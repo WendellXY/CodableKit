@@ -2,13 +2,14 @@
 
 CodableKit is a Swift macro package designed to simplify the use of Swift's `Codable` protocol by allowing easy integration of default values, reducing the amount of auxiliary code you need to write.
 
-### How It Works
+## How It Works
 
 Just add the `@Codable` attribute to your structure. The macro automatically generates code to handle decoding and encoding in compliance with the Codable protocol, recognizing and neatly handling default values:
 
 ```swift
 @Codable
 struct User {
+  @CodableKey("uid") // Change the coding key to `uid`
   let id: UUID
   let name: String
   var age: Int = 24
@@ -17,6 +18,7 @@ struct User {
 It gets transformed into:
 ```swift
 struct User {
+  @CodableKey("uid")
   let id: UUID
   let name: String
   var age: Int = 24
@@ -24,7 +26,7 @@ struct User {
 
 extension User: Codable {
   enum CodingKeys: String, CodingKey {
-    case id
+    case id = "uid"
     case name
     case age
   }
