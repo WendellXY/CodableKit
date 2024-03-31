@@ -11,6 +11,7 @@ import SwiftSyntaxMacros
 @main
 struct CodableKitPlugin: CompilerPlugin {
   let providingMacros: [Macro.Type] = [
-    CodableMacro.self
+    CodableMacro.self,
+    CodableKeyMacro.self,
   ]
 }
