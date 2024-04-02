@@ -15,10 +15,11 @@ struct User {
   var age: Int = 24
 }
 ```
+
 It gets transformed into:
+
 ```swift
 struct User {
-  @CodableKey("uid")
   let id: UUID
   let name: String
   var age: Int = 24
@@ -46,7 +47,8 @@ extension User: Codable {
   }
 }
 ```
-This lets you keep your models clean while the `﻿@Codable` attribute generates the necessary Codable compliance code with incorporated default values in the background. Enjoy more streamlined Swift `Codable` handling with `CodableKit`.
+
+This lets you keep your models clean while the `@Codable` attribute generates the necessary Codable compliance code with incorporated default values in the background. Enjoy more streamlined Swift `Codable` handling with `CodableKit`.
 
 ## Installation
 
@@ -57,4 +59,5 @@ This lets you keep your models clean while the `﻿@Codable` attribute generates
 ```
 
 ## Contributions
+
 Please feel free to contribute to `CodableKit`! Any input and suggestions are always appreciated.
