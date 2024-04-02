@@ -80,6 +80,13 @@ extension CodableMacro {
       })?.arguments?.as(LabeledExprListSyntax.self)?.first?.expression
     }
 
+    /// Initializes a `CodableMacro.Property` instance.
+    ///
+    /// - Parameters:
+    ///   - attributes: The attributes associated with the macro.
+    ///   - binding: The pattern binding syntax.
+    ///   - type: The default type syntax. Variable Decl might not have a type annotation like in
+    ///  `let a, b: String`, so we need to pass the default type.
     init(
       attributes: [AttributeSyntax],
       binding: PatternBindingSyntax,
@@ -113,6 +120,13 @@ extension CodableMacro {
           Property(attributes: attributes, binding: binding, defaultType: defaultType)
         }
       }
+  }
+}
+
+extension CodableMacro.Property {
+  /// Check if the property is optional.
+  var isOptional: Bool {
+    type.as(OptionalTypeSyntax.self) != nil || type.as(IdentifierTypeSyntax.self)?.name.text == "Optional"
   }
 }
 
@@ -166,6 +180,8 @@ extension CodableMacro {
         let type = property.type
         if let defaultValue = property.defaultValue {
           "\(key) = try container.decodeIfPresent(\(type).self, forKey: .\(key)) ?? \(defaultValue)"
+        } else if property.isOptional {
+          "\(key) = try container.decodeIfPresent(\(type).self, forKey: .\(key)) ?? nil"
         } else {
           "\(key) = try container.decode(\(type).self, forKey: .\(key))"
         }
