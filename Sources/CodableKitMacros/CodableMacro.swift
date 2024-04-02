@@ -21,7 +21,7 @@ public struct CodableMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
-    // Validate that the macro is being applied to a protocol declaration
+    // Validate that the macro is being applied to a struct declaration
     guard let structDecl = declaration.as(StructDeclSyntax.self) else {
       throw SimpleDiagnosticMessage(
         message: "Macro `CodableMacro` can only be applied to a struct",
@@ -47,11 +47,11 @@ public struct CodableMacro: ExtensionMacro {
     }
 
     let extensionDecl = ExtensionDeclSyntax(
-      modifiers: [accessModifier], extendedType: type, inheritanceClause: inheritanceClause
+      extendedType: type, inheritanceClause: inheritanceClause
     ) {
       genCodingKeyEnumDecl(from: properties)
-      genInitDecoderDecl(from: properties)
-      genEncodeFuncDecl(from: properties)
+      genInitDecoderDecl(from: properties, modifiers: [accessModifier])
+      genEncodeFuncDecl(from: properties, modifiers: [accessModifier])
     }
 
     return [extensionDecl]
@@ -137,8 +137,13 @@ extension CodableMacro {
     }
   }
 
-  fileprivate static func genInitDecoderDecl(from properties: [Property]) -> InitializerDeclSyntax {
+  fileprivate static func genInitDecoderDecl(
+    from properties: [Property],
+    modifiers: DeclModifierListSyntax
+  ) -> InitializerDeclSyntax {
     InitializerDeclSyntax(
+      leadingTrivia: .newline,
+      modifiers: modifiers,
       signature: .init(
         parameterClause: .init(
           parametersBuilder: {
@@ -163,8 +168,13 @@ extension CodableMacro {
     }
   }
 
-  fileprivate static func genEncodeFuncDecl(from properties: [Property]) -> FunctionDeclSyntax {
+  fileprivate static func genEncodeFuncDecl(
+    from properties: [Property],
+    modifiers: DeclModifierListSyntax
+  ) -> FunctionDeclSyntax {
     FunctionDeclSyntax(
+      leadingTrivia: .newline,
+      modifiers: modifiers,
       name: "encode",
       signature: .init(
         parameterClause: .init(
