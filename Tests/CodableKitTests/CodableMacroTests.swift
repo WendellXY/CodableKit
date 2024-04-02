@@ -1,5 +1,5 @@
 //
-//  CodableKitTests.swift
+//  CodableMacroTests.swift
 //  CodableKitTests
 //
 //  Created by Wendell on 3/30/24.

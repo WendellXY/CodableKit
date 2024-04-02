@@ -49,8 +49,11 @@
 ///   }
 /// }
 /// ```
-@attached(member)
-@attached(extension, conformances: Codable)
+@attached(
+  extension,
+  conformances: Codable,
+  names: named(CodingKeys), named(init(from:)), named(encode(to:))
+)
 public macro Codable() = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
 /// Custom the key used for encoding and decoding a property.

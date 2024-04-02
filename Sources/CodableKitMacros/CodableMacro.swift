@@ -62,6 +62,7 @@ public struct CodableMacro: ExtensionMacro {
 
 extension CodableMacro {
 
+  /// A simple property representation of the property in a group declaration syntax.
   struct Property {
     /// The attributes of the property
     let attributes: [AttributeSyntax]
@@ -117,6 +118,9 @@ extension CodableMacro {
 
 // MARK: Codable Boilerplate Code Generation
 extension CodableMacro {
+  /// Generate the `CodingKeys` enum declaration.
+  ///
+  /// If a property has a `CodableKey` attribute, use the key passed in the attribute, otherwise use the property name.
   fileprivate static func genCodingKeyEnumDecl(from properties: [Property]) -> EnumDeclSyntax {
     EnumDeclSyntax(
       name: "CodingKeys",
@@ -137,6 +141,7 @@ extension CodableMacro {
     }
   }
 
+  /// Generate the `init(from decoder: Decoder)` method of the `Codable` protocol.
   fileprivate static func genInitDecoderDecl(
     from properties: [Property],
     modifiers: DeclModifierListSyntax
@@ -168,6 +173,7 @@ extension CodableMacro {
     }
   }
 
+  /// Generate the `func encode(to encoder: Encoder)` method of the `Codable` protocol.
   fileprivate static func genEncodeFuncDecl(
     from properties: [Property],
     modifiers: DeclModifierListSyntax
