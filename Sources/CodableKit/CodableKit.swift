@@ -58,4 +58,7 @@ public macro Codable() = #externalMacro(module: "CodableKitMacros", type: "Codab
 
 /// Custom the key used for encoding and decoding a property.
 @attached(peer)
-public macro CodableKey(_ key: String) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro")
+public macro CodableKey(
+  _ key: String? = nil,
+  ignored: Bool = false
+) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro")

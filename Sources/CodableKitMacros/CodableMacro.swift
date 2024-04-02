@@ -73,13 +73,6 @@ extension CodableMacro {
     /// The default value of the property
     let defaultValue: ExprSyntax?
 
-    /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key
-    var customCodableKey: ExprSyntax? {
-      attributes.first(where: {
-        $0.attributeName.as(IdentifierTypeSyntax.self)?.description == "CodableKey"
-      })?.arguments?.as(LabeledExprListSyntax.self)?.first?.expression
-    }
-
     /// Initializes a `CodableMacro.Property` instance.
     ///
     /// - Parameters:
@@ -128,6 +121,31 @@ extension CodableMacro.Property {
   var isOptional: Bool {
     type.as(OptionalTypeSyntax.self) != nil || type.as(IdentifierTypeSyntax.self)?.name.text == "Optional"
   }
+
+  /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key
+  var customCodableKey: ExprSyntax? {
+    guard
+      let expr = attributes.first(where: {
+        $0.attributeName.as(IdentifierTypeSyntax.self)?.description == "CodableKey"
+      })?.arguments?.as(LabeledExprListSyntax.self)?.first(where: {
+        $0.label == nil  // the first argument without label is the custom Codable Key
+      })?.expression,
+      expr.as(NilLiteralExprSyntax.self) == nil
+    else {
+      return nil
+    }
+
+    return expr
+  }
+
+  /// Indicates if the property should be ignored when encoding and decoding
+  var ignored: Bool {
+    attributes.first(where: {
+      $0.attributeName.as(IdentifierTypeSyntax.self)?.description == "CodableKey"
+    })?.arguments?.as(LabeledExprListSyntax.self)?.first(where: {
+      $0.label?.text == "ignored"
+    })?.expression.as(BooleanLiteralExprSyntax.self)?.literal.text == "true"
+  }
 }
 
 // MARK: Codable Boilerplate Code Generation
@@ -145,7 +163,7 @@ extension CodableMacro {
         }
       )
     ) {
-      for property in properties {
+      for property in properties where !property.ignored {
         if let customCodableKey = property.customCodableKey {
           "case \(property.name) = \(customCodableKey)"
         } else {
@@ -175,7 +193,7 @@ extension CodableMacro {
       )
     ) {
       "let container = try decoder.container(keyedBy: CodingKeys.self)"
-      for property in properties {
+      for property in properties where !property.ignored {
         let key = property.name
         let type = property.type
         if let defaultValue = property.defaultValue {
@@ -210,7 +228,7 @@ extension CodableMacro {
       )
     ) {
       "var container = encoder.container(keyedBy: CodingKeys.self)"
-      for property in properties {
+      for property in properties where !property.ignored {
         "try container.encode(\(property.name), forKey: .\(property.name))"
       }
     }

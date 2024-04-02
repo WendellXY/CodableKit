@@ -1,10 +1,15 @@
 # CodableKit ⚡️
 
-CodableKit is a Swift macro package designed to simplify the use of Swift's `Codable` protocol by allowing easy integration of default values, reducing the amount of auxiliary code you need to write.
+CodableKit is a Swift macro package designed to simplify the use of Swift's `Codable` protocol by allowing easy
+integration of default values, reducing the amount of auxiliary code you need to write.
 
 ## How It Works
 
-Just add the `@Codable` attribute to your structure. The macro automatically generates code to handle decoding and encoding in compliance with the Codable protocol, recognizing and neatly handling default values:
+> This project is still under development, so the documentation is not complete, you may refer to the source code for
+> more details or peek the example below.
+
+Just add the `@Codable` attribute to your structure. The macro automatically generates code to handle decoding and
+encoding in compliance with the Codable protocol, recognizing and neatly handling default values:
 
 ```swift
 @Codable
@@ -13,6 +18,9 @@ struct User {
   let id: UUID
   let name: String
   var age: Int = 24
+
+  @CodableKey(ignored: true) // Ignore this property
+  let thisPropertyWillNotBeIncluded: String
 }
 ```
 
@@ -23,6 +31,8 @@ struct User {
   let id: UUID
   let name: String
   var age: Int = 24
+
+  let thisPropertyWillNotBeIncluded: String
 }
 
 extension User: Codable {
@@ -48,7 +58,8 @@ extension User: Codable {
 }
 ```
 
-This lets you keep your models clean while the `@Codable` attribute generates the necessary Codable compliance code with incorporated default values in the background. Enjoy more streamlined Swift `Codable` handling with `CodableKit`.
+This lets you keep your models clean while the `@Codable` attribute generates the necessary Codable compliance code
+with incorporated default values in the background. Enjoy more streamlined Swift `Codable` handling with `CodableKit`.
 
 ## Installation
 
