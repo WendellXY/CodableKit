@@ -5,6 +5,8 @@
 //  Created by Wendell on 3/30/24.
 //
 
+import CodableKitMacros
+
 /// A macro that generates `Codable` conformance and boilerplate code for a struct, such that the Codable struct can
 /// have default values for its properties, and custom keys for encoding and decoding with `@CodableKey`.
 ///
@@ -57,8 +59,13 @@
 public macro Codable() = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
 /// Custom the key used for encoding and decoding a property.
+///
+/// - Parameters:
+///   - key: The custom key to use for encoding and decoding the property. If not provided,
+///   the property name will be used.
+///   - options: Options for customizing the behavior of the key.
 @attached(peer)
 public macro CodableKey(
   _ key: String? = nil,
-  ignored: Bool = false
+  options: CodableKeyMacro.Options = .default
 ) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro")

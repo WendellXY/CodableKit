@@ -19,7 +19,7 @@ struct User {
   let name: String
   var age: Int = 24
 
-  @CodableKey(ignored: true) // Ignore this property
+  @CodableKey(options: .ignored) // Ignore this property
   let thisPropertyWillNotBeIncluded: String
 }
 ```
