@@ -63,10 +63,8 @@ with incorporated default values in the background. Enjoy more streamlined Swift
 
 ## Installation
 
-> This project is still under development, so the `main` branch is used here.
-
 ```swift
-.package(url: "https://github.com/WendellXY/CodableKit.git", branch: "main"),
+.package(url: "https://github.com/WendellXY/CodableKit.git", from: "0.0.1"),
 ```
 
 ## Contributions
