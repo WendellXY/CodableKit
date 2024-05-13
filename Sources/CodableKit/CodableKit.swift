@@ -19,7 +19,7 @@ import CodableKitMacros
 ///   let id: Int
 ///   let name: String
 ///   let email: String
-///   var age = 25
+///   var age: Int = 25
 /// }
 /// ```
 ///

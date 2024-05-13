@@ -38,7 +38,8 @@ public struct CodableMacro: ExtensionMacro {
       } else {
         DeclModifierSyntax(name: "internal")
       }
-    let properties = extractProperties(from: structDecl)
+
+    let properties = try extractProperties(from: structDecl)
 
     guard !properties.isEmpty else { return [] }
 
@@ -61,8 +62,8 @@ public struct CodableMacro: ExtensionMacro {
 // MARK: - Supporting Method
 extension CodableMacro {
   /// Extract all the properties from structure and add type info.
-  fileprivate static func extractProperties(from declaration: some DeclGroupSyntax) -> [Property] {
-    declaration.memberBlock.members
+  fileprivate static func extractProperties(from declaration: some DeclGroupSyntax) throws -> [Property] {
+    try declaration.memberBlock.members
       .map(\.decl)
       .compactMap { declaration in
         declaration.as(VariableDeclSyntax.self)
@@ -74,7 +75,11 @@ extension CodableMacro {
         let attributes = variable.attributes.compactMap { $0.as(AttributeSyntax.self) }
 
         guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
-          return []
+          throw SimpleDiagnosticMessage(
+            message: "Properties must have a type annotation",
+            diagnosticID: messageID,
+            severity: .error
+          )
         }
 
         return variable.bindings.map { binding in

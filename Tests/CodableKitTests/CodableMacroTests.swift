@@ -318,4 +318,33 @@ final class CodableKitTests: XCTestCase {
     throw XCTSkip("macros are only supported when running tests for the host platform")
     #endif
   }
+
+    func testMacroWithNoTypeAnnotation() throws {
+        #if canImport(CodableKitMacros)
+        assertMacroExpansion(
+          """
+          @Codable
+          public struct User {
+            let id: UUID
+            let name: String
+            var age = 24
+          }
+          """,
+          expandedSource: """
+            public struct User {
+              let id: UUID
+              let name: String
+              var age = 24
+            }
+            """,
+          diagnostics: [
+            .init(message: "Properties must have a type annotation", line: 1, column: 1)
+          ],
+          macros: macros,
+          indentationWidth: .spaces(2)
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
 }
