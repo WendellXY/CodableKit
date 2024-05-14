@@ -19,14 +19,27 @@ let package = Package(
     .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.1.0"),
   ],
   targets: [
+    .target(
+      name: "CodableKitShared",
+      dependencies: [
+        .product(name: "SwiftSyntax", package: "swift-syntax")
+      ]
+    ),
     .macro(
       name: "CodableKitMacros",
       dependencies: [
+        "CodableKitShared",
         .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
         .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
       ]
     ),
-    .target(name: "CodableKit", dependencies: ["CodableKitMacros"]),
+    .target(
+      name: "CodableKit",
+      dependencies: [
+        "CodableKitShared",
+        "CodableKitMacros",
+      ]
+    ),
     .testTarget(
       name: "CodableKitTests",
       dependencies: [

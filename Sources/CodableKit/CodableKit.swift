@@ -5,7 +5,10 @@
 //  Created by Wendell on 3/30/24.
 //
 
-import CodableKitMacros
+// We should not import the plugin here, otherwise, a compile error will occur. Reference:
+// https://forums.swift.org/t/xcode-15-beta-no-such-module-error-with-swiftpm-and-macro/65486/12
+// import CodableKitMacros
+@_exported import CodableKitShared
 
 /// A macro that generates `Codable` conformance and boilerplate code for a struct, such that the Codable struct can
 /// have default values for its properties, and custom keys for encoding and decoding with `@CodableKey`.
@@ -67,5 +70,5 @@ public macro Codable() = #externalMacro(module: "CodableKitMacros", type: "Codab
 @attached(peer)
 public macro CodableKey(
   _ key: String? = nil,
-  options: CodableKeyMacro.Options = .default
+  options: CodableKeyOptions = .default
 ) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro")
