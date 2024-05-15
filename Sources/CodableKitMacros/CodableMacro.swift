@@ -74,6 +74,11 @@ extension CodableMacro {
       .flatMap { variable -> [Property] in
         let attributes = variable.attributes.compactMap { $0.as(AttributeSyntax.self) }
 
+        let modifiers = variable.modifiers.map { $0.name.text }
+
+        // Ignore static properties
+        guard !modifiers.contains("static") else { return [] }
+
         guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
           throw SimpleDiagnosticMessage(
             message: "Properties must have a type annotation",
