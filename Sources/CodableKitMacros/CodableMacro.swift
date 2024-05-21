@@ -106,7 +106,7 @@ extension CodableMacro {
   /// Validate that the macro is being applied to a struct declaration
   fileprivate static func validateDeclaration(_ declaration: some DeclGroupSyntax) throws {
     // Struct
-    if let structDecl = declaration.as(StructDeclSyntax.self) {
+    if declaration.as(StructDeclSyntax.self) != nil {
       return
     }
 
@@ -224,7 +224,7 @@ extension CodableMacro {
       typeAnnotation: TypeAnnotationSyntax(type: property.type),
       accessorBlock: AccessorBlockSyntax(
         leadingTrivia: .space,
-        leftBrace:  .leftBraceToken(),
+        leftBrace: .leftBraceToken(),
         accessors: .getter("\(property.name)"),
         rightBrace: .rightBraceToken()
       )
