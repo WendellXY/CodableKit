@@ -21,25 +21,18 @@ public struct CodableMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
-    // Validate that the macro is being applied to a struct declaration
-    guard let structDecl = declaration.as(StructDeclSyntax.self) else {
-      throw SimpleDiagnosticMessage(
-        message: "Macro `CodableMacro` can only be applied to a struct",
-        diagnosticID: messageID,
-        severity: .error
-      )
-    }
+    try validateDeclaration(declaration)
 
     let accessModifiers: Set = ["public", "private", "internal"]
 
     let accessModifier =
-      if let accessModifier = structDecl.modifiers.first(where: { accessModifiers.contains($0.name.text) }) {
+      if let accessModifier = declaration.modifiers.first(where: { accessModifiers.contains($0.name.text) }) {
         accessModifier
       } else {
-        DeclModifierSyntax(name: "internal")
+        DeclModifierSyntax(name: .keyword(.internal))
       }
 
-    let properties = try extractProperties(from: structDecl)
+    let properties = try extractProperties(from: declaration)
 
     guard !properties.isEmpty else { return [] }
 
@@ -108,6 +101,20 @@ extension CodableMacro {
           Property(attributes: attributes, binding: binding, defaultType: defaultType)
         }
       }
+  }
+
+  /// Validate that the macro is being applied to a struct declaration
+  fileprivate static func validateDeclaration(_ declaration: some DeclGroupSyntax) throws {
+    // Struct
+    if let structDecl = declaration.as(StructDeclSyntax.self) {
+      return
+    }
+
+    throw SimpleDiagnosticMessage(
+      message: "Macro `CodableMacro` can only be applied to a struct",
+      diagnosticID: messageID,
+      severity: .error
+    )
   }
 }
 
