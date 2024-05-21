@@ -20,6 +20,12 @@ public struct CodableKeyOptions: OptionSet {
   /// The key will be explicitly set to `nil` (`null`) when encoding and decoding.
   /// By default, the key will be omitted if the value is `nil`.
   public static let explicitNil = Self(rawValue: 1 << 1)
+  /// If the key has a custom CodableKey, a computed property will be generated to access the key; otherwise, this
+  /// option is ignored.
+  ///
+  /// For example, if you have a custom key `myKey` and the original key `key`, a computed property `myKey` will be
+  /// generated to access the original key `key`.
+  public static let generateCustomKey = Self(rawValue: 1 << 2)
   /// The default options for a `CodableKey`.
   public static let `default`: Self = []
 }
@@ -33,6 +39,8 @@ extension CodableKeyOptions {
       self = .ignored
     case "explicitNil":
       self = .explicitNil
+    case "generateCustomKey":
+      self = .generateCustomKey
     default:
       self = .default
     }

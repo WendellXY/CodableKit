@@ -52,7 +52,7 @@ extension CodableMacro.Property {
   }
 
   /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key
-  var customCodableKey: ExprSyntax? {
+  var customCodableKey: PatternSyntax? {
     guard
       let expr = codableKeyLabeledExprList?.first(where: {
         $0.label == nil  // the first argument without label is the custom Codable Key
@@ -62,7 +62,10 @@ extension CodableMacro.Property {
       return nil
     }
 
-    return expr
+    // the expr is something like `"customKey"`, we need to remove the quotes
+    let identifier = "\(expr)".trimmingCharacters(in: .init(charactersIn: "\""))
+
+    return PatternSyntax(IdentifierPatternSyntax(identifier: .identifier(identifier)))
   }
 
   /// Options for customizing the behavior of a `CodableKey`.
@@ -75,5 +78,11 @@ extension CodableMacro.Property {
   /// Indicates if the property should be ignored when encoding and decoding
   var ignored: Bool {
     options.contains(.ignored)
+  }
+}
+
+extension CodableMacro.Property {
+  var shouldGenerateCustomCodingKeyVariable: Bool {
+    customCodableKey != nil && options.contains(.generateCustomKey)
   }
 }

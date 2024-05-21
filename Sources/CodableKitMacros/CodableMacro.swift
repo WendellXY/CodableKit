@@ -30,7 +30,7 @@ public struct CodableMacro: ExtensionMacro {
       )
     }
 
-    let accessModifiers: Set<String> = ["public", "private", "internal"]
+    let accessModifiers: Set = ["public", "private", "internal"]
 
     let accessModifier =
       if let accessModifier = structDecl.modifiers.first(where: { accessModifiers.contains($0.name.text) }) {
@@ -47,7 +47,9 @@ public struct CodableMacro: ExtensionMacro {
       InheritedTypeSyntax(type: "Codable" as TypeSyntax)
     }
 
-    let extensionDecl = ExtensionDeclSyntax(
+    var extensionDecls: [ExtensionDeclSyntax] = []
+
+    let codableExtensionDecl = ExtensionDeclSyntax(
       extendedType: type, inheritanceClause: inheritanceClause
     ) {
       genCodingKeyEnumDecl(from: properties)
@@ -55,7 +57,22 @@ public struct CodableMacro: ExtensionMacro {
       genEncodeFuncDecl(from: properties, modifiers: [accessModifier])
     }
 
-    return [extensionDecl]
+    let customKeysExtensionDecl = ExtensionDeclSyntax(
+      extendedType: type
+    ) {
+      let generatingProperties = properties.filter(\.shouldGenerateCustomCodingKeyVariable)
+      for (index, property) in generatingProperties.enumerated() {
+        genCustomKeyVariable(for: property, modifiers: [accessModifier], isFirst: index == 0)
+      }
+    }
+
+    extensionDecls.append(codableExtensionDecl)
+
+    if properties.map(\.shouldGenerateCustomCodingKeyVariable).contains(true) {
+      extensionDecls.append(customKeysExtensionDecl)
+    }
+
+    return extensionDecls
   }
 }
 
@@ -94,7 +111,9 @@ extension CodableMacro {
   }
 }
 
-// MARK: Codable Boilerplate Code Generation
+// MARK: - Boilerplate Code Generation
+
+// MARK: Codable
 extension CodableMacro {
   /// Generate the `CodingKeys` enum declaration.
   ///
@@ -111,7 +130,7 @@ extension CodableMacro {
     ) {
       for property in properties where !property.ignored {
         if let customCodableKey = property.customCodableKey {
-          "case \(property.name) = \(customCodableKey)"
+          "case \(property.name) = \"\(customCodableKey)\""
         } else {
           "case \(property.name)"
         }
@@ -182,5 +201,33 @@ extension CodableMacro {
         }
       }
     }
+  }
+}
+
+// MARK: Others
+extension CodableMacro {
+  /// Generate the custom key variable for the property.
+  fileprivate static func genCustomKeyVariable(
+    for property: Property,
+    modifiers: DeclModifierListSyntax,
+    isFirst: Bool = false
+  ) -> VariableDeclSyntax {
+    let pattern = PatternBindingSyntax(
+      pattern: property.customCodableKey!,
+      typeAnnotation: TypeAnnotationSyntax(type: property.type),
+      accessorBlock: AccessorBlockSyntax(
+        leadingTrivia: .space,
+        leftBrace:  .leftBraceToken(),
+        accessors: .getter("\(property.name)"),
+        rightBrace: .rightBraceToken()
+      )
+    )
+
+    return VariableDeclSyntax(
+      leadingTrivia: isFirst ? .none : .newline,
+      modifiers: modifiers,
+      bindingSpecifier: .keyword(.var),
+      bindings: [pattern]
+    )
   }
 }
