@@ -338,7 +338,8 @@ final class CodableKitTests: XCTestCase {
         }
         """,
       diagnostics: [
-        .init(message: "Properties must have a type annotation", line: 1, column: 1)
+        .init(message: "Properties must have a type annotation", line: 1, column: 1),
+        .init(message: "Code generation already prepared for declaration but properties not found", line: 1, column: 1),
       ],
       macros: macros,
       indentationWidth: .spaces(2)
@@ -417,6 +418,10 @@ final class CodableKitTests: XCTestCase {
           let id: UUID
           let name: String
           let age: Int
+
+          public var uid: UUID {
+            id
+          }
         }
 
         extension User: Codable {
@@ -438,12 +443,6 @@ final class CodableKitTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-          }
-        }
-
-        extension User {
-          public var uid: UUID {
-            id
           }
         }
         """,
@@ -473,6 +472,14 @@ final class CodableKitTests: XCTestCase {
           let id: UUID
           let name: String
           let age: Int
+
+          public var uid: UUID {
+            id
+          }
+
+          public var givenName: String {
+            name
+          }
         }
 
         extension User: Codable {
@@ -494,16 +501,6 @@ final class CodableKitTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-          }
-        }
-
-        extension User {
-          public var uid: UUID {
-            id
-          }
-
-          public var givenName: String {
-            name
           }
         }
         """,

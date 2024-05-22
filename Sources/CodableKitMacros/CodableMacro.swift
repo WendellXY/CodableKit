@@ -11,9 +11,13 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-public struct CodableMacro: ExtensionMacro {
-  private static let messageID = MessageID(domain: "CodableKit", id: "CodableMacro")
+public struct CodableMacro {
+  private static let core = CodeGenCore()
+}
 
+// MARK: - ExtensionMacro
+
+extension CodableMacro: ExtensionMacro {
   public static func expansion(
     of node: AttributeSyntax,
     attachedTo declaration: some DeclGroupSyntax,
@@ -21,100 +25,46 @@ public struct CodableMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
-    try validateDeclaration(declaration)
+    try core.validateDeclaration(declaration)
+    try core.prepareCodeGeneration(for: declaration)
 
-    let accessModifiers: Set = ["public", "private", "internal"]
-
-    let accessModifier =
-      if let accessModifier = declaration.modifiers.first(where: { accessModifiers.contains($0.name.text) }) {
-        accessModifier
-      } else {
-        DeclModifierSyntax(name: .keyword(.internal))
-      }
-
-    let properties = try extractProperties(from: declaration)
-
-    guard !properties.isEmpty else { return [] }
+    let properties = try core.properties(for: declaration)
+    let accessModifier = try core.accessModifier(for: declaration)
 
     let inheritanceClause = InheritanceClauseSyntax {
       InheritedTypeSyntax(type: "Codable" as TypeSyntax)
     }
 
-    var extensionDecls: [ExtensionDeclSyntax] = []
-
-    let codableExtensionDecl = ExtensionDeclSyntax(
-      extendedType: type, inheritanceClause: inheritanceClause
-    ) {
-      genCodingKeyEnumDecl(from: properties)
-      genInitDecoderDecl(from: properties, modifiers: [accessModifier])
-      genEncodeFuncDecl(from: properties, modifiers: [accessModifier])
-    }
-
-    let customKeysExtensionDecl = ExtensionDeclSyntax(
-      extendedType: type
-    ) {
-      let generatingProperties = properties.filter(\.shouldGenerateCustomCodingKeyVariable)
-      for (index, property) in generatingProperties.enumerated() {
-        genCustomKeyVariable(for: property, modifiers: [accessModifier], isFirst: index == 0)
+    return [
+      ExtensionDeclSyntax(
+        extendedType: type, inheritanceClause: inheritanceClause
+      ) {
+        genCodingKeyEnumDecl(from: properties)
+        genInitDecoderDecl(from: properties, modifiers: [accessModifier])
+        genEncodeFuncDecl(from: properties, modifiers: [accessModifier])
       }
-    }
-
-    extensionDecls.append(codableExtensionDecl)
-
-    if properties.map(\.shouldGenerateCustomCodingKeyVariable).contains(true) {
-      extensionDecls.append(customKeysExtensionDecl)
-    }
-
-    return extensionDecls
+    ]
   }
 }
 
-// MARK: - Supporting Method
-extension CodableMacro {
-  /// Extract all the properties from structure and add type info.
-  fileprivate static func extractProperties(from declaration: some DeclGroupSyntax) throws -> [Property] {
-    try declaration.memberBlock.members
-      .map(\.decl)
-      .compactMap { declaration in
-        declaration.as(VariableDeclSyntax.self)
-      }
-      .filter { variable in
-        variable.bindings.first?.accessorBlock == nil
-      }
-      .flatMap { variable -> [Property] in
-        let attributes = variable.attributes.compactMap { $0.as(AttributeSyntax.self) }
+// MARK: - MemberMacro
 
-        let modifiers = variable.modifiers.map { $0.name.text }
+extension CodableMacro: MemberMacro {
+  public static func expansion(
+    of node: AttributeSyntax,
+    providingMembersOf declaration: some DeclGroupSyntax,
+    in context: some MacroExpansionContext
+  ) throws -> [DeclSyntax] {
+    try core.validateDeclaration(declaration)
+    try core.prepareCodeGeneration(for: declaration)
 
-        // Ignore static properties
-        guard !modifiers.contains("static") else { return [] }
+    let properties = try core.properties(for: declaration)
+    let accessModifier = try core.accessModifier(for: declaration)
 
-        guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
-          throw SimpleDiagnosticMessage(
-            message: "Properties must have a type annotation",
-            diagnosticID: messageID,
-            severity: .error
-          )
-        }
-
-        return variable.bindings.map { binding in
-          Property(attributes: attributes, binding: binding, defaultType: defaultType)
-        }
-      }
-  }
-
-  /// Validate that the macro is being applied to a struct declaration
-  fileprivate static func validateDeclaration(_ declaration: some DeclGroupSyntax) throws {
-    // Struct
-    if declaration.as(StructDeclSyntax.self) != nil {
-      return
+    return properties.filter(\.shouldGenerateCustomCodingKeyVariable).compactMap { property in
+      genCustomKeyVariable(for: property, modifiers: [accessModifier])
     }
-
-    throw SimpleDiagnosticMessage(
-      message: "Macro `CodableMacro` can only be applied to a struct",
-      diagnosticID: messageID,
-      severity: .error
-    )
+    .map(DeclSyntax.init)
   }
 }
 
@@ -216,11 +166,12 @@ extension CodableMacro {
   /// Generate the custom key variable for the property.
   fileprivate static func genCustomKeyVariable(
     for property: Property,
-    modifiers: DeclModifierListSyntax,
-    isFirst: Bool = false
-  ) -> VariableDeclSyntax {
+    modifiers: DeclModifierListSyntax
+  ) -> VariableDeclSyntax? {
+    guard let customCodableKey = property.customCodableKey else { return nil }
+
     let pattern = PatternBindingSyntax(
-      pattern: property.customCodableKey!,
+      pattern: customCodableKey,
       typeAnnotation: TypeAnnotationSyntax(type: property.type),
       accessorBlock: AccessorBlockSyntax(
         leadingTrivia: .space,
@@ -231,7 +182,7 @@ extension CodableMacro {
     )
 
     return VariableDeclSyntax(
-      leadingTrivia: isFirst ? .none : .newline,
+      leadingTrivia: .newline,
       modifiers: modifiers,
       bindingSpecifier: .keyword(.var),
       bindings: [pattern]

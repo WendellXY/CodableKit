@@ -59,6 +59,7 @@
   conformances: Codable,
   names: named(CodingKeys), named(init(from:)), named(encode(to:))
 )
+@attached(member, names: arbitrary)
 public macro Codable() = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
 /// Custom the key used for encoding and decoding a property.
