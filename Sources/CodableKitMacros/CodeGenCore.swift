@@ -60,30 +60,35 @@ extension CodeGenCore {
       .filter { variable in
         variable.bindings.first?.accessorBlock == nil
       }
-      .flatMap { variable -> [Property] in
-        let attributes = variable.attributes.compactMap { $0.as(AttributeSyntax.self) }
+      .flatMap(extractProperty)
+  }
 
-        let modifiers = variable.modifiers.map { $0.name.text }
+  /// Extract properties from a single variable declaration
+  fileprivate func extractProperty(
+    from variable: VariableDeclSyntax
+  ) throws -> [Property] {
+    let attributes = variable.attributes.compactMap { $0.as(AttributeSyntax.self) }
 
-        // Ignore static properties
-        guard !modifiers.contains("static") else { return [] }
+    let modifiers = variable.modifiers.map { $0.name.text }
 
-        guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
-          throw SimpleDiagnosticMessage(
-            message: "Properties must have a type annotation",
-            diagnosticID: messageID,
-            severity: .error
-          )
-        }
+    // Ignore static properties
+    guard !modifiers.contains("static") else { return [] }
 
-        return variable.bindings.map { binding in
-          Property(attributes: attributes, binding: binding, defaultType: defaultType)
-        }
-      }
+    guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
+      throw SimpleDiagnosticMessage(
+        message: "Properties must have a type annotation",
+        diagnosticID: messageID,
+        severity: .error
+      )
+    }
+
+    return variable.bindings.map { binding in
+      Property(attributes: attributes, binding: binding, defaultType: defaultType)
+    }
   }
 
   /// Validate that the macro is being applied to a struct declaration
-  func validateDeclaration(_ declaration: some DeclGroupSyntax) throws {
+  fileprivate func validateDeclaration(_ declaration: some DeclGroupSyntax) throws {
     // Struct
     if declaration.as(StructDeclSyntax.self) != nil {
       return
@@ -98,6 +103,8 @@ extension CodeGenCore {
 
   /// Prepare the code generation by extracting properties and access modifier.
   func prepareCodeGeneration(for declaration: some DeclGroupSyntax) throws {
+    try validateDeclaration(declaration)
+
     let id = declaration.id
 
     defer {

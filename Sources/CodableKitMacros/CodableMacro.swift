@@ -25,7 +25,6 @@ extension CodableMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
-    try core.validateDeclaration(declaration)
     try core.prepareCodeGeneration(for: declaration)
 
     let properties = try core.properties(for: declaration)
@@ -55,7 +54,6 @@ extension CodableMacro: MemberMacro {
     providingMembersOf declaration: some DeclGroupSyntax,
     in context: some MacroExpansionContext
   ) throws -> [DeclSyntax] {
-    try core.validateDeclaration(declaration)
     try core.prepareCodeGeneration(for: declaration)
 
     let properties = try core.properties(for: declaration)
