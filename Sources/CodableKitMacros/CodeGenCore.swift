@@ -19,10 +19,19 @@ final class CodeGenCore {
   private var preparedDeclarations: Set<SyntaxIdentifier> = []
   private var properties: [SyntaxIdentifier: [CodableMacro.Property]] = [:]
   private var accessModifiers: [SyntaxIdentifier: DeclModifierSyntax] = [:]
+
+  private let allAccessModifiers: Set<String> = [
+    TokenSyntax.keyword(.open).text,
+    TokenSyntax.keyword(.public).text,
+    TokenSyntax.keyword(.package).text,
+    TokenSyntax.keyword(.internal).text,
+    TokenSyntax.keyword(.private).text,
+    TokenSyntax.keyword(.fileprivate).text,
+  ]
 }
 
 extension CodeGenCore {
-  func properties(for declaration: some DeclGroupSyntax) throws -> [Property] {
+  func properties(for declaration: some SyntaxProtocol) throws -> [Property] {
     if let properties = properties[declaration.id] {
       return properties
     }
@@ -34,7 +43,7 @@ extension CodeGenCore {
     )
   }
 
-  func accessModifier(for declaration: some DeclGroupSyntax) throws -> DeclModifierSyntax {
+  func accessModifier(for declaration: some SyntaxProtocol) throws -> DeclModifierSyntax {
     if let accessModifier = accessModifiers[declaration.id] {
       return accessModifier
     }
@@ -111,8 +120,9 @@ extension CodeGenCore {
       preparedDeclarations.insert(id)
     }
 
-    if properties[id] == nil || properties[id]?.isEmpty == true {
+    // Check if properties and access modifier are already prepared
 
+    if properties[id]?.isEmpty ?? true {
       guard preparedDeclarations.contains(id) == false else {
         throw SimpleDiagnosticMessage(
           message: "Code generation already prepared for declaration but properties not found",
@@ -134,7 +144,6 @@ extension CodeGenCore {
     }
 
     if accessModifiers[id] == nil {
-
       guard preparedDeclarations.contains(id) == false else {
         throw SimpleDiagnosticMessage(
           message: "Code generation already prepared for declaration but access modifier not found",
@@ -143,10 +152,60 @@ extension CodeGenCore {
         )
       }
 
-      let modifiers: Set = ["public", "private", "internal"]
-
       accessModifiers[id] =
-        if let accessModifier = declaration.modifiers.first(where: { modifiers.contains($0.name.text) }) {
+        if let accessModifier = declaration.modifiers.first(where: { allAccessModifiers.contains($0.name.text) }) {
+          accessModifier
+        } else {
+          DeclModifierSyntax(name: .keyword(.internal))
+        }
+    }
+  }
+}
+
+extension CodeGenCore {
+  func prepareCodeGeneration(for declaration: VariableDeclSyntax) throws {
+    let id = declaration.id
+
+    guard !preparedDeclarations.contains(id) else {
+      throw SimpleDiagnosticMessage(
+        message: "Code generation already prepared for declaration",
+        diagnosticID: messageID,
+        severity: .error
+      )
+    }
+
+    defer {
+      preparedDeclarations.insert(id)
+    }
+
+    if properties[id]?.isEmpty ?? true {
+      let extractedProperties = try extractProperty(from: declaration)
+
+      guard let extractedProperty = extractedProperties.first else {
+        throw SimpleDiagnosticMessage(
+          message: "No properties found",
+          diagnosticID: messageID,
+          severity: .warning
+        )
+      }
+
+      // Since the properties extracted from the declaration share the same CodableKey, we can check the first property
+      // to see if it has a custom CodableKey. And if there are some CodableKey options which support multiple pattern
+      // bindings in the future, the following condition guard should not forbid them.
+      if extractedProperties.count > 1 && extractedProperties.first?.customCodableKey != nil {
+        throw SimpleDiagnosticMessage(
+          message: "Custom Codable key not supported for multiple pattern bindings",
+          diagnosticID: messageID,
+          severity: .error
+        )
+      }
+
+      properties[id] = [extractedProperty]
+    }
+
+    if accessModifiers[id] == nil {
+      accessModifiers[id] =
+        if let accessModifier = declaration.modifiers.first(where: { allAccessModifiers.contains($0.name.text) }) {
           accessModifier
         } else {
           DeclModifierSyntax(name: .keyword(.internal))
