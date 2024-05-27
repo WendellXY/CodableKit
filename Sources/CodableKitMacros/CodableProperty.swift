@@ -84,7 +84,7 @@ extension CodableProperty {
   /// Indicates if the property should be considered as normal property, which mean it should be
   ///  encoded and decoded without changing any process.
   var isNormal: Bool {
-    !options.contains(.ignored) && !options.contains(.decodeFromRawString)
+    !options.contains(.ignored) && !options.contains(.transcodeRawString)
   }
 
   /// Indicates if the property should be ignored when encoding and decoding

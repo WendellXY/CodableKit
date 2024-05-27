@@ -434,7 +434,7 @@ final class CodableKitTests: XCTestCase {
         let id: UUID
         let name: String
         let age: Int
-        @CodableKey(options: .decodeFromRawString)
+        @CodableKey(options: .transcodeRawString)
         let room: Room
       }
       """,

@@ -26,10 +26,10 @@ public struct CodableKeyOptions: OptionSet {
   /// For example, if you have a custom key `myKey` and the original key `key`, a computed property `myKey` will be
   /// generated to access the original key `key`.
   public static let generateCustomKey = Self(rawValue: 1 << 2)
-  /// Decode the value from a raw string. This is useful when the value is a string that needs to be decoded to another
-  /// type. To use this option, the type of the property must conform to `Codable`, otherwise, a compile-time error will
-  /// be thrown.
-  public static let decodeFromRawString = Self(rawValue: 1 << 3)
+  /// Transcode the value between raw string and the target type. This is useful when the value needs to be converted
+  /// from a string to another type during decoding and vice versa during encoding. The type of the property must
+  /// conform to `Codable`, otherwise, a compile-time error will occur.
+  public static let transcodeRawString = Self(rawValue: 1 << 3)
   /// The default options for a `CodableKey`.
   public static let `default`: Self = []
 }
@@ -45,8 +45,8 @@ extension CodableKeyOptions {
       self = .explicitNil
     case "generateCustomKey":
       self = .generateCustomKey
-    case "decodeFromRawString":
-      self = .decodeFromRawString
+    case "transcodeRawString":
+      self = .transcodeRawString
     default:
       self = .default
     }

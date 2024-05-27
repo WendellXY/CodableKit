@@ -125,7 +125,7 @@ extension CodableMacro {
         }
       }
 
-      for property in properties where property.options.contains(.decodeFromRawString) && !property.ignored {
+      for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
         let key = property.name
         let rawKey = property.rawStringName
         if let defaultValue = property.defaultValue {
@@ -172,7 +172,7 @@ extension CodableMacro {
       }
 
       // Decode from the rawString.
-      for property in properties where property.options.contains(.decodeFromRawString) && !property.ignored {
+      for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
         "let \(property.rawDataName) = try JSONEncoder().encode(\(property.name))"
         "let \(property.rawStringName) = String(data: \(property.rawDataName), encoding: .utf8)!"
         if property.isOptional && !property.options.contains(.explicitNil) {
