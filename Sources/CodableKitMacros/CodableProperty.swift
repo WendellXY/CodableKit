@@ -81,6 +81,12 @@ extension CodableProperty {
     })?.parseOptions() ?? .default
   }
 
+  /// Indicates if the property should be considered as normal property, which mean it should be
+  ///  encoded and decoded without changing any process.
+  var isNormal: Bool {
+    !options.contains(.ignored) && !options.contains(.decodeFromRawString)
+  }
+
   /// Indicates if the property should be ignored when encoding and decoding
   var ignored: Bool {
     options.contains(.ignored)
@@ -90,5 +96,14 @@ extension CodableProperty {
 extension CodableProperty {
   var shouldGenerateCustomCodingKeyVariable: Bool {
     customCodableKey != nil && options.contains(.generateCustomKey)
+  }
+}
+
+extension CodableProperty {
+  var rawStringName: PatternSyntax {
+    PatternSyntax(IdentifierPatternSyntax(identifier: .identifier("\(name)RawString")))
+  }
+  var rawDataName: PatternSyntax {
+    PatternSyntax(IdentifierPatternSyntax(identifier: .identifier("\(name)RawData")))
   }
 }

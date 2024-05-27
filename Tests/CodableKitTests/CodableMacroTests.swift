@@ -11,15 +11,6 @@ import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
 
-#if canImport(CodableKitMacros)
-import CodableKitMacros
-
-let macros: [String: any Macro.Type] = [
-  "Codable": CodableMacro.self,
-  "CodableKey": CodableKeyMacro.self,
-]
-#endif
-
 final class CodableKitTests: XCTestCase {
   func testMacros() throws {
     #if canImport(CodableKitMacros)
@@ -319,88 +310,6 @@ final class CodableKitTests: XCTestCase {
     #endif
   }
 
-  func testMacroWithNoTypeAnnotation() throws {
-    #if canImport(CodableKitMacros)
-    assertMacroExpansion(
-      """
-      @Codable
-      public struct User {
-        let id: UUID
-        let name: String
-        var age = 24
-      }
-      """,
-      expandedSource: """
-        public struct User {
-          let id: UUID
-          let name: String
-          var age = 24
-        }
-        """,
-      diagnostics: [
-        .init(message: "Properties must have a type annotation", line: 1, column: 1),
-        .init(message: "Code generation already prepared for declaration but properties not found", line: 1, column: 1),
-      ],
-      macros: macros,
-      indentationWidth: .spaces(2)
-    )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
-  }
-
-  func testMacroWithStaticTypeAnnotation() throws {
-    #if canImport(CodableKitMacros)
-    assertMacroExpansion(
-      """
-      @Codable
-      public struct User {
-        let id: UUID
-        let name: String
-        let age: Int
-
-        static let staticProperty: String = "Hello World"
-      }
-      """,
-      expandedSource: """
-        public struct User {
-          let id: UUID
-          let name: String
-          let age: Int
-
-          static let staticProperty: String = "Hello World"
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-          }
-
-          public init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decode(Int.self, forKey: .age)
-          }
-
-          public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(id, forKey: .id)
-            try container.encode(name, forKey: .name)
-            try container.encode(age, forKey: .age)
-          }
-        }
-        """,
-      macros: macros,
-      indentationWidth: .spaces(2)
-    )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
-  }
-
   func testMacroWithOneCustomKeyGenerated() throws {
     #if canImport(CodableKitMacros)
     assertMacroExpansion(
@@ -501,6 +410,72 @@ final class CodableKitTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+          }
+        }
+        """,
+      macros: macros,
+      indentationWidth: .spaces(2)
+    )
+    #else
+    throw XCTSkip("macros are only supported when running tests for the host platform")
+    #endif
+  }
+
+  func testMacroWithDecodingRawString() throws {
+    #if canImport(CodableKitMacros)
+    assertMacroExpansion(
+      """
+      struct Room: Codable {
+        let id: UUID
+        let name: String
+      }
+      @Codable
+      public struct User {
+        let id: UUID
+        let name: String
+        let age: Int
+        @CodableKey(options: .decodeFromRawString)
+        let room: Room
+      }
+      """,
+      expandedSource: """
+        struct Room: Codable {
+          let id: UUID
+          let name: String
+        }
+        public struct User {
+          let id: UUID
+          let name: String
+          let age: Int
+          let room: Room
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case room
+          }
+
+          public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+            let roomRawString = try container.decode(String.self, forKey: .room)
+            let roomRawData = roomRawString.data(using: .utf8)!
+            room = try JSONDecoder().decode(Room.self, from: roomRawData)
+          }
+
+          public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            try container.encode(age, forKey: .age)
+            let roomRawData = try JSONEncoder().encode(room)
+            let roomRawString = String(data: roomRawData, encoding: .utf8)!
+            try container.encode(roomRawString, forKey: .room)
           }
         }
         """,

@@ -113,7 +113,7 @@ extension CodableMacro {
       )
     ) {
       "let container = try decoder.container(keyedBy: CodingKeys.self)"
-      for property in properties where !property.ignored {
+      for property in properties where property.isNormal {
         let key = property.name
         let type = property.type
         if let defaultValue = property.defaultValue {
@@ -123,6 +123,21 @@ extension CodableMacro {
         } else {
           "\(key) = try container.decode(\(type).self, forKey: .\(key))"
         }
+      }
+
+      for property in properties where property.options.contains(.decodeFromRawString) && !property.ignored {
+        let key = property.name
+        let rawKey = property.rawStringName
+        if let defaultValue = property.defaultValue {
+          "let \(rawKey) = try container.decodeIfPresent(String.self, forKey: .\(key)) ?? \(defaultValue)"
+        } else if property.isOptional {
+          "let \(rawKey) = try container.decodeIfPresent(String.self, forKey: .\(key)) ?? nil"
+        } else {
+          "let \(rawKey) = try container.decode(String.self, forKey: .\(key))"
+        }
+
+        "let \(property.rawDataName) = \(rawKey).data(using: .utf8)!"
+        "\(key) = try JSONDecoder().decode(\(property.type).self, from: \(property.rawDataName))"
       }
     }
   }
@@ -148,11 +163,22 @@ extension CodableMacro {
       )
     ) {
       "var container = encoder.container(keyedBy: CodingKeys.self)"
-      for property in properties where !property.ignored {
+      for property in properties where property.isNormal {
         if property.isOptional && !property.options.contains(.explicitNil) {
           "try container.encodeIfPresent(\(property.name), forKey: .\(property.name))"
         } else {
           "try container.encode(\(property.name), forKey: .\(property.name))"
+        }
+      }
+
+      // Decode from the rawString.
+      for property in properties where property.options.contains(.decodeFromRawString) && !property.ignored {
+        "let \(property.rawDataName) = try JSONEncoder().encode(\(property.name))"
+        "let \(property.rawStringName) = String(data: \(property.rawDataName), encoding: .utf8)!"
+        if property.isOptional && !property.options.contains(.explicitNil) {
+          "try container.encodeIfPresent(\(property.rawStringName), forKey: .\(property.name))"
+        } else {
+          "try container.encode(\(property.rawStringName), forKey: .\(property.name))"
         }
       }
     }
