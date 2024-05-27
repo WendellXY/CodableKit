@@ -464,8 +464,11 @@ final class CodableKitTests: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = try container.decode(String.self, forKey: .room)
-            let roomRawData = roomRawString.data(using: .utf8)!
-            room = try JSONDecoder().decode(Room.self, from: roomRawData)
+            if let roomRawData = roomRawString.data(using: .utf8) {
+              room = try JSONDecoder().decode(Room.self, from: roomRawData)
+            } else {
+              throw DecodingError.valueNotFound(String.self, DecodingError.Context(codingPath: [CodingKeys.room], debugDescription: "Failed to convert raw string to data"))
+            }
           }
 
           public func encode(to encoder: Encoder) throws {
@@ -474,8 +477,11 @@ final class CodableKitTests: XCTestCase {
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
             let roomRawData = try JSONEncoder().encode(room)
-            let roomRawString = String(data: roomRawData, encoding: .utf8)!
-            try container.encode(roomRawString, forKey: .room)
+            if let roomRawString = String(data: roomRawData, encoding: .utf8) {
+              try container.encode(roomRawString, forKey: .room)
+            } else {
+              throw EncodingError.invalidValue(roomRawData, EncodingError.Context(codingPath: [CodingKeys.room], debugDescription: "Failed to transcode raw data to string"))
+            }
           }
         }
         """,

@@ -135,9 +135,13 @@ extension CodableMacro {
         } else {
           "let \(rawKey) = try container.decode(String.self, forKey: .\(key))"
         }
-
-        "let \(property.rawDataName) = \(rawKey).data(using: .utf8)!"
-        "\(key) = try JSONDecoder().decode(\(property.type).self, from: \(property.rawDataName))"
+        """
+        if let \(property.rawDataName) = \(rawKey).data(using: .utf8) {
+          \(key) = try JSONDecoder().decode(\(property.type).self, from: \(property.rawDataName))
+        } else {
+          throw DecodingError.valueNotFound(String.self, DecodingError.Context(codingPath: [CodingKeys.\(key)], debugDescription: "Failed to convert raw string to data"))
+        }
+        """
       }
     }
   }
@@ -174,11 +178,22 @@ extension CodableMacro {
       // Decode from the rawString.
       for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
         "let \(property.rawDataName) = try JSONEncoder().encode(\(property.name))"
-        "let \(property.rawStringName) = String(data: \(property.rawDataName), encoding: .utf8)!"
         if property.isOptional && !property.options.contains(.explicitNil) {
-          "try container.encodeIfPresent(\(property.rawStringName), forKey: .\(property.name))"
+          """
+          if let \(property.rawStringName) = String(data: \(property.rawDataName), encoding: .utf8) {
+            try container.encodeIfPresent(\(property.rawStringName), forKey: .\(property.name))
+          } else {
+            throw EncodingError.invalidValue(\(property.rawDataName), EncodingError.Context(codingPath: [CodingKeys.\(property.name)], debugDescription: "Failed to transcode raw data to string"))
+          }
+          """
         } else {
-          "try container.encode(\(property.rawStringName), forKey: .\(property.name))"
+          """
+          if let \(property.rawStringName) = String(data: \(property.rawDataName), encoding: .utf8) {
+            try container.encode(\(property.rawStringName), forKey: .\(property.name))
+          } else {
+            throw EncodingError.invalidValue(\(property.rawDataName), EncodingError.Context(codingPath: [CodingKeys.\(property.name)], debugDescription: "Failed to transcode raw data to string"))
+          }
+          """
         }
       }
     }
