@@ -84,11 +84,21 @@ extension CodeGenCore {
     guard !modifiers.contains("static") else { return [] }
 
     guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
-      throw SimpleDiagnosticMessage(
-        message: "Properties must have a type annotation",
-        diagnosticID: messageID,
-        severity: .error
-      )
+      // If no binding is found, return empty array.
+      guard let lastBinding = variable.bindings.last else { return [] }
+      // To check if a property is ignored, create a temporary property. If the property is ignored, return an empty
+      // array. Otherwise, throw an error.
+      let tmpProperty = Property(attributes: attributes, binding: lastBinding, defaultType: "Any")
+
+      if tmpProperty.ignored {
+        return []
+      } else {
+        throw SimpleDiagnosticMessage(
+          message: "Properties must have a type annotation",
+          diagnosticID: messageID,
+          severity: .error
+        )
+      }
     }
 
     return variable.bindings.map { binding in
