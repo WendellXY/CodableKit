@@ -504,4 +504,68 @@ final class CodableKitTests: XCTestCase {
     throw XCTSkip("macros are only supported when running tests for the host platform")
     #endif
   }
+
+  func testMacrosWithOptionUseDefaultOnFailure() throws {
+    #if canImport(CodableKitMacros)
+    assertMacroExpansion(
+      """
+      enum Role: UInt8, Codable {
+        case unknown = 255
+        case admin = 0
+        case user = 1
+      }
+      @Codable
+      public struct User {
+        let id: UUID
+        let name: String
+        let age: Int
+        @CodableKey(options: .useDefaultOnFailure)
+        var role: Role = .unknown
+      }
+      """,
+      expandedSource: """
+        enum Role: UInt8, Codable {
+          case unknown = 255
+          case admin = 0
+          case user = 1
+        }
+        public struct User {
+          let id: UUID
+          let name: String
+          let age: Int
+          var role: Role = .unknown
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case role
+          }
+
+          public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+            role = (try? container.decodeIfPresent(Role.self, forKey: .role)) ?? .unknown
+          }
+
+          public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            try container.encode(age, forKey: .age)
+            try container.encode(role, forKey: .role)
+          }
+        }
+        """,
+      macros: macros,
+      indentationWidth: .spaces(2)
+    )
+    #else
+    throw XCTSkip("macros are only supported when running tests for the host platform")
+    #endif
+  }
 }

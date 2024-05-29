@@ -92,7 +92,7 @@ extension CodeGenCore {
     useDefaultOnFailure: Bool,
     defaultValueExpr: ExprSyntax?,
     type: TypeSyntax
-  ) -> some ExprSyntaxProtocol {
+  ) -> ExprSyntax {
     // determine which decode method to use, `decode` or `decodeIfPresent`
     let decodeIfPresent = isOptional || defaultValueExpr != nil
 
@@ -109,26 +109,45 @@ extension CodeGenCore {
       LabeledExprSyntax(label: "forKey", expression: genDotExpr(name: "\(patternName)"))
     }
 
-    // The default option expression, if the expression is optional or has a default value,
-    // the expression will be like `... ?? defaultValue`
-    let defaultOptionalExpr = InfixOperatorExprSyntax(
-      leftOperand: funcCallExpr,
-      operator: BinaryOperatorExprSyntax(operator: .binaryOperator("??")),
-      rightOperand: defaultValueExpr ?? ExprSyntax(NilLiteralExprSyntax())
-    )
-
-    let questionOrExclamationMark: TokenSyntax? = useDefaultOnFailure ? .infixQuestionMarkToken() : nil
+    guard useDefaultOnFailure else {
+      return if defaultValueExpr != nil || isOptional {
+        // The default option expression, if the expression is optional or has a default value,
+        // the expression will be like `... ?? defaultValue`
+        ExprSyntax(
+          TryExprSyntax(
+            expression: InfixOperatorExprSyntax(
+              leftOperand: funcCallExpr,
+              operator: BinaryOperatorExprSyntax(operator: .binaryOperator("??")),
+              rightOperand: defaultValueExpr ?? ExprSyntax(NilLiteralExprSyntax())
+            )
+          )
+        )
+      } else {
+        ExprSyntax(TryExprSyntax(expression: funcCallExpr))
+      }
+    }
 
     return if defaultValueExpr != nil || isOptional {
-      TryExprSyntax(
-        questionOrExclamationMark: questionOrExclamationMark,
-        expression: defaultOptionalExpr
+      ExprSyntax(
+        InfixOperatorExprSyntax(
+          leftOperand: TupleExprSyntax(
+            leftParen: .leftParenToken(),
+            elements: [
+              LabeledExprSyntax(
+                expression: TryExprSyntax(
+                  questionOrExclamationMark: .infixQuestionMarkToken(leadingTrivia: .spaces(0)),
+                  expression: funcCallExpr
+                )
+              )
+            ],
+            rightParen: .rightParenToken()
+          ),
+          operator: BinaryOperatorExprSyntax(operator: .binaryOperator("??")),
+          rightOperand: defaultValueExpr ?? ExprSyntax(NilLiteralExprSyntax())
+        )
       )
     } else {
-      TryExprSyntax(
-        questionOrExclamationMark: questionOrExclamationMark,
-        expression: funcCallExpr
-      )
+      ExprSyntax(TryExprSyntax(expression: funcCallExpr))
     }
   }
 
