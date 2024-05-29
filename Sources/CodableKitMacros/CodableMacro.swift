@@ -110,7 +110,7 @@ extension CodableMacro {
         effectSpecifiers: .init(throwsSpecifier: .keyword(.throws))
       )
     ) {
-      CodeBlockItemSyntax(item: .decl(DeclSyntax(core.genDecodeContainerDecl())))
+      CodeBlockItemSyntax(item: .decl(core.genDecodeContainerDecl()))
       for property in properties where property.isNormal {
         CodeBlockItemSyntax(
           item: .expr(
@@ -165,17 +165,15 @@ extension CodableMacro {
     FunctionDeclSyntax(
       leadingTrivia: .newline,
       modifiers: modifiers,
-      name: "encode",
+      name: .identifier("encode"),
       signature: .init(
-        parameterClause: .init(
-          parametersBuilder: {
-            "to encoder: Encoder"
-          }
-        ),
+        parameterClause: FunctionParameterClauseSyntax {
+          "to encoder: Encoder"
+        },
         effectSpecifiers: .init(throwsSpecifier: .keyword(.throws))
       )
     ) {
-      CodeBlockItemSyntax(item: .decl(DeclSyntax(core.genEncodeContainerDecl())))
+      CodeBlockItemSyntax(item: .decl(core.genEncodeContainerDecl()))
       for property in properties where property.isNormal {
         if property.isOptional && !property.options.contains(.explicitNil) {
           "try container.encodeIfPresent(\(property.name), forKey: .\(property.name))"

@@ -60,7 +60,7 @@ extension CodeGenCore {
     bindingSpecifier: TokenSyntax = .keyword(.let),
     patternName: String = "container",
     codingKeysName: String = "CodingKeys"
-  ) -> VariableDeclSyntax {
+  ) -> DeclSyntax {
     let initializerExpr = TryExprSyntax(
       expression: FunctionCallExprSyntax(
         calledExpression: MemberAccessExprSyntax(
@@ -77,10 +77,12 @@ extension CodeGenCore {
       }
     )
 
-    return genVariableDecl(
-      bindingSpecifier: bindingSpecifier,
-      name: patternName,
-      initializer: ExprSyntax(initializerExpr)
+    return DeclSyntax(
+      genVariableDecl(
+        bindingSpecifier: bindingSpecifier,
+        name: patternName,
+        initializer: ExprSyntax(initializerExpr)
+      )
     )
   }
 

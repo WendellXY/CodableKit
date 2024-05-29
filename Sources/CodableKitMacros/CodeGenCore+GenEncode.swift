@@ -13,7 +13,7 @@ extension CodeGenCore {
     bindingSpecifier: TokenSyntax = .keyword(.var),
     patternName: String = "container",
     codingKeysName: String = "CodingKeys"
-  ) -> VariableDeclSyntax {
+  ) -> DeclSyntax {
     let initializerExpr = FunctionCallExprSyntax(
       calledExpression: MemberAccessExprSyntax(
         base: DeclReferenceExprSyntax(baseName: .identifier("encoder")),
@@ -28,10 +28,12 @@ extension CodeGenCore {
       )
     }
 
-    return genVariableDecl(
-      bindingSpecifier: bindingSpecifier,
-      name: patternName,
-      initializer: ExprSyntax(initializerExpr)
+    return DeclSyntax(
+      genVariableDecl(
+        bindingSpecifier: bindingSpecifier,
+        name: patternName,
+        initializer: ExprSyntax(initializerExpr)
+      )
     )
   }
 }
