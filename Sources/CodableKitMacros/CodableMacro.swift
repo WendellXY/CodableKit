@@ -175,45 +175,41 @@ extension CodableMacro {
     ) {
       CodeBlockItemSyntax(item: .decl(core.genEncodeContainerDecl()))
       for property in properties where property.isNormal {
-        if property.isOptional && !property.options.contains(.explicitNil) {
-          "try container.encodeIfPresent(\(property.name), forKey: .\(property.name))"
-        } else {
-          "try container.encode(\(property.name), forKey: .\(property.name))"
-        }
+        CodeBlockItemSyntax(
+          item: .expr(
+            core.genContainerEncodeExpr(
+              key: property.name,
+              patternName: property.name,
+              isOptional: property.isOptional,
+              explicitNil: property.options.contains(.explicitNil)
+            )
+          )
+        )
       }
 
       // Decode from the rawString.
       for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
-        "let \(property.rawDataName) = try JSONEncoder().encode(\(property.name))"
-        if property.isOptional && !property.options.contains(.explicitNil) {
-          """
-          if let \(property.rawStringName) = String(data: \(property.rawDataName), encoding: .utf8) {
-            try container.encodeIfPresent(\(property.rawStringName), forKey: .\(property.name))
-          } else {
-            throw EncodingError.invalidValue(
-              \(property.rawDataName),
-              EncodingError.Context(
-                codingPath: [CodingKeys.\(property.name)],
-                debugDescription: "Failed to transcode raw data to string"
-              )
+        CodeBlockItemSyntax(
+          item: .decl(
+            core.genJSONEncoderEncodeDecl(
+              variableName: property.rawDataName,
+              instance: property.name
             )
-          }
-          """
-        } else {
-          """
-          if let \(property.rawStringName) = String(data: \(property.rawDataName), encoding: .utf8) {
-            try container.encode(\(property.rawStringName), forKey: .\(property.name))
-          } else {
-            throw EncodingError.invalidValue(
-              \(property.rawDataName),
-              EncodingError.Context(
-                codingPath: [CodingKeys.\(property.name)],
-                debugDescription: "Failed to transcode raw data to string"
-              )
+          )
+        )
+
+        CodeBlockItemSyntax(
+          item: .expr(
+            core.genEncodeRawDataHandleExpr(
+              key: property.name,
+              rawDataName: property.rawDataName,
+              rawStringName: property.rawStringName,
+              message: "Failed to transcode raw data to string",
+              isOptional: property.isOptional,
+              explicitNil: property.options.contains(.explicitNil)
             )
-          }
-          """
-        }
+          )
+        )
       }
     }
   }
