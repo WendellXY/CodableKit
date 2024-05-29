@@ -223,3 +223,39 @@ extension CodeGenCore {
     }
   }
 }
+
+// MARK: Code Generation Helpers
+
+extension CodeGenCore {
+  /// Generate type expr like `YourType.self`
+  func genTypeExpr(typeName: String) -> MemberAccessExprSyntax {
+    MemberAccessExprSyntax(
+      base: DeclReferenceExprSyntax(baseName: .identifier(typeName)),
+      declName: DeclReferenceExprSyntax(baseName: .identifier("self"))
+    )
+  }
+  /// Generate dot expr like `.yourEnumCase`
+  func genDotExpr(name: String) -> MemberAccessExprSyntax {
+    MemberAccessExprSyntax(name: .identifier(name))
+  }
+
+  /// Generate a variable declaration.
+  func genVariableDecl(
+    bindingSpecifier: TokenSyntax = .keyword(.let),
+    name: String,
+    type: String? = nil,
+    initializer: (some ExprSyntaxProtocol)? = nil
+  ) -> VariableDeclSyntax {
+    let typeAnnotation = type.map {
+      TypeAnnotationSyntax(type: TypeSyntax(IdentifierTypeSyntax(name: .identifier($0))))
+    }
+    let initializerClause = initializer.map { InitializerClauseSyntax(value: $0) }
+    return VariableDeclSyntax(bindingSpecifier: bindingSpecifier) {
+      PatternBindingSyntax(
+        pattern: IdentifierPatternSyntax(identifier: .identifier(name)),
+        typeAnnotation: typeAnnotation,
+        initializer: initializerClause
+      )
+    }
+  }
+}

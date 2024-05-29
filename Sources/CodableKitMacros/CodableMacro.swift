@@ -78,8 +78,8 @@ extension CodableMacro {
       name: "CodingKeys",
       inheritanceClause: .init(
         inheritedTypesBuilder: {
-          InheritedTypeSyntax(type: "String" as TypeSyntax)
-          InheritedTypeSyntax(type: "CodingKey" as TypeSyntax)
+          InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("String")))
+          InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("CodingKey")))
         }
       )
     ) {
@@ -107,47 +107,52 @@ extension CodableMacro {
             "from decoder: Decoder"
           }
         ),
-        effectSpecifiers: .init(
-          throwsSpecifier: "throws"
-        )
+        effectSpecifiers: .init(throwsSpecifier: .keyword(.throws))
       )
     ) {
-      "let container = try decoder.container(keyedBy: CodingKeys.self)"
+      CodeBlockItemSyntax(item: .decl(DeclSyntax(core.genDecodeContainerDecl())))
       for property in properties where property.isNormal {
-        let key = property.name
-        let type = property.type
-        if let defaultValue = property.defaultValue {
-          "\(key) = try container.decodeIfPresent(\(type).self, forKey: .\(key)) ?? \(defaultValue)"
-        } else if property.isOptional {
-          "\(key) = try container.decodeIfPresent(\(type).self, forKey: .\(key)) ?? nil"
-        } else {
-          "\(key) = try container.decode(\(type).self, forKey: .\(key))"
-        }
+        CodeBlockItemSyntax(
+          item: .expr(
+            core.genContainerDecodeExpr(
+              variableName: property.name,
+              patternName: property.name,
+              isOptional: property.isOptional,
+              useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
+              defaultValueExpr: property.defaultValue,
+              type: property.type
+            )
+          )
+        )
       }
 
       for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
         let key = property.name
         let rawKey = property.rawStringName
-        if let defaultValue = property.defaultValue {
-          "let \(rawKey) = try container.decodeIfPresent(String.self, forKey: .\(key)) ?? \(defaultValue)"
-        } else if property.isOptional {
-          "let \(rawKey) = try container.decodeIfPresent(String.self, forKey: .\(key)) ?? nil"
-        } else {
-          "let \(rawKey) = try container.decode(String.self, forKey: .\(key))"
-        }
-        """
-        if let \(property.rawDataName) = \(rawKey).data(using: .utf8) {
-          \(key) = try JSONDecoder().decode(\(property.type).self, from: \(property.rawDataName))
-        } else {
-          throw DecodingError.valueNotFound(
-            String.self,
-            DecodingError.Context(
-              codingPath: [CodingKeys.\(key)],
-              debugDescription: "Failed to convert raw string to data"
+        CodeBlockItemSyntax(
+          item: .decl(
+            core.genContainerDecodeVariableDecl(
+              variableName: rawKey,
+              patternName: key,
+              isOptional: property.isOptional,
+              useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
+              defaultValueExpr: property.defaultValue,
+              type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String")))
             )
           )
-        }
-        """
+        )
+
+        CodeBlockItemSyntax(
+          item: .expr(
+            core.genRawDataHandleExpr(
+              key: property.name,
+              rawDataName: property.rawDataName,
+              rawStringName: property.rawStringName,
+              type: property.type,
+              message: "Failed to convert raw string to data"
+            )
+          )
+        )
       }
     }
   }
@@ -167,12 +172,10 @@ extension CodableMacro {
             "to encoder: Encoder"
           }
         ),
-        effectSpecifiers: .init(
-          throwsSpecifier: "throws"
-        )
+        effectSpecifiers: .init(throwsSpecifier: .keyword(.throws))
       )
     ) {
-      "var container = encoder.container(keyedBy: CodingKeys.self)"
+      CodeBlockItemSyntax(item: .decl(DeclSyntax(core.genEncodeContainerDecl())))
       for property in properties where property.isNormal {
         if property.isOptional && !property.options.contains(.explicitNil) {
           "try container.encodeIfPresent(\(property.name), forKey: .\(property.name))"
