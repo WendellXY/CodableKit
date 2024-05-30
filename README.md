@@ -1,5 +1,10 @@
 # CodableKit ⚡️
 
+![Swift 5.10](https://img.shields.io/badge/Swift-5.10-orange.svg)
+![iOS](https://img.shields.io/badge/platform-iOS-blue.svg)
+![macOS](https://img.shields.io/badge/platform-macOS-blue.svg)
+![CI](https://github.com/WendellXY/CodableKit/actions/workflows/ci.yml/badge.svg)
+
 CodableKit is a Swift macro package designed to simplify the use of Swift's `Codable` protocol by allowing easy
 integration of default values, reducing the amount of auxiliary code you need to write.
 
