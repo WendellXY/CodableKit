@@ -13,9 +13,11 @@ import SwiftSyntax
 extension CodeGenCore {
   fileprivate func genJSONDecoderDecodeRightOperand(
     type: TypeSyntax,
-    data: PatternSyntax
+    data: PatternSyntax,
+    withQuestionMark: Bool
   ) -> some ExprSyntaxProtocol {
     TryExprSyntax(
+      questionOrExclamationMark: withQuestionMark ? .infixQuestionMarkToken(leadingTrivia: .spaces(0)) : nil,
       expression: FunctionCallExprSyntax(
         calledExpression: MemberAccessExprSyntax(
           base: FunctionCallExprSyntax(
@@ -41,15 +43,28 @@ extension CodeGenCore {
   fileprivate func genJSONDecoderDecodeExpr(
     variableName: PatternSyntax,
     type: TypeSyntax,
-    data: PatternSyntax
+    data: PatternSyntax,
+    defaultValueExpr: ExprSyntax?
   ) -> ExprSyntax {
-    ExprSyntax(
+    let jsonDecoderExpr = ExprSyntax(
+      genJSONDecoderDecodeRightOperand(type: type, data: data, withQuestionMark: defaultValueExpr != nil)
+    )
+
+    let defaultExpr = ExprSyntax(
       InfixOperatorExprSyntax(
-        leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(variableName)")),
-        operator: AssignmentExprSyntax(equal: .equalToken()),
-        rightOperand: genJSONDecoderDecodeRightOperand(type: type, data: data)
+        leftOperand: TupleExprSyntax(elements: LabeledExprListSyntax([LabeledExprSyntax(expression: jsonDecoderExpr)])),
+        operator: BinaryOperatorExprSyntax(operator: .binaryOperator("??")),
+        rightOperand: defaultValueExpr ?? ExprSyntax(NilLiteralExprSyntax())
       )
     )
+
+    return ExprSyntax(
+        InfixOperatorExprSyntax(
+          leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(variableName)")),
+          operator: AssignmentExprSyntax(equal: .equalToken()),
+          rightOperand: defaultValueExpr == nil ? jsonDecoderExpr : defaultExpr
+        )
+      )
   }
 }
 
@@ -241,6 +256,7 @@ extension CodeGenCore {
     key: PatternSyntax,
     rawDataName: PatternSyntax,
     rawStringName: PatternSyntax,
+    defaultValueExpr: ExprSyntax?,
     type: TypeSyntax,
     message: String
   ) -> ExprSyntax {
@@ -277,7 +293,8 @@ extension CodeGenCore {
               genJSONDecoderDecodeExpr(
                 variableName: key,
                 type: type,
-                data: rawDataName
+                data: rawDataName,
+                defaultValueExpr: defaultValueExpr
               )
             )
           )

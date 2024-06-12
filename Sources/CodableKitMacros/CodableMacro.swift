@@ -136,7 +136,7 @@ extension CodableMacro {
               patternName: key,
               isOptional: property.isOptional,
               useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
-              defaultValueExpr: property.defaultValue,
+              defaultValueExpr: nil,
               type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String")))
             )
           )
@@ -148,6 +148,7 @@ extension CodableMacro {
               key: property.name,
               rawDataName: property.rawDataName,
               rawStringName: property.rawStringName,
+              defaultValueExpr: property.defaultValue,
               type: property.type,
               message: "Failed to convert raw string to data"
             )
