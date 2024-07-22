@@ -136,7 +136,7 @@ extension CodableMacro {
               patternName: key,
               isOptional: property.isOptional,
               useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
-              defaultValueExpr: nil,
+              defaultValueExpr: ExprSyntax(StringLiteralExprSyntax(content: "")),
               type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String")))
             )
           )
