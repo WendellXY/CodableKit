@@ -36,14 +36,14 @@ By setting the default value of the `year` property to 2024, the value will be 2
 
 The Codable macro provides several additional features through the `@CodableKey` attribute and its associated options:
 
-*	**Custom Coding Keys**: Change the coding key for a property.
+- **Custom Coding Keys**: Change the coding key for a property.
 
 ```swift
 @CodableKey("uid")
 let id: UUID
 ```
 
-* **CodableKeyOptions**: Customize the behavior of properties using various options.
+- **CodableKeyOptions**: Customize the behavior of properties using various options.
 
 ```swift
 @CodableKey(options: [.useDefaultOnFailure, .transcodeRawString])
@@ -53,12 +53,18 @@ var someProperty: SomeType
 > You can find the details in the [CodableKeyOptions.swift](Sources/CodableKitShared/CodableKeyOptions.swift) file.
 
 Available options:
-* `.default`: The default options (empty set).
-* `.ignored`: The property will be ignored during encoding and decoding.
-* `.explicitNil`: The key will be explicitly set to `nil` (`null`) when encoding and decoding, instead of being omitted.
-* `.generateCustomKey`: Generates a computed property to access the key when a custom CodableKey is used.
-* `.transcodeRawString`: Transcodes the value between raw string and the target type during encoding and decoding.
-* `.useDefaultOnFailure`: Uses the default value (if set) when decoding or encoding fails.
+
+- `.default`: The default options (empty set).
+  
+- `.ignored`: The property will be ignored during encoding and decoding.
+
+- `.explicitNil`: The key will be explicitly set to `nil` (`null`) when encoding and decoding, instead of being omitted.
+
+- `.generateCustomKey`: Generates a computed property to access the key when a custom CodableKey is used.
+
+- `.transcodeRawString`: Transcodes the value between raw string and the target type during encoding and decoding.
+
+- `.useDefaultOnFailure`: Uses the default value (if set) when decoding or encoding fails.
 
 ## Example
 
@@ -92,13 +98,20 @@ struct User {
 ```
 
 In this example:
-* `id` uses a custom coding key "uid".
-* `age` has a default value of 24.
-* `avatar` uses the default value if decoding fails.
-* `car` is transcoded from a raw string to the `Car` struct.
-* `thisPropertyWillNotBeIncluded` is ignored during encoding and decoding.
-* `email` uses a custom key "custom_email" and generates a computed property for access.
-* `optionalField` will be explicitly set to `null` when `nil`, instead of being omitted.
+
+- `id` uses a custom coding key "uid".
+
+- `age` has a default value of 24.
+
+- `avatar` uses the default value if decoding fails.
+
+- `car` is transcoded from a raw string to the `Car` struct.
+
+- `thisPropertyWillNotBeIncluded` is ignored during encoding and decoding.
+
+- `email` uses a custom key "custom_email" and generates a computed property for access.
+
+- `optionalField` will be explicitly set to `null` when `nil`, instead of being omitted.
 
 ## Installation
 
