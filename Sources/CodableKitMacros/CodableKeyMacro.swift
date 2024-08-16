@@ -8,13 +8,35 @@
 import SwiftSyntax
 import SwiftSyntaxMacros
 
-public struct CodableKeyMacro: PeerMacro {
+public struct CodableKeyMacro {
+  internal static let core = CodeGenCore.shared
+}
+
+extension CodableKeyMacro: PeerMacro {
   public static func expansion(
     of node: AttributeSyntax,
     providingPeersOf declaration: some DeclSyntaxProtocol,
     in context: some MacroExpansionContext
   ) throws -> [DeclSyntax] {
-    // Does nothing, used only to decorate members with data
-    return []
+
+    // Check if the declaration is a variable declaration otherwise return an empty array
+    guard var declaration = VariableDeclSyntax(declaration) else {
+      return []
+    }
+
+    // If the variable is a compute property, return an empty array
+    guard declaration.bindings.first?.accessorBlock == nil else {
+      return []
+    }
+
+    declaration.attributes.append(.init(node))
+
+    try core.prepareCodeGeneration(for: declaration)
+
+    let properties = try core.properties(for: declaration)
+
+    return properties.filter(\.shouldGenerateCustomCodingKeyVariable)
+      .compactMap(core.genCustomKeyVariable)
+      .map(DeclSyntax.init)
   }
 }

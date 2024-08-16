@@ -10,8 +10,10 @@ import Foundation
 import SwiftDiagnostics
 import SwiftSyntax
 
-final class CodeGenCore {
+internal final class CodeGenCore {
   typealias Property = CodableMacro.Property
+
+  internal static let shared = CodeGenCore()
 
   private let messageID = MessageID(domain: "CodableKit", id: "CodableMacro")
 
@@ -20,7 +22,7 @@ final class CodeGenCore {
   private var properties: [SyntaxIdentifier: [CodableMacro.Property]] = [:]
   private var accessModifiers: [SyntaxIdentifier: DeclModifierSyntax] = [:]
 
-  private let allAccessModifiers: Set<String> = [
+  internal static let allAccessModifiers: Set<String> = [
     TokenSyntax.keyword(.open).text,
     TokenSyntax.keyword(.public).text,
     TokenSyntax.keyword(.package).text,
@@ -32,15 +34,13 @@ final class CodeGenCore {
 
 extension CodeGenCore {
   func properties(for declaration: some SyntaxProtocol) throws -> [Property] {
-    if let properties = properties[declaration.id] {
-      return properties
-    }
+    properties[declaration.id] ?? []
 
-    throw SimpleDiagnosticMessage(
-      message: "Properties for declaration \(declaration) not found",
-      diagnosticID: messageID,
-      severity: .error
-    )
+    // throw SimpleDiagnosticMessage(
+    //   message: "Properties for declaration not found",
+    //   diagnosticID: messageID,
+    //   severity: .error
+    // )
   }
 
   func accessModifier(for declaration: some SyntaxProtocol) throws -> DeclModifierSyntax {
@@ -49,7 +49,7 @@ extension CodeGenCore {
     }
 
     throw SimpleDiagnosticMessage(
-      message: "Access modifier for declaration \(declaration) not found",
+      message: "Access modifier for declaration not found",
       diagnosticID: messageID,
       severity: .error
     )
@@ -67,7 +67,7 @@ extension CodeGenCore {
         declaration.as(VariableDeclSyntax.self)
       }
       .filter { variable in
-        variable.bindings.first?.accessorBlock == nil
+        variable.bindings.first?.accessorBlock == nil  // Ignore computed properties
       }
       .flatMap(extractProperty)
   }
@@ -78,17 +78,17 @@ extension CodeGenCore {
   ) throws -> [Property] {
     let attributes = variable.attributes.compactMap { $0.as(AttributeSyntax.self) }
 
-    let modifiers = variable.modifiers.map { $0.name.text }
+    let modifiers = variable.modifiers.map { $0 }
 
     // Ignore static properties
-    guard !modifiers.contains("static") else { return [] }
+    guard !modifiers.map(\.name.text).contains("static") else { return [] }
 
     guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
       // If no binding is found, return empty array.
       guard let lastBinding = variable.bindings.last else { return [] }
       // To check if a property is ignored, create a temporary property. If the property is ignored, return an empty
       // array. Otherwise, throw an error.
-      let tmpProperty = Property(attributes: attributes, binding: lastBinding, defaultType: "Any")
+      let tmpProperty = Property(attributes: attributes, declModifiers: [], binding: lastBinding, defaultType: "Any")
 
       if tmpProperty.ignored {
         return []
@@ -102,7 +102,7 @@ extension CodeGenCore {
     }
 
     return variable.bindings.map { binding in
-      Property(attributes: attributes, binding: binding, defaultType: defaultType)
+      Property(attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: defaultType)
     }
   }
 
@@ -142,7 +142,6 @@ extension CodeGenCore {
       }
 
       let extractedProperties = try extractProperties(from: declaration)
-      properties[id] = extractedProperties
 
       if extractedProperties.isEmpty {
         throw SimpleDiagnosticMessage(
@@ -151,6 +150,8 @@ extension CodeGenCore {
           severity: .warning
         )
       }
+
+      properties[id] = extractedProperties
     }
 
     if accessModifiers[id] == nil {
@@ -163,7 +164,7 @@ extension CodeGenCore {
       }
 
       accessModifiers[id] =
-        if let accessModifier = declaration.modifiers.first(where: { allAccessModifiers.contains($0.name.text) }) {
+        if let accessModifier = declaration.modifiers.first(where: { Self.allAccessModifiers.contains($0.name.text) }) {
           accessModifier
         } else {
           DeclModifierSyntax(name: .keyword(.internal))
@@ -191,12 +192,10 @@ extension CodeGenCore {
     if properties[id]?.isEmpty ?? true {
       let extractedProperties = try extractProperty(from: declaration)
 
-      guard let extractedProperty = extractedProperties.first else {
-        throw SimpleDiagnosticMessage(
-          message: "No properties found",
-          diagnosticID: messageID,
-          severity: .warning
-        )
+      guard !extractedProperties.isEmpty else {
+        // for single variable declaration, if no property is found, which means the error should be thrown in the
+        // extractProperty method. If the error is not thrown, it means the property is ignored.
+        return
       }
 
       // Since the properties extracted from the declaration share the same CodableKey, we can check the first property
@@ -210,12 +209,12 @@ extension CodeGenCore {
         )
       }
 
-      properties[id] = [extractedProperty]
+      properties[id] = extractedProperties
     }
 
     if accessModifiers[id] == nil {
       accessModifiers[id] =
-        if let accessModifier = declaration.modifiers.first(where: { allAccessModifiers.contains($0.name.text) }) {
+        if let accessModifier = declaration.modifiers.first(where: { Self.allAccessModifiers.contains($0.name.text) }) {
           accessModifier
         } else {
           DeclModifierSyntax(name: .keyword(.internal))
@@ -257,5 +256,31 @@ extension CodeGenCore {
         initializer: initializerClause
       )
     }
+  }
+}
+
+extension CodeGenCore {
+  /// Generate the custom key variable for the property.
+  func genCustomKeyVariable(
+    for property: Property
+  ) -> VariableDeclSyntax? {
+    guard let customCodableKey = property.customCodableKey else { return nil }
+
+    let pattern = PatternBindingSyntax(
+      pattern: customCodableKey,
+      typeAnnotation: TypeAnnotationSyntax(type: property.type),
+      accessorBlock: AccessorBlockSyntax(
+        leadingTrivia: .space,
+        leftBrace: .leftBraceToken(),
+        accessors: .getter("\(property.name)"),
+        rightBrace: .rightBraceToken()
+      )
+    )
+
+    return VariableDeclSyntax(
+      modifiers: DeclModifierListSyntax([property.accessModifier]),
+      bindingSpecifier: .keyword(.var),
+      bindings: [pattern]
+    )
   }
 }

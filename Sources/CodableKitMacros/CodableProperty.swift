@@ -19,6 +19,8 @@ extension CodableKeyMacro {
 struct CodableProperty {
   /// The attributes of the property
   let attributes: [AttributeSyntax]
+  /// The declaration modifiers of the property
+  let declModifiers: [DeclModifierSyntax]
   /// The name of the property
   let name: PatternSyntax
   /// The type of the property
@@ -30,15 +32,18 @@ struct CodableProperty {
   ///
   /// - Parameters:
   ///   - attributes: The attributes associated with the macro.
+  ///   - declModifiers: The declaration modifiers associated of the property.
   ///   - binding: The pattern binding syntax.
   ///   - type: The default type syntax. Variable Decl might not have a type annotation like in
   ///  `let a, b: String`, so we need to pass the default type.
   init(
     attributes: [AttributeSyntax],
+    declModifiers: [DeclModifierSyntax],
     binding: PatternBindingSyntax,
     defaultType type: TypeSyntax
   ) {
     self.attributes = attributes
+    self.declModifiers = declModifiers
     self.name = binding.pattern
     self.type = binding.typeAnnotation?.type.trimmed ?? type.trimmed
     self.defaultValue = binding.initializer?.value
@@ -55,6 +60,13 @@ extension CodableProperty {
     attributes.first(where: {
       $0.attributeName.as(IdentifierTypeSyntax.self)?.description == "CodableKey"
     })?.arguments?.as(LabeledExprListSyntax.self)
+  }
+
+  /// The access modifier of the property, if not found, it will default to `internal`
+  var accessModifier: DeclModifierSyntax {
+    declModifiers.first { decl in
+      CodeGenCore.allAccessModifiers.contains(decl.name.text)
+    } ?? DeclModifierSyntax(name: .keyword(.internal))
   }
 
   /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key

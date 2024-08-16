@@ -32,8 +32,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
         }
         """,
       diagnostics: [
-        .init(message: "Properties must have a type annotation", line: 1, column: 1),
-        .init(message: "Code generation already prepared for declaration but properties not found", line: 1, column: 1),
+        .init(message: "Properties must have a type annotation", line: 1, column: 1)
       ],
       macros: macros,
       indentationWidth: .spaces(2)

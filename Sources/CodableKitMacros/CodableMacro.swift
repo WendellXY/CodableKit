@@ -12,7 +12,7 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 public struct CodableMacro {
-  private static let core = CodeGenCore()
+  internal static let core = CodeGenCore.shared
 }
 
 // MARK: - ExtensionMacro
@@ -43,26 +43,6 @@ extension CodableMacro: ExtensionMacro {
         genEncodeFuncDecl(from: properties, modifiers: [accessModifier])
       }
     ]
-  }
-}
-
-// MARK: - MemberMacro
-
-extension CodableMacro: MemberMacro {
-  public static func expansion(
-    of node: AttributeSyntax,
-    providingMembersOf declaration: some DeclGroupSyntax,
-    in context: some MacroExpansionContext
-  ) throws -> [DeclSyntax] {
-    try core.prepareCodeGeneration(for: declaration)
-
-    let properties = try core.properties(for: declaration)
-    let accessModifier = try core.accessModifier(for: declaration)
-
-    return properties.filter(\.shouldGenerateCustomCodingKeyVariable).compactMap { property in
-      genCustomKeyVariable(for: property, modifiers: [accessModifier])
-    }
-    .map(DeclSyntax.init)
   }
 }
 
@@ -213,34 +193,5 @@ extension CodableMacro {
         )
       }
     }
-  }
-}
-
-// MARK: Others
-extension CodableMacro {
-  /// Generate the custom key variable for the property.
-  fileprivate static func genCustomKeyVariable(
-    for property: Property,
-    modifiers: DeclModifierListSyntax
-  ) -> VariableDeclSyntax? {
-    guard let customCodableKey = property.customCodableKey else { return nil }
-
-    let pattern = PatternBindingSyntax(
-      pattern: customCodableKey,
-      typeAnnotation: TypeAnnotationSyntax(type: property.type),
-      accessorBlock: AccessorBlockSyntax(
-        leadingTrivia: .space,
-        leftBrace: .leftBraceToken(),
-        accessors: .getter("\(property.name)"),
-        rightBrace: .rightBraceToken()
-      )
-    )
-
-    return VariableDeclSyntax(
-      leadingTrivia: .newline,
-      modifiers: modifiers,
-      bindingSpecifier: .keyword(.var),
-      bindings: [pattern]
-    )
   }
 }

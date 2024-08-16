@@ -13,7 +13,7 @@ import XCTest
 
 final class CodableKitTests: XCTestCase {
   func testMacros() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       @Codable
@@ -55,13 +55,13 @@ final class CodableKitTests: XCTestCase {
       macros: macros,
       indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacroWithDefaultValue() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       @Codable
@@ -103,13 +103,13 @@ final class CodableKitTests: XCTestCase {
       macros: macros,
       indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacroWithCodableKeyAndDefaultValue() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       @Codable
@@ -152,13 +152,13 @@ final class CodableKitTests: XCTestCase {
       macros: macros,
       indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacroWithOptionalValue() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       @Codable
@@ -200,13 +200,13 @@ final class CodableKitTests: XCTestCase {
       macros: macros,
       indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacroWithIgnoredCodableKey() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       @Codable
@@ -251,13 +251,13 @@ final class CodableKitTests: XCTestCase {
       macros: macros,
       indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacroWithExplicitNil() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       @Codable
@@ -305,13 +305,13 @@ final class CodableKitTests: XCTestCase {
       macros: macros,
       indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacroWithOneCustomKeyGenerated() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       @Codable
@@ -325,12 +325,12 @@ final class CodableKitTests: XCTestCase {
       expandedSource: """
         public struct User {
           let id: UUID
-          let name: String
-          let age: Int
 
-          public var uid: UUID {
+          internal var uid: UUID {
             id
           }
+          let name: String
+          let age: Int
         }
 
         extension User: Codable {
@@ -358,13 +358,13 @@ final class CodableKitTests: XCTestCase {
       macros: macros,
       indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacroWithTwoCustomKeyGenerated() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       @Codable
@@ -379,16 +379,16 @@ final class CodableKitTests: XCTestCase {
       expandedSource: """
         public struct User {
           let id: UUID
-          let name: String
-          let age: Int
 
-          public var uid: UUID {
+          internal var uid: UUID {
             id
           }
+          let name: String
 
-          public var givenName: String {
+          internal var givenName: String {
             name
           }
+          let age: Int
         }
 
         extension User: Codable {
@@ -416,13 +416,13 @@ final class CodableKitTests: XCTestCase {
       macros: macros,
       indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacroWithDecodingRawString() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       struct Room: Codable {
@@ -500,181 +500,181 @@ final class CodableKitTests: XCTestCase {
       macros: macros,
       indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacroWithDecodingRawStringAndIgnoreError() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
-        """
+      """
+      struct Room: Codable {
+        let id: UUID
+        let name: String
+      }
+      @Codable
+      public struct User {
+        let id: UUID
+        let name: String
+        let age: Int
+        @CodableKey(options: [.useDefaultOnFailure, .transcodeRawString])
+        let room: Room
+      }
+      """,
+      expandedSource: """
         struct Room: Codable {
           let id: UUID
           let name: String
         }
-        @Codable
         public struct User {
           let id: UUID
           let name: String
           let age: Int
-          @CodableKey(options: [.useDefaultOnFailure, .transcodeRawString])
           let room: Room
         }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case room
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+            let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
+            if let roomRawData = roomRawString.data(using: .utf8) {
+              room = try JSONDecoder().decode(Room.self, from: roomRawData)
+            } else {
+              throw DecodingError.valueNotFound(
+                String.self,
+                DecodingError.Context(
+                  codingPath: [CodingKeys.room],
+                  debugDescription: "Failed to convert raw string to data"
+                )
+              )
+            }
+          }
+
+          public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            try container.encode(age, forKey: .age)
+            let roomRawData = try JSONEncoder().encode(room)
+            if let roomRawString = String(data: roomRawData, encoding: .utf8) {
+              try container.encode(roomRawString, forKey: .room)
+            } else {
+              throw EncodingError.invalidValue(
+                roomRawData,
+                EncodingError.Context(
+                  codingPath: [CodingKeys.room],
+                  debugDescription: "Failed to transcode raw data to string"
+                )
+              )
+            }
+          }
+        }
         """,
-        expandedSource: """
-          struct Room: Codable {
-            let id: UUID
-            let name: String
-          }
-          public struct User {
-            let id: UUID
-            let name: String
-            let age: Int
-            let room: Room
-          }
-
-          extension User: Codable {
-            enum CodingKeys: String, CodingKey {
-              case id
-              case name
-              case age
-              case room
-            }
-
-            public init(from decoder: any Decoder) throws {
-              let container = try decoder.container(keyedBy: CodingKeys.self)
-              id = try container.decode(UUID.self, forKey: .id)
-              name = try container.decode(String.self, forKey: .name)
-              age = try container.decode(Int.self, forKey: .age)
-              let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
-              if let roomRawData = roomRawString.data(using: .utf8) {
-                room = try JSONDecoder().decode(Room.self, from: roomRawData)
-              } else {
-                throw DecodingError.valueNotFound(
-                  String.self,
-                  DecodingError.Context(
-                    codingPath: [CodingKeys.room],
-                    debugDescription: "Failed to convert raw string to data"
-                  )
-                )
-              }
-            }
-
-            public func encode(to encoder: any Encoder) throws {
-              var container = encoder.container(keyedBy: CodingKeys.self)
-              try container.encode(id, forKey: .id)
-              try container.encode(name, forKey: .name)
-              try container.encode(age, forKey: .age)
-              let roomRawData = try JSONEncoder().encode(room)
-              if let roomRawString = String(data: roomRawData, encoding: .utf8) {
-                try container.encode(roomRawString, forKey: .room)
-              } else {
-                throw EncodingError.invalidValue(
-                  roomRawData,
-                  EncodingError.Context(
-                    codingPath: [CodingKeys.room],
-                    debugDescription: "Failed to transcode raw data to string"
-                  )
-                )
-              }
-            }
-          }
-          """,
-        macros: macros,
-        indentationWidth: .spaces(2)
+      macros: macros,
+      indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacroWithDecodingRawStringWithDefaultValueAndIgnoreError() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
-        """
+      """
+      struct Room: Codable {
+        let id: UUID
+        let name: String
+      }
+      @Codable
+      public struct User {
+        let id: UUID
+        let name: String
+        let age: Int
+        @CodableKey(options: [.useDefaultOnFailure, .transcodeRawString])
+        var room: Room = Room(id: UUID(), name: "Hello")
+      }
+      """,
+      expandedSource: """
         struct Room: Codable {
           let id: UUID
           let name: String
         }
-        @Codable
         public struct User {
           let id: UUID
           let name: String
           let age: Int
-          @CodableKey(options: [.useDefaultOnFailure, .transcodeRawString])
           var room: Room = Room(id: UUID(), name: "Hello")
         }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case room
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+            let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
+            if let roomRawData = roomRawString.data(using: .utf8) {
+              room = (try? JSONDecoder().decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
+            } else {
+              throw DecodingError.valueNotFound(
+                String.self,
+                DecodingError.Context(
+                  codingPath: [CodingKeys.room],
+                  debugDescription: "Failed to convert raw string to data"
+                )
+              )
+            }
+          }
+
+          public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            try container.encode(age, forKey: .age)
+            let roomRawData = try JSONEncoder().encode(room)
+            if let roomRawString = String(data: roomRawData, encoding: .utf8) {
+              try container.encode(roomRawString, forKey: .room)
+            } else {
+              throw EncodingError.invalidValue(
+                roomRawData,
+                EncodingError.Context(
+                  codingPath: [CodingKeys.room],
+                  debugDescription: "Failed to transcode raw data to string"
+                )
+              )
+            }
+          }
+        }
         """,
-        expandedSource: """
-          struct Room: Codable {
-            let id: UUID
-            let name: String
-          }
-          public struct User {
-            let id: UUID
-            let name: String
-            let age: Int
-            var room: Room = Room(id: UUID(), name: "Hello")
-          }
-
-          extension User: Codable {
-            enum CodingKeys: String, CodingKey {
-              case id
-              case name
-              case age
-              case room
-            }
-
-            public init(from decoder: any Decoder) throws {
-              let container = try decoder.container(keyedBy: CodingKeys.self)
-              id = try container.decode(UUID.self, forKey: .id)
-              name = try container.decode(String.self, forKey: .name)
-              age = try container.decode(Int.self, forKey: .age)
-              let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
-              if let roomRawData = roomRawString.data(using: .utf8) {
-                room = (try? JSONDecoder().decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
-              } else {
-                throw DecodingError.valueNotFound(
-                  String.self,
-                  DecodingError.Context(
-                    codingPath: [CodingKeys.room],
-                    debugDescription: "Failed to convert raw string to data"
-                  )
-                )
-              }
-            }
-
-            public func encode(to encoder: any Encoder) throws {
-              var container = encoder.container(keyedBy: CodingKeys.self)
-              try container.encode(id, forKey: .id)
-              try container.encode(name, forKey: .name)
-              try container.encode(age, forKey: .age)
-              let roomRawData = try JSONEncoder().encode(room)
-              if let roomRawString = String(data: roomRawData, encoding: .utf8) {
-                try container.encode(roomRawString, forKey: .room)
-              } else {
-                throw EncodingError.invalidValue(
-                  roomRawData,
-                  EncodingError.Context(
-                    codingPath: [CodingKeys.room],
-                    debugDescription: "Failed to transcode raw data to string"
-                  )
-                )
-              }
-            }
-          }
-          """,
-        macros: macros,
-        indentationWidth: .spaces(2)
+      macros: macros,
+      indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 
   func testMacrosWithOptionUseDefaultOnFailure() throws {
-#if canImport(CodableKitMacros)
+    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       enum Role: UInt8, Codable {
@@ -732,8 +732,8 @@ final class CodableKitTests: XCTestCase {
       macros: macros,
       indentationWidth: .spaces(2)
     )
-#else
+    #else
     throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+    #endif
   }
 }
