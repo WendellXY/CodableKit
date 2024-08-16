@@ -8,7 +8,7 @@
 
 import SwiftSyntax
 
-public struct CodableKeyOptions: OptionSet {
+public struct CodableKeyOptions: OptionSet, Sendable {
   public let rawValue: Int32
 
   public init(rawValue: Int32) {

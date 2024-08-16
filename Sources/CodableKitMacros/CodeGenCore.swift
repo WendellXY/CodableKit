@@ -12,11 +12,12 @@ import SwiftSyntax
 import SwiftSyntaxMacros
 
 /// Currently supported structure type of the declaration
-internal enum StructureType {
+internal enum StructureType: Sendable {
   case structType
   case classType(hasSuperclass: Bool)
 }
 
+@preconcurrency // Disable warning when turning on StrictConcurrency Swift feature
 internal final class CodeGenCore {
   internal typealias Property = CodableMacro.Property
   internal typealias MacroContextKey = String

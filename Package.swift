@@ -28,6 +28,7 @@ let package = Package(
       name: "CodableKitMacros",
       dependencies: [
         "CodableKitShared",
+        .product(name: "SwiftSyntax", package: "swift-syntax"),
         .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
         .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
       ]
@@ -42,7 +43,9 @@ let package = Package(
     .testTarget(
       name: "CodableKitTests",
       dependencies: [
+        "CodableKitShared",
         "CodableKitMacros",
+        .product(name: "SwiftSyntax", package: "swift-syntax"),
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
       ]
     ),
