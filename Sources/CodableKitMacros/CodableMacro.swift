@@ -104,7 +104,7 @@ extension CodableMacro {
       signature: .init(
         parameterClause: .init(
           parametersBuilder: {
-            "from decoder: Decoder"
+            "from decoder: any Decoder"
           }
         ),
         effectSpecifiers: .init(throwsSpecifier: .keyword(.throws))
@@ -169,7 +169,7 @@ extension CodableMacro {
       name: .identifier("encode"),
       signature: .init(
         parameterClause: FunctionParameterClauseSyntax {
-          "to encoder: Encoder"
+          "to encoder: any Encoder"
         },
         effectSpecifiers: .init(throwsSpecifier: .keyword(.throws))
       )
