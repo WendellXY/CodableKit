@@ -28,14 +28,6 @@ final class CodableKitTests: XCTestCase {
           let id: UUID
           let name: String
           let age: Int
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -49,6 +41,14 @@ final class CodableKitTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
           }
         }
         """,
@@ -76,14 +76,6 @@ final class CodableKitTests: XCTestCase {
           let id: UUID
           let name: String
           var age: Int = 24
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -97,6 +89,14 @@ final class CodableKitTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
           }
         }
         """,
@@ -125,14 +125,6 @@ final class CodableKitTests: XCTestCase {
           let id: UUID
           let name: String
           var age: Int = 24
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age = "currentAge"
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -146,6 +138,14 @@ final class CodableKitTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age = "currentAge"
           }
         }
         """,
@@ -173,14 +173,6 @@ final class CodableKitTests: XCTestCase {
           let id: UUID
           let name: String
           var age: Int? = 24
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -194,6 +186,14 @@ final class CodableKitTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encodeIfPresent(age, forKey: .age)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
           }
         }
         """,
@@ -224,14 +224,6 @@ final class CodableKitTests: XCTestCase {
           let name: String
           var age: Int? = 24
           let thisPropertyWillBeIgnored: String
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -245,6 +237,14 @@ final class CodableKitTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encodeIfPresent(age, forKey: .age)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
           }
         }
         """,
@@ -275,15 +275,6 @@ final class CodableKitTests: XCTestCase {
           let name: String
           var age: Int? = 24
           let explicitNil: String?
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-            case explicitNil
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -299,6 +290,15 @@ final class CodableKitTests: XCTestCase {
             try container.encode(name, forKey: .name)
             try container.encodeIfPresent(age, forKey: .age)
             try container.encode(explicitNil, forKey: .explicitNil)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case explicitNil
           }
         }
         """,
@@ -331,14 +331,6 @@ final class CodableKitTests: XCTestCase {
           }
           let name: String
           let age: Int
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id = "uid"
-            case name
-            case age
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -352,6 +344,14 @@ final class CodableKitTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id = "uid"
+            case name
+            case age
           }
         }
         """,
@@ -389,14 +389,6 @@ final class CodableKitTests: XCTestCase {
             name
           }
           let age: Int
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id = "uid"
-            case name = "givenName"
-            case age
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -410,6 +402,14 @@ final class CodableKitTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id = "uid"
+            case name = "givenName"
+            case age
           }
         }
         """,
@@ -448,15 +448,6 @@ final class CodableKitTests: XCTestCase {
           let name: String
           let age: Int
           let room: Room
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-            case room
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -496,6 +487,15 @@ final class CodableKitTests: XCTestCase {
             }
           }
         }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case room
+          }
+        }
         """,
       macros: macros,
       indentationWidth: .spaces(2)
@@ -532,15 +532,6 @@ final class CodableKitTests: XCTestCase {
           let name: String
           let age: Int
           let room: Room
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-            case room
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -580,6 +571,15 @@ final class CodableKitTests: XCTestCase {
             }
           }
         }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case room
+          }
+        }
         """,
       macros: macros,
       indentationWidth: .spaces(2)
@@ -616,15 +616,6 @@ final class CodableKitTests: XCTestCase {
           let name: String
           let age: Int
           var room: Room = Room(id: UUID(), name: "Hello")
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-            case room
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -662,6 +653,15 @@ final class CodableKitTests: XCTestCase {
                 )
               )
             }
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case room
           }
         }
         """,
@@ -702,15 +702,6 @@ final class CodableKitTests: XCTestCase {
           let name: String
           let age: Int
           var role: Role = .unknown
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-            case role
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -726,6 +717,15 @@ final class CodableKitTests: XCTestCase {
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
             try container.encode(role, forKey: .role)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case role
           }
         }
         """,

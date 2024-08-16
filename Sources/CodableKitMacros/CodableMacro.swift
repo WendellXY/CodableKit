@@ -25,23 +25,76 @@ extension CodableMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
-    try core.prepareCodeGeneration(for: declaration)
+    try core.prepareCodeGeneration(for: declaration, in: context)
 
-    let properties = try core.properties(for: declaration)
-    let accessModifier = try core.accessModifier(for: declaration)
+    let properties = try core.properties(for: declaration, in: context)
+    let structureType = try core.accessStructureType(for: declaration, in: context)
 
-    let inheritanceClause = InheritanceClauseSyntax {
-      InheritedTypeSyntax(type: "Codable" as TypeSyntax)
+    guard !properties.isEmpty else {
+      // If there are no properties, return an empty array.
+      return []
     }
+
+    let inheritanceClause: InheritanceClauseSyntax? =
+      if case .classType(let hasSuperclass) = structureType, hasSuperclass {
+        nil
+      } else {
+        InheritanceClauseSyntax {
+          InheritedTypeSyntax(type: "Codable" as TypeSyntax)
+        }
+      }
 
     return [
       ExtensionDeclSyntax(
         extendedType: type, inheritanceClause: inheritanceClause
       ) {
         genCodingKeyEnumDecl(from: properties)
-        genInitDecoderDecl(from: properties, modifiers: [accessModifier])
-        genEncodeFuncDecl(from: properties, modifiers: [accessModifier])
       }
+    ]
+  }
+}
+
+// MARK: - MemberMacro
+
+extension CodableMacro: MemberMacro {
+  public static func expansion(
+    of node: AttributeSyntax,
+    providingMembersOf declaration: some DeclGroupSyntax,
+    conformingTo protocols: [TypeSyntax],
+    in context: some MacroExpansionContext
+  ) throws -> [DeclSyntax] {
+    try core.prepareCodeGeneration(for: declaration, in: context)
+
+    let properties = try core.properties(for: declaration, in: context)
+    let accessModifier = try core.accessModifier(for: declaration, in: context)
+    let structureType = try core.accessStructureType(for: declaration, in: context)
+
+    guard !properties.isEmpty else {
+      // If there are no properties, return an empty array.
+      return []
+    }
+
+    var decodeModifiers = [accessModifier]
+    var encodeModifiers = [accessModifier]
+
+    // If the structure is a class and has a superclass, this should be set to true.
+    // This flag is used to determine if the encode and decode methods
+    var hasSuper = false
+
+    switch structureType {
+    case let .classType(hasSuperclass):
+      decodeModifiers.append(.init(name: .keyword(.required)))
+      if hasSuperclass {
+        encodeModifiers.append(.init(name: .keyword(.override)))
+        hasSuper = true
+      }
+    case .structType:
+      break
+    }
+
+    return [
+      DeclSyntax(genInitDecoderDecl(from: properties, modifiers: decodeModifiers, hasSuper: hasSuper)),
+      DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper)),
     ]
   }
 }
@@ -76,11 +129,12 @@ extension CodableMacro {
   /// Generate the `init(from decoder: Decoder)` method of the `Codable` protocol.
   fileprivate static func genInitDecoderDecl(
     from properties: [Property],
-    modifiers: DeclModifierListSyntax
+    modifiers: [DeclModifierSyntax],
+    hasSuper: Bool
   ) -> InitializerDeclSyntax {
     InitializerDeclSyntax(
       leadingTrivia: .newline,
-      modifiers: modifiers,
+      modifiers: DeclModifierListSyntax(modifiers),
       signature: .init(
         parameterClause: .init(
           parametersBuilder: {
@@ -135,17 +189,22 @@ extension CodableMacro {
           )
         )
       }
+
+      if hasSuper {
+        "try super.init(from: decoder)"
+      }
     }
   }
 
   /// Generate the `func encode(to encoder: Encoder)` method of the `Codable` protocol.
   fileprivate static func genEncodeFuncDecl(
     from properties: [Property],
-    modifiers: DeclModifierListSyntax
+    modifiers: [DeclModifierSyntax],
+    hasSuper: Bool
   ) -> FunctionDeclSyntax {
     FunctionDeclSyntax(
       leadingTrivia: .newline,
-      modifiers: modifiers,
+      modifiers: DeclModifierListSyntax(modifiers),
       name: .identifier("encode"),
       signature: .init(
         parameterClause: FunctionParameterClauseSyntax {
@@ -191,6 +250,10 @@ extension CodableMacro {
             )
           )
         )
+      }
+
+      if hasSuper {
+        "try super.encode(to: encoder)"
       }
     }
   }

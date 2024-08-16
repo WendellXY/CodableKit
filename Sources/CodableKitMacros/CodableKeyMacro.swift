@@ -31,9 +31,9 @@ extension CodableKeyMacro: PeerMacro {
 
     declaration.attributes.append(.init(node))
 
-    try core.prepareCodeGeneration(for: declaration)
+    try core.prepareCodeGeneration(for: declaration, in: context)
 
-    let properties = try core.properties(for: declaration)
+    let properties = try core.properties(for: declaration, in: context)
 
     return properties.filter(\.shouldGenerateCustomCodingKeyVariable)
       .compactMap(core.genCustomKeyVariable)

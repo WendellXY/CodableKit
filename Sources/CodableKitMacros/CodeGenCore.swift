@@ -9,18 +9,27 @@
 import Foundation
 import SwiftDiagnostics
 import SwiftSyntax
+import SwiftSyntaxMacros
+
+/// Currently supported structure type of the declaration
+internal enum StructureType {
+  case structType
+  case classType(hasSuperclass: Bool)
+}
 
 internal final class CodeGenCore {
-  typealias Property = CodableMacro.Property
+  internal typealias Property = CodableMacro.Property
+  internal typealias MacroContextKey = String
 
   internal static let shared = CodeGenCore()
 
   private let messageID = MessageID(domain: "CodableKit", id: "CodableMacro")
 
   /// Declarations that have been prepared for code generation
-  private var preparedDeclarations: Set<SyntaxIdentifier> = []
-  private var properties: [SyntaxIdentifier: [CodableMacro.Property]] = [:]
-  private var accessModifiers: [SyntaxIdentifier: DeclModifierSyntax] = [:]
+  private var preparedDeclarations: Set<MacroContextKey> = []
+  private var properties: [MacroContextKey: [CodableMacro.Property]] = [:]
+  private var accessModifiers: [MacroContextKey: DeclModifierSyntax] = [:]
+  private var structureTypes: [MacroContextKey: StructureType] = [:]
 
   internal static let allAccessModifiers: Set<String> = [
     TokenSyntax.keyword(.open).text,
@@ -30,11 +39,22 @@ internal final class CodeGenCore {
     TokenSyntax.keyword(.private).text,
     TokenSyntax.keyword(.fileprivate).text,
   ]
+
+  func key(for declaration: some SyntaxProtocol, in context: some MacroExpansionContext) -> MacroContextKey {
+    let location = context.location(of: declaration)
+    let syntaxIdentifier = declaration.id.hashValue
+
+    if let location {
+      return "\(location.file):\(location.line):\(location.column):\(syntaxIdentifier)"
+    } else {
+      return "\(syntaxIdentifier)"
+    }
+  }
 }
 
 extension CodeGenCore {
-  func properties(for declaration: some SyntaxProtocol) throws -> [Property] {
-    properties[declaration.id] ?? []
+  func properties(for declaration: some SyntaxProtocol, in context: some MacroExpansionContext) throws -> [Property] {
+    properties[key(for: declaration, in: context)] ?? []
 
     // throw SimpleDiagnosticMessage(
     //   message: "Properties for declaration not found",
@@ -43,8 +63,11 @@ extension CodeGenCore {
     // )
   }
 
-  func accessModifier(for declaration: some SyntaxProtocol) throws -> DeclModifierSyntax {
-    if let accessModifier = accessModifiers[declaration.id] {
+  func accessModifier(
+    for declaration: some SyntaxProtocol,
+    in context: some MacroExpansionContext
+  ) throws -> DeclModifierSyntax {
+    if let accessModifier = accessModifiers[key(for: declaration, in: context)] {
       return accessModifier
     }
 
@@ -54,8 +77,24 @@ extension CodeGenCore {
       severity: .error
     )
   }
+
+  func accessStructureType(
+    for declaration: some SyntaxProtocol,
+    in context: some MacroExpansionContext
+  ) throws -> StructureType {
+    if let structureType = structureTypes[key(for: declaration, in: context)] {
+      return structureType
+    }
+
+    throw SimpleDiagnosticMessage(
+      message: "Structure type for declaration not found",
+      diagnosticID: messageID,
+      severity: .error
+    )
+  }
 }
 
+// MARK: - Property Extraction
 extension CodeGenCore {
   /// Extract all the properties from structure and add type info.
   fileprivate func extractProperties(
@@ -105,26 +144,50 @@ extension CodeGenCore {
       Property(attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: defaultType)
     }
   }
+}
 
+// MARK: - Code Generation Preparation
+extension CodeGenCore {
   /// Validate that the macro is being applied to a struct declaration
-  fileprivate func validateDeclaration(_ declaration: some DeclGroupSyntax) throws {
+  fileprivate func validateDeclaration(for declaration: some DeclGroupSyntax, in context: some MacroExpansionContext)
+    throws
+  {
+    let id = key(for: declaration, in: context)
     // Struct
     if declaration.as(StructDeclSyntax.self) != nil {
+      structureTypes[id] = .structType
+      return
+    }
+
+    // Class
+    if let declaration = declaration.as(ClassDeclSyntax.self) {
+      // Check if the class has a superclass. Actually, it is impossible to check if a class has a
+      // superclass or not during macro expansion. So, we just check if the inheritance clause is empty,
+      // this is a trade-off, otherwise, we cannot implement @Codable as expected.
+      let hasSuperclass = declaration.inheritanceClause?.inheritedTypes.isEmpty == false
+      structureTypes[id] = .classType(hasSuperclass: hasSuperclass)
       return
     }
 
     throw SimpleDiagnosticMessage(
-      message: "Macro `CodableMacro` can only be applied to a struct",
+      message: "Macro `CodableMacro` can only be applied to a struct or a class",
       diagnosticID: messageID,
       severity: .error
     )
   }
 
   /// Prepare the code generation by extracting properties and access modifier.
-  func prepareCodeGeneration(for declaration: some DeclGroupSyntax) throws {
-    try validateDeclaration(declaration)
+  func prepareCodeGeneration(for declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws {
+    let id = key(for: declaration, in: context)
 
-    let id = declaration.id
+    guard preparedDeclarations.contains(id) == false else {
+      // Since we have two macro implementations, so this method could be called twice. If in the first call, the
+      // properties are not found, it means there are some errors in the first call. So, the error should be thrown
+      // in the first call already. We just return here.
+      return
+    }
+
+    try validateDeclaration(for: declaration, in: context)
 
     defer {
       preparedDeclarations.insert(id)
@@ -133,21 +196,13 @@ extension CodeGenCore {
     // Check if properties and access modifier are already prepared
 
     if properties[id]?.isEmpty ?? true {
-      guard preparedDeclarations.contains(id) == false else {
-        throw SimpleDiagnosticMessage(
-          message: "Code generation already prepared for declaration but properties not found",
-          diagnosticID: messageID,
-          severity: .error
-        )
-      }
-
       let extractedProperties = try extractProperties(from: declaration)
 
       if extractedProperties.isEmpty {
         throw SimpleDiagnosticMessage(
           message: "No properties found",
           diagnosticID: messageID,
-          severity: .warning
+          severity: .error
         )
       }
 
@@ -155,14 +210,6 @@ extension CodeGenCore {
     }
 
     if accessModifiers[id] == nil {
-      guard preparedDeclarations.contains(id) == false else {
-        throw SimpleDiagnosticMessage(
-          message: "Code generation already prepared for declaration but access modifier not found",
-          diagnosticID: messageID,
-          severity: .error
-        )
-      }
-
       accessModifiers[id] =
         if let accessModifier = declaration.modifiers.first(where: { Self.allAccessModifiers.contains($0.name.text) }) {
           accessModifier
@@ -171,11 +218,9 @@ extension CodeGenCore {
         }
     }
   }
-}
 
-extension CodeGenCore {
-  func prepareCodeGeneration(for declaration: VariableDeclSyntax) throws {
-    let id = declaration.id
+  func prepareCodeGeneration(for declaration: VariableDeclSyntax, in context: some MacroExpansionContext) throws {
+    let id = key(for: declaration, in: context)
 
     guard !preparedDeclarations.contains(id) else {
       throw SimpleDiagnosticMessage(
@@ -187,6 +232,17 @@ extension CodeGenCore {
 
     defer {
       preparedDeclarations.insert(id)
+    }
+
+    // For single variable declaration, use the property.accessModifier to get the access modifier. The following
+    // condition check would be removed someday.
+    if accessModifiers[id] == nil {
+      accessModifiers[id] =
+        if let accessModifier = declaration.modifiers.first(where: { Self.allAccessModifiers.contains($0.name.text) }) {
+          accessModifier
+        } else {
+          DeclModifierSyntax(name: .keyword(.internal))
+        }
     }
 
     if properties[id]?.isEmpty ?? true {
@@ -211,20 +267,10 @@ extension CodeGenCore {
 
       properties[id] = extractedProperties
     }
-
-    if accessModifiers[id] == nil {
-      accessModifiers[id] =
-        if let accessModifier = declaration.modifiers.first(where: { Self.allAccessModifiers.contains($0.name.text) }) {
-          accessModifier
-        } else {
-          DeclModifierSyntax(name: .keyword(.internal))
-        }
-    }
   }
 }
 
 // MARK: Code Generation Helpers
-
 extension CodeGenCore {
   /// Generate type expr like `YourType.self`
   func genTypeExpr(typeName: String) -> MemberAccessExprSyntax {

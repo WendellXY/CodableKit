@@ -61,14 +61,6 @@ final class CodableKitDiagnosticsTests: XCTestCase {
           let name: String
           let age: Int
           var ignored: String = "Hello World"
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -82,6 +74,14 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
           }
         }
         """,
@@ -113,14 +113,6 @@ final class CodableKitDiagnosticsTests: XCTestCase {
           let age: Int
 
           static let staticProperty = "Hello World"
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-            case name
-            case age
-          }
 
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -134,6 +126,14 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
           }
         }
         """,
