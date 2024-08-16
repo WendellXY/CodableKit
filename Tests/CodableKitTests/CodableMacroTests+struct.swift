@@ -11,7 +11,7 @@ import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
 
-final class CodableKitTests: XCTestCase {
+final class CodableKitTestsForStruct: XCTestCase {
   func testMacros() throws {
     #if canImport(CodableKitMacros)
     assertMacroExpansion(
