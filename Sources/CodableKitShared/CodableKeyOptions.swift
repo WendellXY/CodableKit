@@ -46,11 +46,36 @@ public struct CodableKeyOptions: OptionSet {
   /// }
   /// ```
   public static let generateCustomKey = Self(rawValue: 1 << 2)
-  /// Transcode the value between raw string and the target type. This is useful when the value needs to be converted
-  /// from a string to another type during decoding and vice versa during encoding. The type of the property must
-  /// conform to `Codable`, otherwise, a compile-time error will occur.
+  /// Transcode the value between raw string and the target type. 
+  /// 
+  /// This is useful when the value needs to be converted from a string to another 
+  /// type during decoding and vice versa during encoding. The type of the property 
+  /// must conform to `Codable`, otherwise, a compile-time error will occur.
+  /// 
+  /// For example, if you have a property `car` of type `Car` and you want to
+  /// transcode it to a raw string, in the past, you would need to write a custom
+  /// `init(from:)` and `encode(to:)` method. With this option, you can simply
+  /// add the `transcodeRawString` option to the property and set the type of the
+  /// property to the result type of the transcode operation.
+  /// 
+  /// ```swift
+  /// @Codable
+  /// struct MyStruct {
+  ///   @CodableKey(options: .transcodeRawString)
+  ///   var car: Car
+  /// }
+  /// ```
   public static let transcodeRawString = Self(rawValue: 1 << 3)
   /// Use the default value (if set) when decode or encode fails.
+  /// 
+  /// This option is only valid when the property has a default value or is optional (like `String?`).
+  /// If the property is optional and the default value is set, the default value will be used when the 
+  /// property is empty or the decoding fails. If the property is optional and the default value is not set,
+  /// the property will be set to `nil` when the decoding fails.
+  /// 
+  /// This option is useful when you want to use a default value when the decoding fails, for example, when
+  /// you have a enum property which decoded from a string, and you want to use a default value when the string
+  /// is not a valid case.
   public static let useDefaultOnFailure = Self(rawValue: 1 << 4)
 }
 
