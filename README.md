@@ -73,6 +73,13 @@ Here's a comprehensive example showcasing various features:
 ```swift
 @Codable
 struct User {
+    @Codable
+    struct Car {
+        let brand: String
+        let model: String
+        let year: Int
+    }
+
     @CodableKey("uid")
     let id: UUID
     
@@ -116,7 +123,7 @@ In this example:
 ## Installation
 
 ```swift
-.package(url: "https://github.com/WendellXY/CodableKit.git", from: "0.0.1"),
+.package(url: "https://github.com/WendellXY/CodableKit.git", from: "0.4.0"),
 ```
 
 ## Contributions
