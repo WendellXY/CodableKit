@@ -123,7 +123,28 @@ In this example:
 ## Installation
 
 ```swift
-.package(url: "https://github.com/WendellXY/CodableKit.git", from: "0.4.2"),
+.package(url: "https://github.com/WendellXY/CodableKit.git", from: "0.4.3"),
+```
+
+## Limitation
+
+When applying this macro to a base class, in the class definition header, you should not add any inheritance to the 
+class. Otherwise, this class will be considered as a class with a superclass, because the macro cannot identify whether 
+the inheritance is a class or a protocol during macro expansion.
+
+```swift
+// Codable will consider the BaseUser as a base class since it does not have any inheritance
+@Codable
+class BaseUser { }
+
+// Codable will consider the HashableUser as a subclass even if the inheritance just contains a protocol
+@Codable
+class HashableUser: Hashable { }
+
+// So you have to write the HashableUser like:
+@Codable
+class HashableUser { }
+extension HashableUser: Hashable { }
 ```
 
 ## Contributions
