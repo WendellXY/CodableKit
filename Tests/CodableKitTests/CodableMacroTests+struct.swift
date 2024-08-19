@@ -29,13 +29,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           let name: String
           let age: Int
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decode(Int.self, forKey: .age)
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -49,6 +42,13 @@ final class CodableKitTestsForStruct: XCTestCase {
             case id
             case name
             case age
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
           }
         }
         """,
@@ -77,13 +77,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           let name: String
           var age: Int = 24
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -97,6 +90,13 @@ final class CodableKitTestsForStruct: XCTestCase {
             case id
             case name
             case age
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
           }
         }
         """,
@@ -126,13 +126,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           let name: String
           var age: Int = 24
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -146,6 +139,13 @@ final class CodableKitTestsForStruct: XCTestCase {
             case id
             case name
             case age = "currentAge"
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
           }
         }
         """,
@@ -174,13 +174,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           let name: String
           var age: Int? = 24
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -194,6 +187,13 @@ final class CodableKitTestsForStruct: XCTestCase {
             case id
             case name
             case age
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
           }
         }
         """,
@@ -225,13 +225,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           var age: Int? = 24
           let thisPropertyWillBeIgnored: String
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -245,6 +238,13 @@ final class CodableKitTestsForStruct: XCTestCase {
             case id
             case name
             case age
+          }
+        
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
           }
         }
         """,
@@ -276,14 +276,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           var age: Int? = 24
           let explicitNil: String?
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
-            explicitNil = try container.decodeIfPresent(String?.self, forKey: .explicitNil) ?? nil
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -299,6 +291,14 @@ final class CodableKitTestsForStruct: XCTestCase {
             case name
             case age
             case explicitNil
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
+            explicitNil = try container.decodeIfPresent(String?.self, forKey: .explicitNil) ?? nil
           }
         }
         """,
@@ -332,13 +332,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           let name: String
           let age: Int
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decode(Int.self, forKey: .age)
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -352,6 +345,13 @@ final class CodableKitTestsForStruct: XCTestCase {
             case id = "uid"
             case name
             case age
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
           }
         }
         """,
@@ -390,13 +390,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           }
           let age: Int
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decode(Int.self, forKey: .age)
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -410,6 +403,13 @@ final class CodableKitTestsForStruct: XCTestCase {
             case id = "uid"
             case name = "givenName"
             case age
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
           }
         }
         """,
@@ -449,25 +449,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           let age: Int
           let room: Room
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decode(Int.self, forKey: .age)
-            let roomRawString = try container.decodeIfPresent(String.self, forKey: .room) ?? ""
-            if let roomRawData = roomRawString.data(using: .utf8) {
-              room = try JSONDecoder().decode(Room.self, from: roomRawData)
-            } else {
-              throw DecodingError.valueNotFound(
-                String.self,
-                DecodingError.Context(
-                  codingPath: [CodingKeys.room],
-                  debugDescription: "Failed to convert raw string to data"
-                )
-              )
-            }
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -494,6 +475,25 @@ final class CodableKitTestsForStruct: XCTestCase {
             case name
             case age
             case room
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+            let roomRawString = try container.decodeIfPresent(String.self, forKey: .room) ?? ""
+            if let roomRawData = roomRawString.data(using: .utf8) {
+              room = try JSONDecoder().decode(Room.self, from: roomRawData)
+            } else {
+              throw DecodingError.valueNotFound(
+                String.self,
+                DecodingError.Context(
+                  codingPath: [CodingKeys.room],
+                  debugDescription: "Failed to convert raw string to data"
+                )
+              )
+            }
           }
         }
         """,
@@ -533,25 +533,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           let age: Int
           let room: Room
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decode(Int.self, forKey: .age)
-            let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
-            if let roomRawData = roomRawString.data(using: .utf8) {
-              room = try JSONDecoder().decode(Room.self, from: roomRawData)
-            } else {
-              throw DecodingError.valueNotFound(
-                String.self,
-                DecodingError.Context(
-                  codingPath: [CodingKeys.room],
-                  debugDescription: "Failed to convert raw string to data"
-                )
-              )
-            }
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -578,6 +559,25 @@ final class CodableKitTestsForStruct: XCTestCase {
             case name
             case age
             case room
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+            let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
+            if let roomRawData = roomRawString.data(using: .utf8) {
+              room = try JSONDecoder().decode(Room.self, from: roomRawData)
+            } else {
+              throw DecodingError.valueNotFound(
+                String.self,
+                DecodingError.Context(
+                  codingPath: [CodingKeys.room],
+                  debugDescription: "Failed to convert raw string to data"
+                )
+              )
+            }
           }
         }
         """,
@@ -617,25 +617,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           let age: Int
           var room: Room = Room(id: UUID(), name: "Hello")
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decode(Int.self, forKey: .age)
-            let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
-            if let roomRawData = roomRawString.data(using: .utf8) {
-              room = (try? JSONDecoder().decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
-            } else {
-              throw DecodingError.valueNotFound(
-                String.self,
-                DecodingError.Context(
-                  codingPath: [CodingKeys.room],
-                  debugDescription: "Failed to convert raw string to data"
-                )
-              )
-            }
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -662,6 +643,25 @@ final class CodableKitTestsForStruct: XCTestCase {
             case name
             case age
             case room
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+            let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
+            if let roomRawData = roomRawString.data(using: .utf8) {
+              room = (try? JSONDecoder().decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
+            } else {
+              throw DecodingError.valueNotFound(
+                String.self,
+                DecodingError.Context(
+                  codingPath: [CodingKeys.room],
+                  debugDescription: "Failed to convert raw string to data"
+                )
+              )
+            }
           }
         }
         """,
@@ -703,14 +703,6 @@ final class CodableKitTestsForStruct: XCTestCase {
           let age: Int
           var role: Role = .unknown
 
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-            name = try container.decode(String.self, forKey: .name)
-            age = try container.decode(Int.self, forKey: .age)
-            role = (try? container.decodeIfPresent(Role.self, forKey: .role)) ?? .unknown
-          }
-
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -726,6 +718,14 @@ final class CodableKitTestsForStruct: XCTestCase {
             case name
             case age
             case role
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+            role = (try? container.decodeIfPresent(Role.self, forKey: .role)) ?? .unknown
           }
         }
         """,

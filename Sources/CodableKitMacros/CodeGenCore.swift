@@ -196,6 +196,15 @@ extension CodeGenCore {
 
     // Check if properties and access modifier are already prepared
 
+    if accessModifiers[id] == nil {
+      accessModifiers[id] =
+        if let accessModifier = declaration.modifiers.first(where: { Self.allAccessModifiers.contains($0.name.text) }) {
+          accessModifier
+        } else {
+          DeclModifierSyntax(name: .keyword(.internal))
+        }
+    }
+
     if properties[id]?.isEmpty ?? true {
       let extractedProperties = try extractProperties(from: declaration)
 
@@ -208,15 +217,6 @@ extension CodeGenCore {
       }
 
       properties[id] = extractedProperties
-    }
-
-    if accessModifiers[id] == nil {
-      accessModifiers[id] =
-        if let accessModifier = declaration.modifiers.first(where: { Self.allAccessModifiers.contains($0.name.text) }) {
-          accessModifier
-        } else {
-          DeclModifierSyntax(name: .keyword(.internal))
-        }
     }
   }
 
@@ -233,17 +233,6 @@ extension CodeGenCore {
 
     defer {
       preparedDeclarations.insert(id)
-    }
-
-    // For single variable declaration, use the property.accessModifier to get the access modifier. The following
-    // condition check would be removed someday.
-    if accessModifiers[id] == nil {
-      accessModifiers[id] =
-        if let accessModifier = declaration.modifiers.first(where: { Self.allAccessModifiers.contains($0.name.text) }) {
-          accessModifier
-        } else {
-          DeclModifierSyntax(name: .keyword(.internal))
-        }
     }
 
     if properties[id]?.isEmpty ?? true {

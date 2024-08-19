@@ -28,12 +28,11 @@ extension CodableMacro: ExtensionMacro {
     try core.prepareCodeGeneration(for: declaration, in: context)
 
     let properties = try core.properties(for: declaration, in: context)
+    let accessModifier = try core.accessModifier(for: declaration, in: context)
     let structureType = try core.accessStructureType(for: declaration, in: context)
 
-    guard !properties.isEmpty else {
-      // If there are no properties, return an empty array.
-      return []
-    }
+    // If there are no properties, return an empty array.
+    guard !properties.isEmpty else { return [] }
 
     let inheritanceClause: InheritanceClauseSyntax? =
       if case .classType(let hasSuperclass) = structureType, hasSuperclass {
@@ -44,13 +43,25 @@ extension CodableMacro: ExtensionMacro {
         }
       }
 
-    return [
-      ExtensionDeclSyntax(
-        extendedType: type, inheritanceClause: inheritanceClause
-      ) {
-        genCodingKeyEnumDecl(from: properties)
-      }
-    ]
+    return switch structureType {
+    case .classType:
+      [
+        ExtensionDeclSyntax(
+          extendedType: type, inheritanceClause: inheritanceClause
+        ) {
+          genCodingKeyEnumDecl(from: properties)
+        }
+      ]
+    case .structType:
+      [
+        ExtensionDeclSyntax(
+          extendedType: type, inheritanceClause: inheritanceClause
+        ) {
+          genCodingKeyEnumDecl(from: properties)
+          DeclSyntax(genInitDecoderDecl(from: properties, modifiers: [accessModifier], hasSuper: false))
+        }
+      ]
+    }
   }
 }
 
@@ -69,10 +80,8 @@ extension CodableMacro: MemberMacro {
     let accessModifier = try core.accessModifier(for: declaration, in: context)
     let structureType = try core.accessStructureType(for: declaration, in: context)
 
-    guard !properties.isEmpty else {
-      // If there are no properties, return an empty array.
-      return []
-    }
+    // If there are no properties, return an empty array.
+    guard !properties.isEmpty else { return [] }
 
     var decodeModifiers = [accessModifier]
     var encodeModifiers = [accessModifier]
@@ -92,10 +101,17 @@ extension CodableMacro: MemberMacro {
       break
     }
 
-    return [
-      DeclSyntax(genInitDecoderDecl(from: properties, modifiers: decodeModifiers, hasSuper: hasSuper)),
-      DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper)),
-    ]
+    return switch structureType {
+    case .classType:
+      [
+        DeclSyntax(genInitDecoderDecl(from: properties, modifiers: decodeModifiers, hasSuper: hasSuper)),
+        DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper)),
+      ]
+    case .structType: // Move the init logic to an extension to enable an automatic init method for the struct.
+      [
+        DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper)),
+      ]
+    }
   }
 }
 
