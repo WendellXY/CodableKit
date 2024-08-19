@@ -220,20 +220,32 @@ extension CodeGenCore {
     }
   }
 
-  func prepareCodeGeneration(for declaration: VariableDeclSyntax, in context: some MacroExpansionContext) throws {
+  func prepareCodeGeneration(
+    for declaration: some DeclSyntaxProtocol,
+    in context: some MacroExpansionContext,
+    with node: AttributeSyntax
+  ) throws -> [Property] {
     let id = key(for: declaration, in: context)
 
-    guard !preparedDeclarations.contains(id) else {
+    // Check if the declaration is a variable declaration
+    guard var declaration = VariableDeclSyntax(declaration) else {
       throw SimpleDiagnosticMessage(
-        message: "Code generation already prepared for declaration",
+        message: "Only variable declarations are supported",
         diagnosticID: messageID,
         severity: .error
       )
     }
 
-    defer {
-      preparedDeclarations.insert(id)
+    // If the variable is a compute property
+    guard declaration.bindings.first?.accessorBlock == nil else {
+      throw SimpleDiagnosticMessage(
+        message: "Only variable declarations with no accessor block are supported",
+        diagnosticID: messageID,
+        severity: .error
+      )
     }
+
+    declaration.attributes.append(.init(node))
 
     if properties[id]?.isEmpty ?? true {
       let extractedProperties = try extractProperty(from: declaration)
@@ -241,7 +253,7 @@ extension CodeGenCore {
       guard !extractedProperties.isEmpty else {
         // for single variable declaration, if no property is found, which means the error should be thrown in the
         // extractProperty method. If the error is not thrown, it means the property is ignored.
-        return
+        return []
       }
 
       // Since the properties extracted from the declaration share the same CodableKey, we can check the first property
@@ -256,6 +268,12 @@ extension CodeGenCore {
       }
 
       properties[id] = extractedProperties
+    }
+
+    return if let properties = properties[id] {
+      properties
+    } else {
+      []
     }
   }
 }
