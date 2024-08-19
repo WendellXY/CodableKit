@@ -54,7 +54,7 @@
 ///   }
 /// }
 /// ```
-@attached(extension, conformances: Codable, names: named(CodingKeys))
+@attached(extension, conformances: Codable, names: named(CodingKeys), named(init(from:)))
 @attached(member, names: named(init(from:)), named(encode(to:)))
 public macro Codable() = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
