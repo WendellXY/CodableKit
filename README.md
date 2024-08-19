@@ -123,7 +123,7 @@ In this example:
 ## Installation
 
 ```swift
-.package(url: "https://github.com/WendellXY/CodableKit.git", from: "0.4.0"),
+.package(url: "https://github.com/WendellXY/CodableKit.git", from: "0.4.2"),
 ```
 
 ## Contributions
