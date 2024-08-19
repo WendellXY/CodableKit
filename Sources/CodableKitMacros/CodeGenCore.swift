@@ -17,7 +17,7 @@ internal enum StructureType: Sendable {
   case classType(hasSuperclass: Bool)
 }
 
-@preconcurrency // Disable warning when turning on StrictConcurrency Swift feature
+@preconcurrency  // Disable warning when turning on StrictConcurrency Swift feature
 internal final class CodeGenCore {
   internal typealias Property = CodableMacro.Property
   internal typealias MacroContextKey = String
@@ -31,15 +31,6 @@ internal final class CodeGenCore {
   private var properties: [MacroContextKey: [CodableMacro.Property]] = [:]
   private var accessModifiers: [MacroContextKey: DeclModifierSyntax] = [:]
   private var structureTypes: [MacroContextKey: StructureType] = [:]
-
-  internal static let allAccessModifiers: Set<String> = [
-    TokenSyntax.keyword(.open).text,
-    TokenSyntax.keyword(.public).text,
-    TokenSyntax.keyword(.package).text,
-    TokenSyntax.keyword(.internal).text,
-    TokenSyntax.keyword(.private).text,
-    TokenSyntax.keyword(.fileprivate).text,
-  ]
 
   func key(for declaration: some SyntaxProtocol, in context: some MacroExpansionContext) -> MacroContextKey {
     let location = context.location(of: declaration)
@@ -121,7 +112,7 @@ extension CodeGenCore {
     let modifiers = variable.modifiers.map { $0 }
 
     // Ignore static properties
-    guard !modifiers.map(\.name.text).contains("static") else { return [] }
+    guard !modifiers.contains(where: \.name.isTypePropertyKeyword) else { return [] }
 
     guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
       // If no binding is found, return empty array.
@@ -198,7 +189,7 @@ extension CodeGenCore {
 
     if accessModifiers[id] == nil {
       accessModifiers[id] =
-        if let accessModifier = declaration.modifiers.first(where: { Self.allAccessModifiers.contains($0.name.text) }) {
+        if let accessModifier = declaration.modifiers.first(where: \.name.isAccessModifierKeyword) {
           accessModifier
         } else {
           DeclModifierSyntax(name: .keyword(.internal))
@@ -236,10 +227,19 @@ extension CodeGenCore {
       )
     }
 
-    // If the variable is a compute property
+    // Check if the variable is a compute property
     guard declaration.bindings.first?.accessorBlock == nil else {
       throw SimpleDiagnosticMessage(
         message: "Only variable declarations with no accessor block are supported",
+        diagnosticID: messageID,
+        severity: .error
+      )
+    }
+
+    // Check if the variable is not static or class property
+    guard !declaration.modifiers.contains(where: \.name.isTypePropertyKeyword) else {
+      throw SimpleDiagnosticMessage(
+        message: "Only non-static variable declarations are supported",
         diagnosticID: messageID,
         severity: .error
       )

@@ -64,9 +64,7 @@ extension CodableProperty {
 
   /// The access modifier of the property, if not found, it will default to `internal`
   var accessModifier: DeclModifierSyntax {
-    declModifiers.first { decl in
-      CodeGenCore.allAccessModifiers.contains(decl.name.text)
-    } ?? DeclModifierSyntax(name: .keyword(.internal))
+    declModifiers.first(where: \.name.isAccessModifierKeyword) ?? DeclModifierSyntax(name: .keyword(.internal))
   }
 
   /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key

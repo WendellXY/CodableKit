@@ -59,12 +59,12 @@ extension CodeGenCore {
     )
 
     return ExprSyntax(
-        InfixOperatorExprSyntax(
-          leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(variableName)")),
-          operator: AssignmentExprSyntax(equal: .equalToken()),
-          rightOperand: defaultValueExpr == nil ? jsonDecoderExpr : defaultExpr
-        )
+      InfixOperatorExprSyntax(
+        leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(variableName)")),
+        operator: AssignmentExprSyntax(equal: .equalToken()),
+        rightOperand: defaultValueExpr == nil ? jsonDecoderExpr : defaultExpr
       )
+    )
   }
 }
 

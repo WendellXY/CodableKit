@@ -107,9 +107,9 @@ extension CodableMacro: MemberMacro {
         DeclSyntax(genInitDecoderDecl(from: properties, modifiers: decodeModifiers, hasSuper: hasSuper)),
         DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper)),
       ]
-    case .structType: // Move the init logic to an extension to enable an automatic init method for the struct.
+    case .structType:  // Move the init logic to an extension to enable an automatic init method for the struct.
       [
-        DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper)),
+        DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper))
       ]
     }
   }

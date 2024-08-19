@@ -239,7 +239,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             case name
             case age
           }
-        
+
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             id = try container.decode(UUID.self, forKey: .id)
