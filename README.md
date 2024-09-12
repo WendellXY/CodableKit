@@ -94,7 +94,7 @@ struct User {
     var car: Car
 
     @CodableKey(options: .ignored)
-    let thisPropertyWillNotBeIncluded: String
+    let thisPropertyWillNotBeIncluded: String = "ignored"
 
     @CodableKey("custom_email", options: .generateCustomKey)
     var email: String
