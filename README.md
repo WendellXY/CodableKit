@@ -126,6 +126,15 @@ In this example:
 .package(url: "https://github.com/WendellXY/CodableKit.git", from: "1.0.0"),
 ```
 
+For those who still use Swift 5 or have dependencies that require Swift 5 or swift-syntax 510.0.0,
+you can use the previous 0.x version of CodableKit, which is compatible with Swift 5 and should
+cover most of features in the latest version. Be aware that the 0.x version will not be developed
+anymore, and it is recommended to upgrade to the latest version.
+
+```swift
+.package(url: "https://github.com/WendellXY/CodableKit.git", from: "0.4.0"),
+```
+
 ## Limitation
 
 When applying this macro to a base class, in the class definition header, you should not add any inheritance to the
