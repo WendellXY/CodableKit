@@ -18,7 +18,7 @@ internal enum StructureType: Sendable {
 }
 
 @preconcurrency  // Disable warning when turning on StrictConcurrency Swift feature
-internal final class CodeGenCore {
+internal final class CodeGenCore: @unchecked Sendable {
   internal typealias Property = CodableMacro.Property
   internal typealias MacroContextKey = String
 

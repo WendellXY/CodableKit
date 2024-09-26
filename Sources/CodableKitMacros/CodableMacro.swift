@@ -157,7 +157,7 @@ extension CodableMacro {
             "from decoder: any Decoder"
           }
         ),
-        effectSpecifiers: .init(throwsSpecifier: .keyword(.throws))
+        effectSpecifiers: .init(throwsClause: .init(throwsSpecifier: .keyword(.throws)))
       )
     ) {
       CodeBlockItemSyntax(item: .decl(core.genDecodeContainerDecl()))
@@ -226,7 +226,7 @@ extension CodableMacro {
         parameterClause: FunctionParameterClauseSyntax {
           "to encoder: any Encoder"
         },
-        effectSpecifiers: .init(throwsSpecifier: .keyword(.throws))
+        effectSpecifiers: .init(throwsClause: .init(throwsSpecifier: .keyword(.throws)))
       )
     ) {
       CodeBlockItemSyntax(item: .decl(core.genEncodeContainerDecl()))
