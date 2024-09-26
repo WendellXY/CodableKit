@@ -55,7 +55,7 @@ var someProperty: SomeType
 Available options:
 
 - `.default`: The default options (empty set).
-  
+
 - `.ignored`: The property will be ignored during encoding and decoding.
 
 - `.explicitNil`: The key will be explicitly set to `nil` (`null`) when encoding and decoding, instead of being omitted.
@@ -82,9 +82,9 @@ struct User {
 
     @CodableKey("uid")
     let id: UUID
-    
+
     let name: String
-    
+
     var age: Int = 24
 
     @CodableKey(options: .useDefaultOnFailure)
@@ -123,13 +123,13 @@ In this example:
 ## Installation
 
 ```swift
-.package(url: "https://github.com/WendellXY/CodableKit.git", from: "0.4.3"),
+.package(url: "https://github.com/WendellXY/CodableKit.git", from: "1.0.0"),
 ```
 
 ## Limitation
 
-When applying this macro to a base class, in the class definition header, you should not add any inheritance to the 
-class. Otherwise, this class will be considered as a class with a superclass, because the macro cannot identify whether 
+When applying this macro to a base class, in the class definition header, you should not add any inheritance to the
+class. Otherwise, this class will be considered as a class with a superclass, because the macro cannot identify whether
 the inheritance is a class or a protocol during macro expansion.
 
 ```swift
