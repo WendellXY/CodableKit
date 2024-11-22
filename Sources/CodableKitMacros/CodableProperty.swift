@@ -48,6 +48,24 @@ struct CodableProperty {
     self.type = binding.typeAnnotation?.type.trimmed ?? type.trimmed
     self.defaultValue = binding.initializer?.value
   }
+  
+  /// Initializes a `CodableMacro.Property` instance.
+  ///
+  /// - Parameters:
+  ///   - attributes: The attributes associated with the macro.
+  ///   - declModifiers: The declaration modifiers associated of the property.
+  ///   - caseElement: The element of an enum case
+  init(
+    attributes: [AttributeSyntax],
+    declModifiers: [DeclModifierSyntax],
+    caseElement: EnumCaseElementSyntax
+  ) {
+    self.attributes = attributes
+    self.declModifiers = declModifiers
+    self.name = PatternSyntax(IdentifierPatternSyntax(identifier: caseElement.name))
+    self.type = "Never"
+    self.defaultValue = nil
+  }
 }
 
 extension CodableProperty {
@@ -106,6 +124,17 @@ extension CodableProperty {
 extension CodableProperty {
   var shouldGenerateCustomCodingKeyVariable: Bool {
     customCodableKey != nil && options.contains(.generateCustomKey)
+  }
+  
+  func checkOptionsAvailability(for type: StructureType) throws(CustomError) {
+    switch type {
+    case .enumType:
+      if !options.isEmpty && options != [.ignored] {
+        throw CustomError.message("`enum` type does not support any options except `.ignored`")
+      }
+    case .structType, .classType:
+      break
+    }
   }
 }
 

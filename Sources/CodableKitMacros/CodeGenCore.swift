@@ -15,6 +15,7 @@ import SwiftSyntaxMacros
 internal enum StructureType: Sendable {
   case structType
   case classType(hasSuperclass: Bool)
+  case enumType
 }
 
 @preconcurrency  // Disable warning when turning on StrictConcurrency Swift feature
@@ -47,12 +48,6 @@ internal final class CodeGenCore: @unchecked Sendable {
 extension CodeGenCore {
   func properties(for declaration: some SyntaxProtocol, in context: some MacroExpansionContext) throws -> [Property] {
     properties[key(for: declaration, in: context)] ?? []
-
-    // throw SimpleDiagnosticMessage(
-    //   message: "Properties for declaration not found",
-    //   diagnosticID: messageID,
-    //   severity: .error
-    // )
   }
 
   func accessModifier(
@@ -92,8 +87,14 @@ extension CodeGenCore {
   fileprivate func extractProperties(
     from declaration: some DeclGroupSyntax
   ) throws -> [Property] {
-    try declaration.memberBlock.members
-      .map(\.decl)
+    let declarations = declaration.memberBlock.members.map(\.decl)
+    return try extractVariableProperties(from: declarations) + extractEnumCaseProperties(from: declarations)
+  }
+  
+  fileprivate func extractVariableProperties(
+    from declarations: some Collection<DeclSyntax>
+  ) throws -> [Property] {
+    try declarations
       .compactMap { declaration in
         declaration.as(VariableDeclSyntax.self)
       }
@@ -102,7 +103,17 @@ extension CodeGenCore {
       }
       .flatMap(extractProperty)
   }
-
+  
+  fileprivate func extractEnumCaseProperties(
+    from declarations: some Collection<DeclSyntax>
+  ) throws -> [Property] {
+    try declarations
+      .compactMap { declaration in
+        declaration.as(EnumCaseDeclSyntax.self)
+      }
+      .flatMap(extractProperty)
+  }
+  
   /// Extract properties from a single variable declaration
   fileprivate func extractProperty(
     from variable: VariableDeclSyntax
@@ -136,14 +147,27 @@ extension CodeGenCore {
       Property(attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: defaultType)
     }
   }
+  
+  fileprivate func extractProperty(
+    from caseDecl: EnumCaseDeclSyntax
+  ) throws -> [Property] {
+    let attributes = caseDecl.attributes.compactMap { $0.as(AttributeSyntax.self) }
+    
+    let modifiers = caseDecl.modifiers.map { $0 }
+    
+    return caseDecl.elements.map { element in
+      Property(attributes: attributes, declModifiers: modifiers, caseElement: element)
+    }
+  }
 }
 
 // MARK: - Code Generation Preparation
 extension CodeGenCore {
   /// Validate that the macro is being applied to a struct declaration
-  fileprivate func validateDeclaration(for declaration: some DeclGroupSyntax, in context: some MacroExpansionContext)
-    throws
-  {
+  fileprivate func validateDeclaration(
+    for declaration: some DeclGroupSyntax,
+    in context: some MacroExpansionContext
+  ) throws {
     let id = key(for: declaration, in: context)
     // Struct
     if declaration.as(StructDeclSyntax.self) != nil {
@@ -160,9 +184,15 @@ extension CodeGenCore {
       structureTypes[id] = .classType(hasSuperclass: hasSuperclass)
       return
     }
+    
+    // Enum
+    if declaration.as(EnumDeclSyntax.self) != nil {
+      structureTypes[id] = .enumType
+      return
+    }
 
     throw SimpleDiagnosticMessage(
-      message: "Macro `CodableMacro` can only be applied to a struct or a class",
+      message: "Macro `CodableMacro` can only be applied to the struct, class or enum declaration.",
       diagnosticID: messageID,
       severity: .error
     )
@@ -220,11 +250,26 @@ extension CodeGenCore {
 
     // Check if the declaration is a variable declaration
     guard var declaration = VariableDeclSyntax(declaration) else {
-      throw SimpleDiagnosticMessage(
-        message: "Only variable declarations are supported",
-        diagnosticID: messageID,
-        severity: .error
-      )
+      if let caseDecl = EnumCaseDeclSyntax(declaration) {
+        do {
+          try extractProperty(from: caseDecl).forEach { proxy in
+            try proxy.checkOptionsAvailability(for: .enumType)
+          }
+          return []
+        } catch {
+          throw SimpleDiagnosticMessage(
+            message: error.localizedDescription,
+            diagnosticID: messageID,
+            severity: .warning
+          )
+        }
+      } else {
+        throw SimpleDiagnosticMessage(
+          message: "Only variable declarations are supported",
+          diagnosticID: messageID,
+          severity: .error
+        )
+      }
     }
 
     // Check if the variable is a compute property

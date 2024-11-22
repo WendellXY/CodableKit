@@ -61,6 +61,14 @@ extension CodableMacro: ExtensionMacro {
           DeclSyntax(genInitDecoderDecl(from: properties, modifiers: [accessModifier], hasSuper: false))
         }
       ]
+    case .enumType:
+      [
+        ExtensionDeclSyntax(
+          extendedType: type, inheritanceClause: inheritanceClause
+        ) {
+          genCodingKeyEnumDecl(from: properties)
+        }
+      ]
     }
   }
 }
@@ -97,7 +105,7 @@ extension CodableMacro: MemberMacro {
         encodeModifiers.append(.init(name: .keyword(.override)))
         hasSuper = true
       }
-    case .structType:
+    case .structType, .enumType:
       break
     }
 
@@ -110,6 +118,10 @@ extension CodableMacro: MemberMacro {
     case .structType:  // Move the init logic to an extension to enable an automatic init method for the struct.
       [
         DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper))
+      ]
+    case .enumType:
+      [
+        // Not implemented
       ]
     }
   }
