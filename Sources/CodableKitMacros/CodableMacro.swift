@@ -114,9 +114,9 @@ extension CodableMacro: MemberMacro {
     case .structType, .enumType:
       break
     }
-    
+
     var result: [DeclSyntax] = []
-    
+
     switch structureType {
     case .classType:
       if codableType.contains(.decodable) {

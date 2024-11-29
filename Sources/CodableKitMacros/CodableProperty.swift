@@ -48,7 +48,7 @@ struct CodableProperty {
     self.type = binding.typeAnnotation?.type.trimmed ?? type.trimmed
     self.defaultValue = binding.initializer?.value
   }
-  
+
   /// Initializes a `CodableMacro.Property` instance.
   ///
   /// - Parameters:
@@ -125,7 +125,7 @@ extension CodableProperty {
   var shouldGenerateCustomCodingKeyVariable: Bool {
     customCodableKey != nil && options.contains(.generateCustomKey)
   }
-  
+
   func checkOptionsAvailability(for type: StructureType) throws(CustomError) {
     switch type {
     case .enumType:

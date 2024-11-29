@@ -13,7 +13,7 @@ import XCTest
 
 final class CodableKitTestsForSubClass: XCTestCase {
   func testMacros() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -54,16 +54,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithDefaultValue() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -104,16 +102,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithCodableKeyAndDefaultValue() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -155,16 +151,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithOptionalValue() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -205,16 +199,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithIgnoredCodableKey() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -258,16 +250,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithExplicitNil() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -314,16 +304,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithOneCustomKeyGenerated() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -369,16 +357,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithTwoCustomKeyGenerated() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -429,16 +415,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithDecodingRawString() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       struct Room: Codable {
@@ -515,16 +499,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithDecodingRawStringAndIgnoreError() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       struct Room: Codable {
@@ -601,16 +583,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithDecodingRawStringWithDefaultValueAndIgnoreError() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       struct Room: Codable {
@@ -687,16 +667,14 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacrosWithOptionUseDefaultOnFailure() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       enum Role: UInt8, Codable {
@@ -753,11 +731,9 @@ final class CodableKitTestsForSubClass: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 }
