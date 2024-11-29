@@ -6,13 +6,18 @@
 //  Copyright © 2024 WendellXY. All rights reserved.
 //
 
-import SwiftSyntaxMacros
-
-#if canImport(CodableKitMacros)
 import CodableKitMacros
+import SwiftSyntax
+import SwiftSyntaxMacroExpansion
+import SwiftSyntaxMacros
+import SwiftSyntaxMacrosTestSupport
 
 let macros: [String: any Macro.Type] = [
   "Codable": CodableMacro.self,
   "CodableKey": CodableKeyMacro.self,
 ]
-#endif
+
+let macroSpecs: [String: MacroSpec] = [
+  "Codable": MacroSpec(type: CodableMacro.self, conformances: ["Codable"]),
+  "CodableKey": MacroSpec(type: CodableKeyMacro.self),
+]

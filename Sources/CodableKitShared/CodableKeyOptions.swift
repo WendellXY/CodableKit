@@ -17,7 +17,7 @@ public struct CodableKeyOptions: OptionSet, Sendable {
 
   /// The default options for a `CodableKey`, which is equivalent to an empty set.
   public static let `default`: Self = []
-  
+
   /// The key will be ignored during encoding and decoding.
   ///
   /// This option is useful when you want to add a local or runtime-only property to the structure without creating
@@ -26,11 +26,11 @@ public struct CodableKeyOptions: OptionSet, Sendable {
   /// -  Important: Using the `.ignored` option for an enum case may lead to runtime issues if you attempt to decode
   /// or encode the enum with that case using the `.ignored` option.
   public static let ignored = Self(rawValue: 1 << 0)
-  
+
   /// The key will be explicitly set to `nil` (`null`) when encoding and decoding.
   /// By default, the key will be omitted if the value is `nil`.
   public static let explicitNil = Self(rawValue: 1 << 1)
-  
+
   /// If the key has a custom CodableKey, a computed property will be generated to access the key; otherwise, this
   /// option is ignored.
   ///
@@ -55,7 +55,7 @@ public struct CodableKeyOptions: OptionSet, Sendable {
   /// }
   /// ```
   public static let generateCustomKey = Self(rawValue: 1 << 2)
-  
+
   /// Transcode the value between raw string and the target type.
   ///
   /// This is useful when the value needs to be converted from a string to another
@@ -76,7 +76,7 @@ public struct CodableKeyOptions: OptionSet, Sendable {
   /// }
   /// ```
   public static let transcodeRawString = Self(rawValue: 1 << 3)
-  
+
   /// Use the default value (if set) when decode or encode fails.
   ///
   /// This option is only valid when the property has a default value or is optional (like `String?`).

@@ -14,7 +14,6 @@ import XCTest
 
 final class CodableKitDiagnosticsTests: XCTestCase {
   func testMacroWithNoTypeAnnotation() throws {
-    #if canImport(CodableKitMacros)
     assertMacroExpansion(
       """
       @Codable
@@ -34,16 +33,13 @@ final class CodableKitDiagnosticsTests: XCTestCase {
       diagnostics: [
         .init(message: "Properties must have a type annotation", line: 1, column: 1)
       ],
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
   }
 
   func testMacroWithIgnoredPropertyTypeAnnotation() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -85,16 +81,14 @@ final class CodableKitDiagnosticsTests: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroWithStaticTypeAnnotation() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -137,16 +131,14 @@ final class CodableKitDiagnosticsTests: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroOnComputeProperty() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -195,16 +187,14 @@ final class CodableKitDiagnosticsTests: XCTestCase {
       diagnostics: [
         .init(message: "Only variable declarations with no accessor block are supported", line: 6, column: 3)
       ],
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroOnStaticComputeProperty() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -253,16 +243,14 @@ final class CodableKitDiagnosticsTests: XCTestCase {
       diagnostics: [
         .init(message: "Only variable declarations with no accessor block are supported", line: 6, column: 3)
       ],
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 
   func testMacroOnStaticProperty() throws {
-    #if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -307,11 +295,9 @@ final class CodableKitDiagnosticsTests: XCTestCase {
       diagnostics: [
         .init(message: "Only non-static variable declarations are supported", line: 6, column: 3)
       ],
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-    #else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-    #endif
+
   }
 }

@@ -13,7 +13,7 @@ import XCTest
 
 final class CodableKitTestsForEnum: XCTestCase {
   func testMacros() throws {
-#if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -29,7 +29,7 @@ final class CodableKitTestsForEnum: XCTestCase {
             case int(Int)
             case none
         }
-        
+
         extension TestEnum: Codable {
           enum CodingKeys: String, CodingKey {
             case string
@@ -38,16 +38,14 @@ final class CodableKitTestsForEnum: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-#else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+
   }
-  
+
   func testMacrosWithCodableKey() throws {
-#if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -63,7 +61,7 @@ final class CodableKitTestsForEnum: XCTestCase {
             case int(Int)
             case none
         }
-        
+
         extension TestEnum: Codable {
           enum CodingKeys: String, CodingKey {
             case string = "str"
@@ -72,16 +70,14 @@ final class CodableKitTestsForEnum: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-#else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+
   }
-  
+
   func testMacrosWithIgnoredCodableKey() throws {
-#if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -97,7 +93,7 @@ final class CodableKitTestsForEnum: XCTestCase {
             case int(Int)
             case none
         }
-        
+
         extension TestEnum: Codable {
           enum CodingKeys: String, CodingKey {
             case string = "str"
@@ -105,16 +101,14 @@ final class CodableKitTestsForEnum: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-#else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+
   }
-  
+
   func testMacrosWithIndirectCase() throws {
-#if canImport(CodableKitMacros)
+
     assertMacroExpansion(
       """
       @Codable
@@ -134,7 +128,7 @@ final class CodableKitTestsForEnum: XCTestCase {
             indirect case nestedA(TestEnum)
             indirect case nestedB(TestEnum)
         }
-        
+
         extension TestEnum: Codable {
           enum CodingKeys: String, CodingKey {
             case string = "str"
@@ -145,11 +139,9 @@ final class CodableKitTestsForEnum: XCTestCase {
           }
         }
         """,
-      macros: macros,
+      macroSpecs: macroSpecs,
       indentationWidth: .spaces(2)
     )
-#else
-    throw XCTSkip("macros are only supported when running tests for the host platform")
-#endif
+
   }
 }
