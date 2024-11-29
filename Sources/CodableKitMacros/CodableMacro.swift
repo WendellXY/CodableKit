@@ -25,11 +25,12 @@ extension CodableMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
-    try core.prepareCodeGeneration(for: declaration, in: context)
+    try core.prepareCodeGeneration(for: declaration, in: context, conformingTo: protocols)
 
     let properties = try core.properties(for: declaration, in: context)
     let accessModifier = try core.accessModifier(for: declaration, in: context)
     let structureType = try core.accessStructureType(for: declaration, in: context)
+    let codableType = try core.accessCodableType(for: declaration, in: context)
 
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
@@ -39,7 +40,9 @@ extension CodableMacro: ExtensionMacro {
         nil
       } else {
         InheritanceClauseSyntax {
-          InheritedTypeSyntax(type: "Codable" as TypeSyntax)
+          for `protocol` in protocols {
+            InheritedTypeSyntax(type: `protocol`)
+          }
         }
       }
 
@@ -58,7 +61,9 @@ extension CodableMacro: ExtensionMacro {
           extendedType: type, inheritanceClause: inheritanceClause
         ) {
           genCodingKeyEnumDecl(from: properties)
-          DeclSyntax(genInitDecoderDecl(from: properties, modifiers: [accessModifier], hasSuper: false))
+          if codableType.contains(.decodable) {
+            DeclSyntax(genInitDecoderDecl(from: properties, modifiers: [accessModifier], hasSuper: false))
+          }
         }
       ]
     case .enumType:
@@ -82,11 +87,12 @@ extension CodableMacro: MemberMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [DeclSyntax] {
-    try core.prepareCodeGeneration(for: declaration, in: context)
+    try core.prepareCodeGeneration(for: declaration, in: context, conformingTo: protocols)
 
     let properties = try core.properties(for: declaration, in: context)
     let accessModifier = try core.accessModifier(for: declaration, in: context)
     let structureType = try core.accessStructureType(for: declaration, in: context)
+    let codableType = try core.accessCodableType(for: declaration, in: context)
 
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
@@ -108,22 +114,28 @@ extension CodableMacro: MemberMacro {
     case .structType, .enumType:
       break
     }
-
-    return switch structureType {
+    
+    var result: [DeclSyntax] = []
+    
+    switch structureType {
     case .classType:
-      [
-        DeclSyntax(genInitDecoderDecl(from: properties, modifiers: decodeModifiers, hasSuper: hasSuper)),
-        DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper)),
-      ]
-    case .structType:  // Move the init logic to an extension to enable an automatic init method for the struct.
-      [
-        DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper))
-      ]
+      if codableType.contains(.decodable) {
+        result.append(
+          DeclSyntax(genInitDecoderDecl(from: properties, modifiers: decodeModifiers, hasSuper: hasSuper))
+        )
+      }
+      fallthrough
+    case .structType:
+      if codableType.contains(.encodable) {
+        result.append(
+          DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper))
+        )
+      }
     case .enumType:
-      [
-        // Not implemented
-      ]
+      // Not implemented
+      break
     }
+    return result
   }
 }
 

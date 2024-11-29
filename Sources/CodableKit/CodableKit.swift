@@ -55,8 +55,16 @@
 /// }
 /// ```
 @attached(extension, conformances: Codable, names: named(CodingKeys), named(init(from:)))
-@attached(member, names: named(init(from:)), named(encode(to:)))
+@attached(member, conformances: Codable, names: named(init(from:)), named(encode(to:)))
 public macro Codable() = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
+
+@attached(extension, conformances: Decodable, names: named(CodingKeys), named(init(from:)))
+@attached(member, conformances: Decodable, names: named(init(from:)))
+public macro Decodable() = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
+
+@attached(extension, conformances: Encodable, names: named(CodingKeys))
+@attached(member, conformances: Encodable, names: named(encode(to:)))
+public macro Encodable() = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
 /// Custom the key used for encoding and decoding a property.
 ///

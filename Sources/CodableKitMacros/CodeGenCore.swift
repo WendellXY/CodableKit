@@ -32,6 +32,7 @@ internal final class CodeGenCore: @unchecked Sendable {
   private var properties: [MacroContextKey: [CodableMacro.Property]] = [:]
   private var accessModifiers: [MacroContextKey: DeclModifierSyntax] = [:]
   private var structureTypes: [MacroContextKey: StructureType] = [:]
+  private var codableTypes: [MacroContextKey: CodableType] = [:]
 
   func key(for declaration: some SyntaxProtocol, in context: some MacroExpansionContext) -> MacroContextKey {
     let location = context.location(of: declaration)
@@ -79,6 +80,21 @@ extension CodeGenCore {
       severity: .error
     )
   }
+
+  func accessCodableType(
+    for declaration: some SyntaxProtocol,
+    in context: some MacroExpansionContext
+  ) throws -> CodableType {
+    if let codableType = codableTypes[key(for: declaration, in: context)] {
+      return codableType
+    }
+
+    throw SimpleDiagnosticMessage(
+      message: "Codable type for declaration not found",
+      diagnosticID: messageID,
+      severity: .error
+    )
+  }
 }
 
 // MARK: - Property Extraction
@@ -90,7 +106,7 @@ extension CodeGenCore {
     let declarations = declaration.memberBlock.members.map(\.decl)
     return try extractVariableProperties(from: declarations) + extractEnumCaseProperties(from: declarations)
   }
-  
+
   fileprivate func extractVariableProperties(
     from declarations: some Collection<DeclSyntax>
   ) throws -> [Property] {
@@ -103,7 +119,7 @@ extension CodeGenCore {
       }
       .flatMap(extractProperty)
   }
-  
+
   fileprivate func extractEnumCaseProperties(
     from declarations: some Collection<DeclSyntax>
   ) throws -> [Property] {
@@ -113,7 +129,7 @@ extension CodeGenCore {
       }
       .flatMap(extractProperty)
   }
-  
+
   /// Extract properties from a single variable declaration
   fileprivate func extractProperty(
     from variable: VariableDeclSyntax
@@ -147,14 +163,14 @@ extension CodeGenCore {
       Property(attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: defaultType)
     }
   }
-  
+
   fileprivate func extractProperty(
     from caseDecl: EnumCaseDeclSyntax
   ) throws -> [Property] {
     let attributes = caseDecl.attributes.compactMap { $0.as(AttributeSyntax.self) }
-    
+
     let modifiers = caseDecl.modifiers.map { $0 }
-    
+
     return caseDecl.elements.map { element in
       Property(attributes: attributes, declModifiers: modifiers, caseElement: element)
     }
@@ -184,7 +200,7 @@ extension CodeGenCore {
       structureTypes[id] = .classType(hasSuperclass: hasSuperclass)
       return
     }
-    
+
     // Enum
     if declaration.as(EnumDeclSyntax.self) != nil {
       structureTypes[id] = .enumType
@@ -199,7 +215,11 @@ extension CodeGenCore {
   }
 
   /// Prepare the code generation by extracting properties and access modifier.
-  func prepareCodeGeneration(for declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws {
+  func prepareCodeGeneration(
+    for declaration: some DeclGroupSyntax,
+    in context: some MacroExpansionContext,
+    conformingTo protocols: [TypeSyntax] = []
+  ) throws {
     let id = key(for: declaration, in: context)
 
     guard preparedDeclarations.contains(id) == false else {
@@ -208,6 +228,8 @@ extension CodeGenCore {
       // in the first call already. We just return here.
       return
     }
+
+    codableTypes[id] = .from(protocols)
 
     try validateDeclaration(for: declaration, in: context)
 
