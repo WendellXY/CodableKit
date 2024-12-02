@@ -49,6 +49,24 @@ let package = Package(
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
       ]
     ),
+    .testTarget(
+      name: "DecodableKitTests",
+      dependencies: [
+        "CodableKitShared",
+        "CodableKitMacros",
+        .product(name: "SwiftSyntax", package: "swift-syntax"),
+        .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+      ]
+    ),
+    .testTarget(
+      name: "EncodableKitTests",
+      dependencies: [
+        "CodableKitShared",
+        "CodableKitMacros",
+        .product(name: "SwiftSyntax", package: "swift-syntax"),
+        .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+      ]
+    ),
   ]
 )
 
