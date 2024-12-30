@@ -17,6 +17,49 @@ public struct CodableKeyOptions: OptionSet, Sendable {
 
   /// The default options for a `CodableKey`, which is equivalent to an empty set.
   public static let `default`: Self = []
+  
+  /// A convenience option combining ``transcodeRawString`` and ``useDefaultOnFailure`` for safe JSON string transcoding.
+  ///
+  /// This option provides a safer way to handle string-encoded JSON by automatically falling back to
+  /// default values or `nil` when the JSON string is invalid or malformed. It's equivalent to
+  /// `[.transcodeRawString, .useDefaultOnFailure]`.
+  ///
+  /// Example usage with invalid JSON handling:
+  ///
+  /// ```json
+  /// {
+  ///   "name": "Tom",
+  ///   "validCar": "{\"brand\":\"XYZ\",\"year\":9999}",
+  ///   "invalidCar": "corrupted json string",
+  ///   "optionalCar": null
+  /// }
+  /// ```
+  ///
+  /// ```swift
+  /// @Codable
+  /// struct Person {
+  ///   let name: String
+  ///
+  ///   // Successfully decodes valid JSON string
+  ///   @CodableKey(options: .safeTranscodeRawString)
+  ///   var validCar: Car = Car(brand: "Default", year: 2024)
+  ///
+  ///   // Uses default value for invalid JSON string
+  ///   @CodableKey(options: .safeTranscodeRawString)
+  ///   var invalidCar: Car = Car(brand: "Default", year: 2024)
+  ///
+  ///   // Becomes nil for invalid JSON string or null
+  ///   @CodableKey(options: .safeTranscodeRawString)
+  ///   var optionalCar: Car?
+  /// }
+  /// ```
+  ///
+  /// - Note: This is a convenience option. It's identical to using
+  ///         `@CodableKey(options: [.transcodeRawString, .useDefaultOnFailure])`
+  /// - Important: When using this option, ensure your properties either:
+  ///   - Have an explicit default value, or
+  ///   - Are optional (implicitly having `nil` as default)
+  public static let safeTranscodeRawString: Self = [.transcodeRawString, .useDefaultOnFailure]
 
   /// The key will be ignored during encoding and decoding.
   ///
