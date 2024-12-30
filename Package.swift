@@ -69,35 +69,3 @@ let package = Package(
     ),
   ]
 )
-
-let buildForBinary = ProcessInfo.processInfo.environment["BUILD_FOR_BINARY"]?.lowercased() == "true"
-
-if buildForBinary {
-  package.products = [
-    .executable(
-      name: "CodableKitMacros",
-      targets: ["CodableKitMacros"]
-    )
-  ]
-
-  package.targets = package.targets.compactMap { target in
-    if target.type == .macro {
-      .executableTarget(
-        name: target.name,
-        dependencies: target.dependencies,
-        path: target.path,
-        exclude: target.exclude,
-        sources: target.sources,
-        resources: target.resources,
-        publicHeadersPath: target.publicHeadersPath,
-        cSettings: target.cSettings,
-        cxxSettings: target.cxxSettings,
-        swiftSettings: target.swiftSettings,
-        linkerSettings: target.linkerSettings,
-        plugins: target.plugins
-      )
-    } else {
-      target
-    }
-  }
-}
