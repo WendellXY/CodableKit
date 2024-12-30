@@ -101,35 +101,131 @@ public struct CodableKeyOptions: OptionSet, Sendable {
 
   /// Transcode the value between raw string and the target type.
   ///
-  /// This is useful when the value needs to be converted from a string to another
-  /// type during decoding and vice versa during encoding. The type of the property
-  /// must conform to `Codable`, otherwise, a compile-time error will occur.
+  /// This option enables automatic conversion between a JSON string representation and a
+  /// strongly-typed model during encoding and decoding. The property type must conform to
+  /// the appropriate coding protocol based on usage:
+  /// - For decoding: must conform to `Decodable`
+  /// - For encoding: must conform to `Encodable`
+  /// - For both operations: must conform to `Codable` (which combines both protocols)
   ///
-  /// For example, if you have a property `car` of type `Car` and you want to
-  /// transcode it to a raw string, in the past, you would need to write a custom
-  /// `init(from:)` and `encode(to:)` method. With this option, you can simply
-  /// add the `transcodeRawString` option to the property and set the type of the
-  /// property to the result type of the transcode operation.
+  /// This is particularly useful when dealing with APIs that encode nested objects as
+  /// string-encoded JSON, eliminating the need for custom encoding/decoding logic.
+  ///
+  /// For example, given this JSON response where `car` is a string-encoded JSON object:
+  ///
+  /// ```json
+  /// {
+  ///   "name": "Tom",
+  ///   "car": "{\"brand\":\"XYZ\",\"year\":9999}"
+  /// }
+  /// ```
+  ///
+  /// You can decode it directly into typed models:
   ///
   /// ```swift
   /// @Codable
-  /// struct MyStruct {
+  /// struct Car {
+  ///   let brand: String
+  ///   let year: Int
+  /// }
+  ///
+  /// @Codable
+  /// struct Person {
+  ///   let name: String
   ///   @CodableKey(options: .transcodeRawString)
   ///   var car: Car
   /// }
   /// ```
+  ///
+  /// When dealing with potentially invalid JSON strings, you can combine with other options.
+  /// For example:
+  ///
+  /// ```json
+  /// {
+  ///   "name": "Tom",
+  ///   "car": "invalid json string"
+  /// }
+  /// ```
+  ///
+  /// ```swift
+  /// @Codable
+  /// struct SafePerson {
+  ///   let name: String
+  ///
+  ///   // Will use the default car when JSON string is invalid
+  ///   @CodableKey(options: [.transcodeRawString, .useDefaultOnFailure])
+  ///   var car: Car = Car(brand: "Default", year: 2024)
+  ///
+  ///   // Will be nil when JSON string is invalid
+  ///   @CodableKey(options: [.transcodeRawString, .useDefaultOnFailure])
+  ///   var optionalCar: Car?
+  /// }
+  /// ```
+  ///
+  /// Without this option, you would need to:
+  /// 1. First decode the car field as a String
+  /// 2. Parse that string into JSON data
+  /// 3. Decode the JSON data into the Car type
+  /// 4. Implement the reverse process for encoding
+  ///
+  /// The `transcodeRawString` option handles all these steps automatically.
+  ///
+  /// - Note: The property type must conform to the appropriate coding protocol based on usage:
+  ///         `Decodable` for decoding, `Encodable` for encoding, or `Codable` for both.
+  ///         A compile-time error will occur if the type does not satisfy these requirements.
+  /// - Important: The string value must contain valid JSON that matches the structure of
+  ///             the target type. If the JSON is invalid or doesn't match the expected structure,
+  ///             a decoding error will be thrown at runtime. See ``useDefaultOnFailure`` option
+  ///             for handling invalid JSON strings gracefully.
   public static let transcodeRawString = Self(rawValue: 1 << 3)
 
-  /// Use the default value (if set) when decode or encode fails.
+  /// Use the default value or `nil` when decoding or encoding fails.
   ///
-  /// This option is only valid when the property has a default value or is optional (like `String?`).
-  /// If the property is optional and the default value is set, the default value will be used when the
-  /// property is empty or the decoding fails. If the property is optional and the default value is not set,
-  /// the property will be set to `nil` when the decoding fails.
+  /// This option provides fallback behavior when coding operations fail, with two scenarios:
   ///
-  /// This option is useful when you want to use a default value when the decoding fails, for example, when
-  /// you have a enum property which decoded from a string, and you want to use a default value when the string
-  /// is not a valid case.
+  /// 1. For properties with explicit default values:
+  ///    ```swift
+  ///    @CodableKey(options: .useDefaultOnFailure)
+  ///    var status: Status = .unknown
+  ///    ```
+  ///    The default value (`.unknown`) will be used when decoding fails.
+  ///
+  /// 2. For optional properties:
+  ///    ```swift
+  ///    @CodableKey(options: .useDefaultOnFailure)
+  ///    var status: Status?
+  ///    ```
+  ///    The property will be set to `nil` when decoding fails.
+  ///
+  /// This is particularly useful for:
+  /// - Enum properties where the raw value might not match any defined cases
+  /// - Handling backward compatibility when adding new properties
+  /// - Gracefully handling malformed or unexpected data
+  ///
+  /// Example handling an enum with invalid raw value:
+  /// ```swift
+  /// enum Status: String, Codable {
+  ///     case active
+  ///     case inactive
+  ///     case unknown
+  /// }
+  ///
+  /// struct User {
+  ///     let id: Int
+  ///     @CodableKey(options: .useDefaultOnFailure)
+  ///     var status: Status = .unknown  // Will use .unknown if JSON contains invalid status
+  /// }
+  ///
+  /// // JSON: {"id": 1, "status": "invalid_value"}
+  /// // Decodes without error, status will be .unknown
+  /// ```
+  ///
+  /// - Note: This option must be used with either:
+  ///   - A property that has an explicit default value
+  ///   - An optional property (which implicitly has `nil` as default)
+  /// - Important: Without this option, decoding failures would throw an error and halt the
+  ///             entire decoding process. With this option, failures are handled gracefully
+  ///             by falling back to the default value or `nil`.
   public static let useDefaultOnFailure = Self(rawValue: 1 << 4)
 }
 
@@ -148,6 +244,8 @@ extension CodableKeyOptions {
       self = .transcodeRawString
     case "useDefaultOnFailure":
       self = .useDefaultOnFailure
+    case "safeTranscodeRawString":
+      self = .safeTranscodeRawString
     default:
       self = .default
     }
