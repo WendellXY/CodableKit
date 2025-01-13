@@ -710,4 +710,50 @@ final class CodableKitTestsForClass: XCTestCase {
     )
 
   }
+  
+  func testMacrosWithCodableOptionSkipSuperCoding() throws {
+
+    assertMacroExpansion(
+      """
+      @Codable(options: .skipSuperCoding)
+      public class User {
+        let id: UUID
+        let name: String
+        let age: Int
+      }
+      """,
+      expandedSource: """
+        public class User {
+          let id: UUID
+          let name: String
+          let age: Int
+
+          public required init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+          }
+
+          public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            try container.encode(age, forKey: .age)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+          }
+        }
+        """,
+      macroSpecs: macroSpecs,
+      indentationWidth: .spaces(2)
+    )
+
+  }
 }

@@ -56,7 +56,9 @@
 /// ```
 @attached(extension, conformances: Codable, names: named(CodingKeys), named(init(from:)))
 @attached(member, conformances: Codable, names: named(init(from:)), named(encode(to:)))
-public macro Codable() = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
+public macro Codable(
+  options: CodableOptions = .default
+) = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
 /// A macro that generates `Decodable` conformance and boilerplate code for a struct, such that the Decodable struct can
 /// have default values for its properties, and custom keys for encoding and decoding with `@CodableKey`.
@@ -96,7 +98,9 @@ public macro Codable() = #externalMacro(module: "CodableKitMacros", type: "Codab
 /// ```
 @attached(extension, conformances: Decodable, names: named(CodingKeys), named(init(from:)))
 @attached(member, conformances: Decodable, names: named(init(from:)))
-public macro Decodable() = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
+public macro Decodable(
+  options: CodableOptions = .default
+) = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
 /// A macro that generates `Encodable` conformance and boilerplate code for a struct, such that the Encodable struct can
 /// have default values for its properties, and custom keys for encoding and decoding with `@CodableKey`.
@@ -136,7 +140,9 @@ public macro Decodable() = #externalMacro(module: "CodableKitMacros", type: "Cod
 /// ```
 @attached(extension, conformances: Encodable, names: named(CodingKeys))
 @attached(member, conformances: Encodable, names: named(encode(to:)))
-public macro Encodable() = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
+public macro Encodable(
+  options: CodableOptions = .default
+) = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
 /// Custom the key used for encoding and decoding a property.
 ///

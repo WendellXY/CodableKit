@@ -6,6 +6,7 @@
 //  Copyright © 2024 WendellXY. All rights reserved.
 //
 
+import CodableKitShared
 import Foundation
 import SwiftDiagnostics
 import SwiftSyntax
@@ -33,6 +34,7 @@ internal final class CodeGenCore: @unchecked Sendable {
   private var accessModifiers: [MacroContextKey: DeclModifierSyntax] = [:]
   private var structureTypes: [MacroContextKey: StructureType] = [:]
   private var codableTypes: [MacroContextKey: CodableType] = [:]
+  private var codableOptions: [MacroContextKey: CodableOptions] = [:]
 
   func key(for declaration: some SyntaxProtocol, in context: some MacroExpansionContext) -> MacroContextKey {
     let location = context.location(of: declaration)
@@ -47,7 +49,10 @@ internal final class CodeGenCore: @unchecked Sendable {
 }
 
 extension CodeGenCore {
-  func properties(for declaration: some SyntaxProtocol, in context: some MacroExpansionContext) throws -> [Property] {
+  func properties(
+    for declaration: some SyntaxProtocol,
+    in context: some MacroExpansionContext
+  ) throws -> [Property] {
     properties[key(for: declaration, in: context)] ?? []
   }
 
@@ -91,6 +96,21 @@ extension CodeGenCore {
 
     throw SimpleDiagnosticMessage(
       message: "Codable type for declaration not found",
+      diagnosticID: messageID,
+      severity: .error
+    )
+  }
+  
+  func accessCodableOptions(
+    for declaration: some SyntaxProtocol,
+    in context: some MacroExpansionContext
+  ) throws -> CodableOptions {
+    if let codableOptions = codableOptions[key(for: declaration, in: context)] {
+      return codableOptions
+    }
+    
+    throw SimpleDiagnosticMessage(
+      message: "Codable options for declaration not found",
       diagnosticID: messageID,
       severity: .error
     )
@@ -216,6 +236,7 @@ extension CodeGenCore {
 
   /// Prepare the code generation by extracting properties and access modifier.
   func prepareCodeGeneration(
+    of node: AttributeSyntax,
     for declaration: some DeclGroupSyntax,
     in context: some MacroExpansionContext,
     conformingTo protocols: [TypeSyntax] = []
@@ -236,6 +257,11 @@ extension CodeGenCore {
     defer {
       preparedDeclarations.insert(id)
     }
+
+    codableOptions[id] = node.arguments?
+      .as(LabeledExprListSyntax.self)?
+      .first(where: { $0.label?.text == "options" })?
+      .parseCodableOptions() ?? .default
 
     // Check if properties and access modifier are already prepared
 

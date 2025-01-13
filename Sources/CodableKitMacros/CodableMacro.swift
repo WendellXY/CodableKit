@@ -5,6 +5,7 @@
 //  Created by Wendell on 3/30/24.
 //
 
+import CodableKitShared
 import Foundation
 import SwiftDiagnostics
 import SwiftSyntax
@@ -25,18 +26,22 @@ extension CodableMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
-    try core.prepareCodeGeneration(for: declaration, in: context, conformingTo: protocols)
+    try core.prepareCodeGeneration(of: node, for: declaration, in: context, conformingTo: protocols)
 
     let properties = try core.properties(for: declaration, in: context)
     let accessModifier = try core.accessModifier(for: declaration, in: context)
     let structureType = try core.accessStructureType(for: declaration, in: context)
     let codableType = try core.accessCodableType(for: declaration, in: context)
+    let codableOptions = try core.accessCodableOptions(for: declaration, in: context)
 
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
 
     let inheritanceClause: InheritanceClauseSyntax? =
-      if case .classType(let hasSuperclass) = structureType, hasSuperclass {
+      if case .classType(let hasSuperclass) = structureType,
+        hasSuperclass,
+        !codableOptions.contains(.skipSuperCoding)
+      {
         nil
       } else {
         InheritanceClauseSyntax {
@@ -62,7 +67,14 @@ extension CodableMacro: ExtensionMacro {
         ) {
           genCodingKeyEnumDecl(from: properties)
           if codableType.contains(.decodable) {
-            DeclSyntax(genInitDecoderDecl(from: properties, modifiers: [accessModifier], hasSuper: false))
+            DeclSyntax(
+              genInitDecoderDecl(
+                from: properties,
+                modifiers: [accessModifier],
+                codableOptions: codableOptions,
+                hasSuper: false
+              )
+            )
           }
         }
       ]
@@ -87,12 +99,13 @@ extension CodableMacro: MemberMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [DeclSyntax] {
-    try core.prepareCodeGeneration(for: declaration, in: context, conformingTo: protocols)
+    try core.prepareCodeGeneration(of: node, for: declaration, in: context, conformingTo: protocols)
 
     let properties = try core.properties(for: declaration, in: context)
     let accessModifier = try core.accessModifier(for: declaration, in: context)
     let structureType = try core.accessStructureType(for: declaration, in: context)
     let codableType = try core.accessCodableType(for: declaration, in: context)
+    let codableOptions = try core.accessCodableOptions(for: declaration, in: context)
 
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
@@ -108,7 +121,9 @@ extension CodableMacro: MemberMacro {
     case let .classType(hasSuperclass):
       decodeModifiers.append(.init(name: .keyword(.required)))
       if hasSuperclass {
-        encodeModifiers.append(.init(name: .keyword(.override)))
+        if !codableOptions.contains(.skipSuperCoding) {
+          encodeModifiers.append(.init(name: .keyword(.override)))
+        }
         hasSuper = true
       }
     case .structType, .enumType:
@@ -121,14 +136,28 @@ extension CodableMacro: MemberMacro {
     case .classType:
       if codableType.contains(.decodable) {
         result.append(
-          DeclSyntax(genInitDecoderDecl(from: properties, modifiers: decodeModifiers, hasSuper: hasSuper))
+          DeclSyntax(
+            genInitDecoderDecl(
+              from: properties,
+              modifiers: decodeModifiers,
+              codableOptions: codableOptions,
+              hasSuper: hasSuper
+            )
+          )
         )
       }
       fallthrough
     case .structType:
       if codableType.contains(.encodable) {
         result.append(
-          DeclSyntax(genEncodeFuncDecl(from: properties, modifiers: encodeModifiers, hasSuper: hasSuper))
+          DeclSyntax(
+            genEncodeFuncDecl(
+              from: properties,
+              modifiers: encodeModifiers,
+              codableOptions: codableOptions,
+              hasSuper: hasSuper
+            )
+          )
         )
       }
     case .enumType:
@@ -170,6 +199,7 @@ extension CodableMacro {
   fileprivate static func genInitDecoderDecl(
     from properties: [Property],
     modifiers: [DeclModifierSyntax],
+    codableOptions: CodableOptions,
     hasSuper: Bool
   ) -> InitializerDeclSyntax {
     InitializerDeclSyntax(
@@ -231,7 +261,11 @@ extension CodableMacro {
       }
 
       if hasSuper {
-        "try super.init(from: decoder)"
+        if codableOptions.contains(.skipSuperCoding) {
+          "super.init()"
+        } else {
+          "try super.init(from: decoder)"
+        }
       }
     }
   }
@@ -240,6 +274,7 @@ extension CodableMacro {
   fileprivate static func genEncodeFuncDecl(
     from properties: [Property],
     modifiers: [DeclModifierSyntax],
+    codableOptions: CodableOptions,
     hasSuper: Bool
   ) -> FunctionDeclSyntax {
     FunctionDeclSyntax(
@@ -292,7 +327,7 @@ extension CodableMacro {
         )
       }
 
-      if hasSuper {
+      if hasSuper, !codableOptions.contains(.skipSuperCoding) {
         "try super.encode(to: encoder)"
       }
     }
