@@ -38,7 +38,10 @@ extension CodableMacro: ExtensionMacro {
     guard !properties.isEmpty else { return [] }
 
     let inheritanceClause: InheritanceClauseSyntax? =
-      if case .classType(let hasSuperclass) = structureType, hasSuperclass {
+      if case .classType(let hasSuperclass) = structureType,
+        hasSuperclass,
+        !codableOptions.contains(.skipSuperCoding)
+      {
         nil
       } else {
         InheritanceClauseSyntax {
