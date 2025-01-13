@@ -54,6 +54,9 @@
 ///   }
 /// }
 /// ```
+///
+/// - Parameters:
+///   - options: Options for customizing the behavior of the key.
 @attached(extension, conformances: Codable, names: named(CodingKeys), named(init(from:)))
 @attached(member, conformances: Codable, names: named(init(from:)), named(encode(to:)))
 public macro Codable(
@@ -96,6 +99,9 @@ public macro Codable(
 ///   }
 /// }
 /// ```
+///
+/// - Parameters:
+///   - options: Options for customizing the behavior of the key.
 @attached(extension, conformances: Decodable, names: named(CodingKeys), named(init(from:)))
 @attached(member, conformances: Decodable, names: named(init(from:)))
 public macro Decodable(
@@ -138,6 +144,9 @@ public macro Decodable(
 ///   }
 /// }
 /// ```
+///
+/// - Parameters:
+///   - options: Options for customizing the behavior of the key.
 @attached(extension, conformances: Encodable, names: named(CodingKeys))
 @attached(member, conformances: Encodable, names: named(encode(to:)))
 public macro Encodable(
