@@ -1,6 +1,6 @@
 version: 1
 builder:
   configs:
-    - documentation_targets 
+    - documentation_targets:
       - CodableKit
       - CodableKitShared
