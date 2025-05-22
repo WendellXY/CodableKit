@@ -257,7 +257,7 @@ extension CodeGenCore {
   ///
   /// ```swift
   /// if ![rawStringName].isEmpty, let [rawDataName] = [rawStringName].data(using: .utf8) {
-  ///   [key] = try JSONDecoder().decode([type].self, from: [rawDataName])
+  ///   [key] = (try? JSONDecoder().decode([type].self, from: [rawDataName])) ?? [defaultValueExpr]
   /// } else {
   ///   [key] = [defaultValueExpr]
   /// }
