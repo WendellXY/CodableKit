@@ -246,13 +246,15 @@ extension CodableMacro {
           )
         )
 
+        let defaultValueExpr = property.defaultValue ?? (property.isOptional ? "nil": nil)
+
         CodeBlockItemSyntax(
           item: .expr(
             core.genRawDataHandleExpr(
               key: property.name,
               rawDataName: property.rawDataName,
               rawStringName: property.rawStringName,
-              defaultValueExpr: property.defaultValue,
+              defaultValueExpr: defaultValueExpr,
               type: property.type,
               message: "Failed to convert raw string to data"
             )

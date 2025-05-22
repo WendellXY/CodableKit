@@ -380,7 +380,7 @@ final class CodableKitTestsForClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = try container.decodeIfPresent(String.self, forKey: .room) ?? ""
-            if let roomRawData = roomRawString.data(using: .utf8) {
+            if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
               room = try JSONDecoder().decode(Room.self, from: roomRawData)
             } else {
               throw DecodingError.valueNotFound(
@@ -443,7 +443,7 @@ final class CodableKitTestsForClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
-            if let roomRawData = roomRawString.data(using: .utf8) {
+            if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
               room = try JSONDecoder().decode(Room.self, from: roomRawData)
             } else {
               throw DecodingError.valueNotFound(
@@ -506,16 +506,10 @@ final class CodableKitTestsForClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
-            if let roomRawData = roomRawString.data(using: .utf8) {
+            if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
               room = (try? JSONDecoder().decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
             } else {
-              throw DecodingError.valueNotFound(
-                String.self,
-                DecodingError.Context(
-                  codingPath: [CodingKeys.room],
-                  debugDescription: "Failed to convert raw string to data"
-                )
-              )
+              room = Room(id: UUID(), name: "Hello")
             }
           }
         }

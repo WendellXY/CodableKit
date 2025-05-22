@@ -240,7 +240,7 @@ extension CodeGenCore {
   /// The generated expression will be like below:
   ///
   /// ```swift
-  /// if let [rawDataName] = [rawStringName].data(using: .utf8) {
+  /// if ![rawStringName].isEmpty, let [rawDataName] = [rawStringName].data(using: .utf8) {
   ///   [key] = try JSONDecoder().decode([type].self, from: [rawDataName])
   /// } else {
   ///   throw DecodingError.valueNotFound(
@@ -250,6 +250,16 @@ extension CodeGenCore {
   ///       debugDescription: [message]
   ///     )
   ///   )
+  /// }
+  /// ```
+  ///
+  /// If the default value expression is not nil, the generated expression will be like below:
+  ///
+  /// ```swift
+  /// if ![rawStringName].isEmpty, let [rawDataName] = [rawStringName].data(using: .utf8) {
+  ///   [key] = (try? JSONDecoder().decode([type].self, from: [rawDataName])) ?? [defaultValueExpr]
+  /// } else {
+  ///   [key] = [defaultValueExpr]
   /// }
   /// ```
   func genRawDataHandleExpr(
@@ -263,6 +273,20 @@ extension CodeGenCore {
     ExprSyntax(
       IfExprSyntax(
         conditions: [
+          ConditionElementSyntax(
+            condition: .expression(
+              ExprSyntax(
+                PrefixOperatorExprSyntax(
+                  operator: .prefixOperator("!"),
+                  expression: MemberAccessExprSyntax(
+                    base: DeclReferenceExprSyntax(baseName: .identifier("\(rawStringName)")),
+                    declName: DeclReferenceExprSyntax(baseName: .identifier("isEmpty"))
+                  )
+                )
+              )
+            ),
+            trailingComma: .commaToken(trailingTrivia: .spaces(1))
+          ),
           ConditionElementSyntax(
             condition: .optionalBinding(
               OptionalBindingConditionSyntax(
@@ -302,15 +326,29 @@ extension CodeGenCore {
         elseKeyword: .keyword(.else),
         elseBody: .init(
           CodeBlockSyntax {
-            CodeBlockItemSyntax(
-              item: .stmt(
-                genValueNotFoundDecodingErrorThrowStmt(
-                  type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String"))),
-                  codingPath: key,
-                  message: message
+            if let defaultValueExpr {
+              CodeBlockItemSyntax(
+                item: .expr(
+                  ExprSyntax(
+                    InfixOperatorExprSyntax(
+                      leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(key)")),
+                      operator: AssignmentExprSyntax(equal: .equalToken()),
+                      rightOperand: defaultValueExpr
+                    )
+                  )
                 )
               )
-            )
+            } else {
+              CodeBlockItemSyntax(
+                item: .stmt(
+                  genValueNotFoundDecodingErrorThrowStmt(
+                    type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String"))),
+                    codingPath: key,
+                    message: message
+                  )
+                )
+              )
+            }
           }
         )
       )

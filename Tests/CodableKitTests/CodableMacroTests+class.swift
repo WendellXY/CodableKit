@@ -437,7 +437,7 @@ final class CodableKitTestsForClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = try container.decodeIfPresent(String.self, forKey: .room) ?? ""
-            if let roomRawData = roomRawString.data(using: .utf8) {
+            if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
               room = try JSONDecoder().decode(Room.self, from: roomRawData)
             } else {
               throw DecodingError.valueNotFound(
@@ -519,7 +519,7 @@ final class CodableKitTestsForClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
-            if let roomRawData = roomRawString.data(using: .utf8) {
+            if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
               room = try JSONDecoder().decode(Room.self, from: roomRawData)
             } else {
               throw DecodingError.valueNotFound(
@@ -601,8 +601,84 @@ final class CodableKitTestsForClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
-            if let roomRawData = roomRawString.data(using: .utf8) {
+            if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
               room = (try? JSONDecoder().decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
+            } else {
+              room = Room(id: UUID(), name: "Hello")
+            }
+          }
+
+          public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            try container.encode(age, forKey: .age)
+            let roomRawData = try JSONEncoder().encode(room)
+            if let roomRawString = String(data: roomRawData, encoding: .utf8) {
+              try container.encode(roomRawString, forKey: .room)
+            } else {
+              throw EncodingError.invalidValue(
+                roomRawData,
+                EncodingError.Context(
+                  codingPath: [CodingKeys.room],
+                  debugDescription: "Failed to transcode raw data to string"
+                )
+              )
+            }
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case room
+          }
+        }
+        """,
+      macroSpecs: macroSpecs,
+      indentationWidth: .spaces(2)
+    )
+
+  }
+
+  func testMacroForSafeTranscodeRawString() throws {
+
+    assertMacroExpansion(
+      """
+      struct Room: Codable {
+        let id: UUID
+        let name: String
+      }
+      @Codable
+      public class User {
+        let id: UUID
+        let name: String
+        let age: Int
+        @CodableKey(options: .safeTranscodeRawString)
+        let room: Room
+      }
+      """,
+      expandedSource: """
+        struct Room: Codable {
+          let id: UUID
+          let name: String
+        }
+        public class User {
+          let id: UUID
+          let name: String
+          let age: Int
+          let room: Room
+
+          public required init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+            let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
+            if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
+              room = try JSONDecoder().decode(Room.self, from: roomRawData)
             } else {
               throw DecodingError.valueNotFound(
                 String.self,
@@ -611,6 +687,82 @@ final class CodableKitTestsForClass: XCTestCase {
                   debugDescription: "Failed to convert raw string to data"
                 )
               )
+            }
+          }
+
+          public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            try container.encode(age, forKey: .age)
+            let roomRawData = try JSONEncoder().encode(room)
+            if let roomRawString = String(data: roomRawData, encoding: .utf8) {
+              try container.encode(roomRawString, forKey: .room)
+            } else {
+              throw EncodingError.invalidValue(
+                roomRawData,
+                EncodingError.Context(
+                  codingPath: [CodingKeys.room],
+                  debugDescription: "Failed to transcode raw data to string"
+                )
+              )
+            }
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+            case room
+          }
+        }
+        """,
+      macroSpecs: macroSpecs,
+      indentationWidth: .spaces(2)
+    )
+
+  }
+
+  func testMacroWithSafeTranscodeRawStringWithDefaultValue() throws {
+
+    assertMacroExpansion(
+      """
+      struct Room: Codable {
+        let id: UUID
+        let name: String
+      }
+      @Codable
+      public class User {
+        let id: UUID
+        let name: String
+        let age: Int
+        @CodableKey(options: .safeTranscodeRawString)
+        var room: Room = Room(id: UUID(), name: "Hello")
+      }
+      """,
+      expandedSource: """
+        struct Room: Codable {
+          let id: UUID
+          let name: String
+        }
+        public class User {
+          let id: UUID
+          let name: String
+          let age: Int
+          var room: Room = Room(id: UUID(), name: "Hello")
+
+          public required init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+            let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
+            if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
+              room = (try? JSONDecoder().decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
+            } else {
+              room = Room(id: UUID(), name: "Hello")
             }
           }
 
