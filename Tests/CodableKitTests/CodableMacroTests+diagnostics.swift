@@ -59,10 +59,12 @@ final class CodableKitDiagnosticsTests: XCTestCase {
           var ignored: String = "Hello World"
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -78,6 +80,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -109,10 +112,12 @@ final class CodableKitDiagnosticsTests: XCTestCase {
           static let staticProperty = "Hello World"
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -128,6 +133,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -162,10 +168,12 @@ final class CodableKitDiagnosticsTests: XCTestCase {
           }
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -181,6 +189,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -218,10 +227,12 @@ final class CodableKitDiagnosticsTests: XCTestCase {
           }
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -237,6 +248,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -270,10 +282,12 @@ final class CodableKitDiagnosticsTests: XCTestCase {
           static var address: String = "A"
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -289,6 +303,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
+            try didDecode(from: decoder)
           }
         }
         """,

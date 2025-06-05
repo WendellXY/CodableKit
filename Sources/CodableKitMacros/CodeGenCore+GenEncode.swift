@@ -71,7 +71,7 @@ extension CodeGenCore {
     ) {
       LabeledExprSyntax(
         label: "keyedBy",
-        expression: genTypeExpr(typeName: codingKeysName)
+        expression: genChaningMembers(codingKeysName, "self")
       )
     }
 
@@ -117,7 +117,7 @@ extension CodeGenCore {
           rightParen: .rightParenToken()
         ) {
           LabeledExprSyntax(expression: DeclReferenceExprSyntax(baseName: .identifier("\(patternName)")))
-          LabeledExprSyntax(label: "forKey", expression: genDotExpr(name: "\(key)"))
+          LabeledExprSyntax(label: "forKey", expression: genChaningMembers("\(key)"))
         }
       )
     )
@@ -166,7 +166,7 @@ extension CodeGenCore {
                       label: "data",
                       expression: DeclReferenceExprSyntax(baseName: .identifier("\(rawDataName)"))
                     )
-                    LabeledExprSyntax(label: "encoding", expression: genDotExpr(name: "utf8"))
+                    LabeledExprSyntax(label: "encoding", expression: genChaningMembers("utf8"))
                   }
                 )
               )

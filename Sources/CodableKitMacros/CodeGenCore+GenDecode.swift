@@ -7,6 +7,7 @@
 //
 
 import SwiftSyntax
+import SwiftSyntaxBuilder
 
 // MARK: JSONDecoder
 
@@ -31,7 +32,7 @@ extension CodeGenCore {
         leftParen: .leftParenToken(),
         rightParen: .rightParenToken()
       ) {
-        LabeledExprSyntax(expression: genTypeExpr(typeName: "\(type)"))
+        LabeledExprSyntax(expression: genChaningMembers("\(type)", "self"))
         LabeledExprSyntax(
           label: "from",
           expression: DeclReferenceExprSyntax(baseName: .identifier("\(data)"))
@@ -87,7 +88,7 @@ extension CodeGenCore {
       ) {
         LabeledExprSyntax(
           label: "keyedBy",
-          expression: genTypeExpr(typeName: codingKeysName)
+          expression: genChaningMembers(codingKeysName, "self")
         )
       }
     )
@@ -120,8 +121,11 @@ extension CodeGenCore {
       leftParen: .leftParenToken(),
       rightParen: .rightParenToken()
     ) {
-      LabeledExprSyntax(expression: genTypeExpr(typeName: "\(type)"))
-      LabeledExprSyntax(label: "forKey", expression: genDotExpr(name: "\(patternName)"))
+      LabeledExprSyntax(expression: genChaningMembers("\(type)", "self"))
+      LabeledExprSyntax(
+        label: "forKey",
+        expression: genChaningMembers("\(patternName)")
+      )
     }
 
     guard useDefaultOnFailure else {
@@ -303,7 +307,7 @@ extension CodeGenCore {
                   ) {
                     LabeledExprSyntax(
                       label: "using",
-                      expression: genDotExpr(name: "utf8")
+                      expression: genChaningMembers("utf8")
                     )
                   }
                 )
@@ -384,7 +388,7 @@ extension CodeGenCore {
         ) {
           LabeledExprSyntax(
             leadingTrivia: .spaces(2),
-            expression: genTypeExpr(typeName: "\(type)"),
+            expression: genChaningMembers("\(type)", "self"),
             trailingComma: .commaToken(trailingTrivia: .newline)
           )
           LabeledExprSyntax(
