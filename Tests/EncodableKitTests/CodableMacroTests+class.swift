@@ -29,10 +29,12 @@ final class CodableKitTestsForClass: XCTestCase {
           let age: Int
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -67,10 +69,12 @@ final class CodableKitTestsForClass: XCTestCase {
           var age: Int = 24
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -107,10 +111,12 @@ final class CodableKitTestsForClass: XCTestCase {
           var age: Int = 24
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -146,10 +152,12 @@ final class CodableKitTestsForClass: XCTestCase {
           var age: Int? = 24
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encodeIfPresent(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -188,10 +196,12 @@ final class CodableKitTestsForClass: XCTestCase {
           let thisPropertyWillBeIgnored: String
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encodeIfPresent(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -230,11 +240,13 @@ final class CodableKitTestsForClass: XCTestCase {
           let explicitNil: String?
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encodeIfPresent(age, forKey: .age)
             try container.encode(explicitNil, forKey: .explicitNil)
+            try didEncode(to: encoder)
           }
         }
 
@@ -276,10 +288,12 @@ final class CodableKitTestsForClass: XCTestCase {
           let age: Int
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -325,10 +339,12 @@ final class CodableKitTestsForClass: XCTestCase {
           let age: Int
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 
@@ -375,6 +391,7 @@ final class CodableKitTestsForClass: XCTestCase {
           let room: Room
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
@@ -391,6 +408,7 @@ final class CodableKitTestsForClass: XCTestCase {
                 )
               )
             }
+            try didEncode(to: encoder)
           }
         }
 
@@ -438,6 +456,7 @@ final class CodableKitTestsForClass: XCTestCase {
           let room: Room
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
@@ -454,6 +473,7 @@ final class CodableKitTestsForClass: XCTestCase {
                 )
               )
             }
+            try didEncode(to: encoder)
           }
         }
 
@@ -501,6 +521,7 @@ final class CodableKitTestsForClass: XCTestCase {
           var room: Room = Room(id: UUID(), name: "Hello")
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
@@ -517,6 +538,7 @@ final class CodableKitTestsForClass: XCTestCase {
                 )
               )
             }
+            try didEncode(to: encoder)
           }
         }
 
@@ -566,11 +588,13 @@ final class CodableKitTestsForClass: XCTestCase {
           var role: Role = .unknown
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
             try container.encode(role, forKey: .role)
+            try didEncode(to: encoder)
           }
         }
 
@@ -607,10 +631,12 @@ final class CodableKitTestsForClass: XCTestCase {
           let age: Int
 
           public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try didEncode(to: encoder)
           }
         }
 

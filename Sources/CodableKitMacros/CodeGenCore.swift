@@ -10,6 +10,7 @@ import CodableKitShared
 import Foundation
 import SwiftDiagnostics
 import SwiftSyntax
+import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 /// Currently supported structure type of the declaration
@@ -100,7 +101,7 @@ extension CodeGenCore {
       severity: .error
     )
   }
-  
+
   func accessCodableOptions(
     for declaration: some SyntaxProtocol,
     in context: some MacroExpansionContext
@@ -108,7 +109,7 @@ extension CodeGenCore {
     if let codableOptions = codableOptions[key(for: declaration, in: context)] {
       return codableOptions
     }
-    
+
     throw SimpleDiagnosticMessage(
       message: "Codable options for declaration not found",
       diagnosticID: messageID,
@@ -258,7 +259,8 @@ extension CodeGenCore {
       preparedDeclarations.insert(id)
     }
 
-    codableOptions[id] = node.arguments?
+    codableOptions[id] =
+      node.arguments?
       .as(LabeledExprListSyntax.self)?
       .first(where: { $0.label?.text == "options" })?
       .parseCodableOptions() ?? .default
@@ -373,18 +375,43 @@ extension CodeGenCore {
 
 // MARK: Code Generation Helpers
 extension CodeGenCore {
-  /// Generate type expr like `YourType.self`
-  func genTypeExpr(typeName: String) -> MemberAccessExprSyntax {
-    MemberAccessExprSyntax(
-      base: DeclReferenceExprSyntax(baseName: .identifier(typeName)),
-      declName: DeclReferenceExprSyntax(baseName: .identifier("self"))
-    )
-  }
-  /// Generate dot expr like `.yourEnumCase`
-  func genDotExpr(name: String) -> MemberAccessExprSyntax {
-    MemberAccessExprSyntax(name: .identifier(name))
+  /// Generate a member access expression with a list of members like `A.B.C`.
+  fileprivate func genChaningMembers(
+    _ names: some Collection<String>,
+    attchedTo expr: ExprSyntax? = nil
+  ) -> ExprSyntax {
+    if let first = names.first {
+      switch names.count {
+      case 1: ExprSyntax(fromProtocol: MemberAccessExprSyntax(name: .identifier(first)))
+      case 2:
+        ExprSyntax(
+          fromProtocol: MemberAccessExprSyntax(
+            base: DeclReferenceExprSyntax(baseName: .identifier(first)),
+            declName: DeclReferenceExprSyntax(baseName: .identifier(names.dropFirst().first!))
+          )
+        )
+      default:
+        genChaningMembers(
+          names.dropFirst(),
+          attchedTo: ExprSyntax(
+            fromProtocol: MemberAccessExprSyntax(
+              base: expr,
+              declName: DeclReferenceExprSyntax(baseName: .identifier(first))
+            )
+          )
+        )
+      }
+    } else {
+      expr!
+    }
   }
 
+  func genChaningMembers(_ names: String...) -> MemberAccessExprSyntax {
+    genChaningMembers(names, attchedTo: nil).as(MemberAccessExprSyntax.self)!
+  }
+}
+
+extension CodeGenCore {
   /// Generate a variable declaration.
   func genVariableDecl(
     bindingSpecifier: TokenSyntax = .keyword(.let),

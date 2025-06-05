@@ -72,6 +72,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -115,6 +116,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -161,6 +163,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -210,6 +213,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -255,6 +259,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
+            try didDecode(from: decoder)
           }
         }
         """,

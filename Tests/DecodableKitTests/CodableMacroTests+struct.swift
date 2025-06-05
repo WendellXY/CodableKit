@@ -42,6 +42,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -81,6 +82,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -121,6 +123,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -160,6 +163,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -202,6 +206,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -246,6 +251,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
             explicitNil = try container.decodeIfPresent(String?.self, forKey: .explicitNil) ?? nil
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -290,6 +296,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -339,6 +346,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -402,6 +410,7 @@ final class CodableKitTestsForStruct: XCTestCase {
                 )
               )
             }
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -465,6 +474,7 @@ final class CodableKitTestsForStruct: XCTestCase {
                 )
               )
             }
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -522,6 +532,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             } else {
               room = Room(id: UUID(), name: "Hello")
             }
+            try didDecode(from: decoder)
           }
         }
         """,
@@ -576,6 +587,7 @@ final class CodableKitTestsForStruct: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             role = (try? container.decodeIfPresent(Role.self, forKey: .role)) ?? .unknown
+            try didDecode(from: decoder)
           }
         }
         """,

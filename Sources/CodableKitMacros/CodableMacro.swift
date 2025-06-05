@@ -269,6 +269,8 @@ extension CodableMacro {
           "try super.init(from: decoder)"
         }
       }
+
+      "try didDecode(from: decoder)"
     }
   }
 
@@ -290,6 +292,8 @@ extension CodableMacro {
         effectSpecifiers: .init(throwsClause: .init(throwsSpecifier: .keyword(.throws)))
       )
     ) {
+      "try willEncode(to: encoder)"
+
       CodeBlockItemSyntax(item: .decl(core.genEncodeContainerDecl()))
       for property in properties where property.isNormal {
         CodeBlockItemSyntax(
@@ -332,6 +336,8 @@ extension CodableMacro {
       if hasSuper, !codableOptions.contains(.skipSuperCoding) {
         "try super.encode(to: encoder)"
       }
+
+      "try didEncode(to: encoder)"
     }
   }
 }

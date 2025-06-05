@@ -57,7 +57,7 @@
 ///
 /// - Parameters:
 ///   - options: Options for customizing the behavior of the key.
-@attached(extension, conformances: Codable, names: named(CodingKeys), named(init(from:)))
+@attached(extension, conformances: Codable, CodableHooks, names: named(CodingKeys), named(init(from:)))
 @attached(member, conformances: Codable, names: named(init(from:)), named(encode(to:)))
 public macro Codable(
   options: CodableOptions = .default
@@ -102,7 +102,7 @@ public macro Codable(
 ///
 /// - Parameters:
 ///   - options: Options for customizing the behavior of the key.
-@attached(extension, conformances: Decodable, names: named(CodingKeys), named(init(from:)))
+@attached(extension, conformances: Decodable, DecodingHooks, names: named(CodingKeys), named(init(from:)))
 @attached(member, conformances: Decodable, names: named(init(from:)))
 public macro Decodable(
   options: CodableOptions = .default
@@ -147,7 +147,7 @@ public macro Decodable(
 ///
 /// - Parameters:
 ///   - options: Options for customizing the behavior of the key.
-@attached(extension, conformances: Encodable, names: named(CodingKeys))
+@attached(extension, conformances: Encodable, EncodingHooks, names: named(CodingKeys))
 @attached(member, conformances: Encodable, names: named(encode(to:)))
 public macro Encodable(
   options: CodableOptions = .default

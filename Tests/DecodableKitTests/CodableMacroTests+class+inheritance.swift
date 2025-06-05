@@ -35,6 +35,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -75,6 +76,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -116,6 +118,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -156,6 +159,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -199,6 +203,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -243,6 +248,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
             explicitNil = try container.decodeIfPresent(String?.self, forKey: .explicitNil) ?? nil
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -289,6 +295,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -339,6 +346,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -402,6 +410,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
               )
             }
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -466,6 +475,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
               )
             }
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -524,6 +534,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
               room = Room(id: UUID(), name: "Hello")
             }
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -579,6 +590,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
             age = try container.decode(Int.self, forKey: .age)
             role = (try? container.decodeIfPresent(Role.self, forKey: .role)) ?? .unknown
             try super.init(from: decoder)
+            try didDecode(from: decoder)
           }
         }
 
@@ -620,6 +632,7 @@ final class CodableKitTestsForSubClass: XCTestCase {
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             super.init()
+            try didDecode(from: decoder)
           }
         }
 
