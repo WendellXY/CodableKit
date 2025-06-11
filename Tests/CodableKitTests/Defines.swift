@@ -12,7 +12,7 @@ import SwiftSyntaxMacroExpansion
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 
-let macros: [String: any Macro.Type] = [
+nonisolated(unsafe) let macros: [String: any Macro.Type] = [
   "Codable": CodableMacro.self,
   "CodableKey": CodableKeyMacro.self,
 ]
