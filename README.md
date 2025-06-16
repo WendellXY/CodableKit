@@ -16,6 +16,7 @@ integration of default values, reducing the amount of auxiliary code you need to
 - Property ignoring
 - Explicit nil handling
 - Custom key property generation
+- Coding lifecycle hooks
 
 ## Usage
 
@@ -52,19 +53,21 @@ var someProperty: SomeType
 
 > You can find the details in the [CodableKeyOptions.swift](Sources/CodableKitShared/CodableKeyOptions.swift) file.
 
-Available options:
+- **Lifecycle Hooks**: Run specific code during the decoding and encoding stages.
 
-- `.default`: The default options (empty set).
+```swift
+@Codable
+struct User {
+    var id: String = ""
+    var name: String
+    var age: Int
+    var gender: Gender
 
-- `.ignored`: The property will be ignored during encoding and decoding.
-
-- `.explicitNil`: The key will be explicitly set to `nil` (`null`) when encoding and decoding, instead of being omitted.
-
-- `.generateCustomKey`: Generates a computed property to access the key when a custom CodableKey is used.
-
-- `.transcodeRawString`: Transcodes the value between raw string and the target type during encoding and decoding.
-
-- `.useDefaultOnFailure`: Uses the default value (if set) when decoding or encoding fails.
+    mutating func didDecode(from decoder: any Decoder) throws {
+        id = name + "\(age)"
+    }
+}
+```
 
 ## Example
 
