@@ -118,76 +118,20 @@ extension CodeGenCore {
   fileprivate func extractProperties(
     from declaration: some DeclGroupSyntax
   ) throws -> [Property] {
-    let declarations = declaration.memberBlock.members.map(\.decl)
-    return try extractVariableProperties(from: declarations) + extractEnumCaseProperties(from: declarations)
-  }
-
-  fileprivate func extractVariableProperties(
-    from declarations: some Collection<DeclSyntax>
-  ) throws -> [Property] {
-    try declarations
-      .compactMap { declaration in
-        declaration.as(VariableDeclSyntax.self)
-      }
-      .filter { variable in
-        variable.bindings.first?.accessorBlock == nil  // Ignore computed properties
-      }
-      .flatMap(extractProperty)
-  }
-
-  fileprivate func extractEnumCaseProperties(
-    from declarations: some Collection<DeclSyntax>
-  ) throws -> [Property] {
-    try declarations
-      .compactMap { declaration in
-        declaration.as(EnumCaseDeclSyntax.self)
-      }
-      .flatMap(extractProperty)
+    try Property.extract(from: declaration)
   }
 
   /// Extract properties from a single variable declaration
   fileprivate func extractProperty(
     from variable: VariableDeclSyntax
   ) throws -> [Property] {
-    let attributes = variable.attributes.compactMap { $0.as(AttributeSyntax.self) }
-
-    let modifiers = variable.modifiers.map { $0 }
-
-    // Ignore static properties
-    guard !modifiers.contains(where: \.name.isTypePropertyKeyword) else { return [] }
-
-    guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
-      // If no binding is found, return empty array.
-      guard let lastBinding = variable.bindings.last else { return [] }
-      // To check if a property is ignored, create a temporary property. If the property is ignored, return an empty
-      // array. Otherwise, throw an error.
-      let tmpProperty = Property(attributes: attributes, declModifiers: [], binding: lastBinding, defaultType: "Any")
-
-      if tmpProperty.ignored {
-        return []
-      } else {
-        throw SimpleDiagnosticMessage(
-          message: "Properties must have a type annotation",
-          severity: .error
-        )
-      }
-    }
-
-    return variable.bindings.map { binding in
-      Property(attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: defaultType)
-    }
+    try Property.extract(from: variable)
   }
 
   fileprivate func extractProperty(
     from caseDecl: EnumCaseDeclSyntax
   ) throws -> [Property] {
-    let attributes = caseDecl.attributes.compactMap { $0.as(AttributeSyntax.self) }
-
-    let modifiers = caseDecl.modifiers.map { $0 }
-
-    return caseDecl.elements.map { element in
-      Property(attributes: attributes, declModifiers: modifiers, caseElement: element)
-    }
+    try Property.extract(from: caseDecl)
   }
 }
 

@@ -146,3 +146,70 @@ extension CodableProperty {
     PatternSyntax(IdentifierPatternSyntax(identifier: .identifier("\(name)RawData")))
   }
 }
+
+extension CodableProperty {
+  static func extract(from declaration: some DeclGroupSyntax) throws -> [Self] {
+    let declarations = declaration.memberBlock.members.map(\.decl)
+
+    let vars = try declarations
+      .compactMap { declaration in
+        declaration.as(VariableDeclSyntax.self)
+      }
+      .filter { variable in
+        variable.bindings.first?.accessorBlock == nil  // Ignore computed properties
+      }
+      .flatMap(extract)
+
+    let cases = try declarations
+        .compactMap { declaration in
+          declaration.as(EnumCaseDeclSyntax.self)
+        }
+        .flatMap(extract)
+
+    return vars + cases
+  }
+
+  static func extract(
+    from variable: VariableDeclSyntax
+  ) throws -> [Self] {
+    let attributes = variable.attributes.compactMap { $0.as(AttributeSyntax.self) }
+
+    let modifiers = variable.modifiers.map { $0 }
+
+    // Ignore static properties
+    guard !modifiers.contains(where: \.name.isTypePropertyKeyword) else { return [] }
+
+    guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
+      // If no binding is found, return empty array.
+      guard let lastBinding = variable.bindings.last else { return [] }
+      // To check if a property is ignored, create a temporary property. If the property is ignored, return an empty
+      // array. Otherwise, throw an error.
+      let tmpProperty = Self(attributes: attributes, declModifiers: [], binding: lastBinding, defaultType: "Any")
+
+      if tmpProperty.ignored {
+        return []
+      } else {
+        throw SimpleDiagnosticMessage(
+          message: "Properties must have a type annotation",
+          severity: .error
+        )
+      }
+    }
+
+    return variable.bindings.map { binding in
+      Self(attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: defaultType)
+    }
+  }
+
+  static func extract(
+    from caseDecl: EnumCaseDeclSyntax
+  ) throws -> [Self] {
+    let attributes = caseDecl.attributes.compactMap { $0.as(AttributeSyntax.self) }
+
+    let modifiers = caseDecl.modifiers.map { $0 }
+
+    return caseDecl.elements.map { element in
+      Self(attributes: attributes, declModifiers: modifiers, caseElement: element)
+    }
+  }
+}
