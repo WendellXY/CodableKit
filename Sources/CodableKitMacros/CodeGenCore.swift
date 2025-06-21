@@ -27,8 +27,6 @@ internal final class CodeGenCore: @unchecked Sendable {
 
   internal static let shared = CodeGenCore()
 
-  private let messageID = MessageID(domain: "CodableKit", id: "CodableMacro")
-
   /// Declarations that have been prepared for code generation
   private var preparedDeclarations: Set<MacroContextKey> = []
   private var properties: [MacroContextKey: [CodableMacro.Property]] = [:]
@@ -67,7 +65,6 @@ extension CodeGenCore {
 
     throw SimpleDiagnosticMessage(
       message: "Access modifier for declaration not found",
-      diagnosticID: messageID,
       severity: .error
     )
   }
@@ -82,7 +79,6 @@ extension CodeGenCore {
 
     throw SimpleDiagnosticMessage(
       message: "Structure type for declaration not found",
-      diagnosticID: messageID,
       severity: .error
     )
   }
@@ -97,7 +93,6 @@ extension CodeGenCore {
 
     throw SimpleDiagnosticMessage(
       message: "Codable type for declaration not found",
-      diagnosticID: messageID,
       severity: .error
     )
   }
@@ -112,7 +107,6 @@ extension CodeGenCore {
 
     throw SimpleDiagnosticMessage(
       message: "Codable options for declaration not found",
-      diagnosticID: messageID,
       severity: .error
     )
   }
@@ -174,7 +168,6 @@ extension CodeGenCore {
       } else {
         throw SimpleDiagnosticMessage(
           message: "Properties must have a type annotation",
-          diagnosticID: messageID,
           severity: .error
         )
       }
@@ -230,7 +223,6 @@ extension CodeGenCore {
 
     throw SimpleDiagnosticMessage(
       message: "Macro `CodableMacro` can only be applied to the struct, class or enum declaration.",
-      diagnosticID: messageID,
       severity: .error
     )
   }
@@ -282,7 +274,6 @@ extension CodeGenCore {
       if extractedProperties.isEmpty {
         throw SimpleDiagnosticMessage(
           message: "No properties found",
-          diagnosticID: messageID,
           severity: .error
         )
       }
@@ -309,14 +300,12 @@ extension CodeGenCore {
         } catch {
           throw SimpleDiagnosticMessage(
             message: error.localizedDescription,
-            diagnosticID: messageID,
             severity: .warning
           )
         }
       } else {
         throw SimpleDiagnosticMessage(
           message: "Only variable declarations are supported",
-          diagnosticID: messageID,
           severity: .error
         )
       }
@@ -326,7 +315,6 @@ extension CodeGenCore {
     guard declaration.bindings.first?.accessorBlock == nil else {
       throw SimpleDiagnosticMessage(
         message: "Only variable declarations with no accessor block are supported",
-        diagnosticID: messageID,
         severity: .error
       )
     }
@@ -335,7 +323,6 @@ extension CodeGenCore {
     guard !declaration.modifiers.contains(where: \.name.isTypePropertyKeyword) else {
       throw SimpleDiagnosticMessage(
         message: "Only non-static variable declarations are supported",
-        diagnosticID: messageID,
         severity: .error
       )
     }
@@ -357,7 +344,6 @@ extension CodeGenCore {
       if extractedProperties.count > 1 && extractedProperties.first?.customCodableKey != nil {
         throw SimpleDiagnosticMessage(
           message: "Custom Codable key not supported for multiple pattern bindings",
-          diagnosticID: messageID,
           severity: .error
         )
       }

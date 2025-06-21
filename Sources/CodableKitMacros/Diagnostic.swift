@@ -9,8 +9,9 @@ import SwiftDiagnostics
 import SwiftSyntax
 
 struct SimpleDiagnosticMessage: DiagnosticMessage, Error {
+  static let diagnosticID = MessageID(domain: "CodableKit", id: "CodableMacro")
   let message: String
-  let diagnosticID: MessageID
+  let diagnosticID: MessageID = Self.diagnosticID
   let severity: DiagnosticSeverity
 }
 
