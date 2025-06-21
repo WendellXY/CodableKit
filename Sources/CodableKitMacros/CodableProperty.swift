@@ -152,26 +152,18 @@ extension CodableProperty {
     let declarations = declaration.memberBlock.members.map(\.decl)
 
     let vars = try declarations
-      .compactMap { declaration in
-        declaration.as(VariableDeclSyntax.self)
-      }
-      .filter { variable in
-        variable.bindings.first?.accessorBlock == nil  // Ignore computed properties
-      }
+      .compactMap { $0.as(VariableDeclSyntax.self) }
+      .filter { $0.bindings.first?.accessorBlock == nil } // Ignore computed properties
       .flatMap(extract)
 
     let cases = try declarations
-        .compactMap { declaration in
-          declaration.as(EnumCaseDeclSyntax.self)
-        }
+        .compactMap { $0.as(EnumCaseDeclSyntax.self) }
         .flatMap(extract)
 
     return vars + cases
   }
 
-  static func extract(
-    from variable: VariableDeclSyntax
-  ) throws -> [Self] {
+  static func extract(from variable: VariableDeclSyntax) throws -> [Self] {
     let attributes = variable.attributes.compactMap { $0.as(AttributeSyntax.self) }
 
     let modifiers = variable.modifiers.map { $0 }
@@ -201,9 +193,7 @@ extension CodableProperty {
     }
   }
 
-  static func extract(
-    from caseDecl: EnumCaseDeclSyntax
-  ) throws -> [Self] {
+  static func extract(from caseDecl: EnumCaseDeclSyntax) throws -> [Self] {
     let attributes = caseDecl.attributes.compactMap { $0.as(AttributeSyntax.self) }
 
     let modifiers = caseDecl.modifiers.map { $0 }

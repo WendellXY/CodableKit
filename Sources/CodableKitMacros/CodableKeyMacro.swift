@@ -20,7 +20,29 @@ extension CodableKeyMacro: PeerMacro {
   ) throws -> [DeclSyntax] {
     try core.prepareCodeGeneration(for: declaration, in: context, with: node)
       .filter(\.shouldGenerateCustomCodingKeyVariable)
-      .compactMap(core.genCustomKeyVariable)
+      .compactMap(genCustomKeyVariable)
       .map(DeclSyntax.init)
   }
+}
+
+/// Generate the custom key variable for the property.
+fileprivate func genCustomKeyVariable(for property: CodableProperty) -> VariableDeclSyntax? {
+  guard let customCodableKey = property.customCodableKey else { return nil }
+
+  let pattern = PatternBindingSyntax(
+    pattern: customCodableKey,
+    typeAnnotation: TypeAnnotationSyntax(type: property.type),
+    accessorBlock: AccessorBlockSyntax(
+      leadingTrivia: .space,
+      leftBrace: .leftBraceToken(),
+      accessors: .getter("\(property.name)"),
+      rightBrace: .rightBraceToken()
+    )
+  )
+
+  return VariableDeclSyntax(
+    modifiers: DeclModifierListSyntax([property.accessModifier]),
+    bindingSpecifier: .keyword(.var),
+    bindings: [pattern]
+  )
 }

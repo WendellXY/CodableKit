@@ -112,29 +112,6 @@ extension CodeGenCore {
   }
 }
 
-// MARK: - Property Extraction
-extension CodeGenCore {
-  /// Extract all the properties from structure and add type info.
-  fileprivate func extractProperties(
-    from declaration: some DeclGroupSyntax
-  ) throws -> [Property] {
-    try Property.extract(from: declaration)
-  }
-
-  /// Extract properties from a single variable declaration
-  fileprivate func extractProperty(
-    from variable: VariableDeclSyntax
-  ) throws -> [Property] {
-    try Property.extract(from: variable)
-  }
-
-  fileprivate func extractProperty(
-    from caseDecl: EnumCaseDeclSyntax
-  ) throws -> [Property] {
-    try Property.extract(from: caseDecl)
-  }
-}
-
 // MARK: - Code Generation Preparation
 extension CodeGenCore {
   /// Validate that the macro is being applied to a struct declaration
@@ -213,7 +190,7 @@ extension CodeGenCore {
     }
 
     if properties[id]?.isEmpty ?? true {
-      let extractedProperties = try extractProperties(from: declaration)
+      let extractedProperties = try Property.extract(from: declaration)
 
       if extractedProperties.isEmpty {
         throw SimpleDiagnosticMessage(
@@ -237,7 +214,7 @@ extension CodeGenCore {
     guard var declaration = VariableDeclSyntax(declaration) else {
       if let caseDecl = EnumCaseDeclSyntax(declaration) {
         do {
-          try extractProperty(from: caseDecl).forEach { proxy in
+          try Property.extract(from: caseDecl).forEach { proxy in
             try proxy.checkOptionsAvailability(for: .enumType)
           }
           return []
@@ -274,7 +251,7 @@ extension CodeGenCore {
     declaration.attributes.append(.init(node))
 
     if properties[id]?.isEmpty ?? true {
-      let extractedProperties = try extractProperty(from: declaration)
+      let extractedProperties = try Property.extract(from: declaration)
 
       guard !extractedProperties.isEmpty else {
         // for single variable declaration, if no property is found, which means the error should be thrown in the
@@ -295,11 +272,7 @@ extension CodeGenCore {
       properties[id] = extractedProperties
     }
 
-    return if let properties = properties[id] {
-      properties
-    } else {
-      []
-    }
+    return properties[id] ?? []
   }
 }
 
@@ -360,31 +333,5 @@ extension CodeGenCore {
         initializer: initializerClause
       )
     }
-  }
-}
-
-extension CodeGenCore {
-  /// Generate the custom key variable for the property.
-  func genCustomKeyVariable(
-    for property: Property
-  ) -> VariableDeclSyntax? {
-    guard let customCodableKey = property.customCodableKey else { return nil }
-
-    let pattern = PatternBindingSyntax(
-      pattern: customCodableKey,
-      typeAnnotation: TypeAnnotationSyntax(type: property.type),
-      accessorBlock: AccessorBlockSyntax(
-        leadingTrivia: .space,
-        leftBrace: .leftBraceToken(),
-        accessors: .getter("\(property.name)"),
-        rightBrace: .rightBraceToken()
-      )
-    )
-
-    return VariableDeclSyntax(
-      modifiers: DeclModifierListSyntax([property.accessModifier]),
-      bindingSpecifier: .keyword(.var),
-      bindings: [pattern]
-    )
   }
 }
