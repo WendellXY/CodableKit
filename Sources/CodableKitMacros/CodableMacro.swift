@@ -37,6 +37,8 @@ extension CodableMacro: ExtensionMacro {
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
 
+    let namespaceTree = NamespaceNode.buildTree(from: properties)
+
     let inheritanceClause: InheritanceClauseSyntax? =
       if case .classType(let hasSuperclass) = structureType,
         hasSuperclass,
@@ -57,7 +59,9 @@ extension CodableMacro: ExtensionMacro {
         ExtensionDeclSyntax(
           extendedType: type, inheritanceClause: inheritanceClause
         ) {
-          genCodingKeyEnumDecl(from: properties)
+          for namespaceDecl in namespaceTree.allCodingKeysEnums {
+            namespaceDecl
+          }
         }
       ]
     case .structType:
@@ -65,7 +69,9 @@ extension CodableMacro: ExtensionMacro {
         ExtensionDeclSyntax(
           extendedType: type, inheritanceClause: inheritanceClause
         ) {
-          genCodingKeyEnumDecl(from: properties)
+          for namespaceDecl in namespaceTree.allCodingKeysEnums {
+            namespaceDecl
+          }
           if codableType.contains(.decodable) {
             DeclSyntax(
               genInitDecoderDecl(
@@ -83,7 +89,9 @@ extension CodableMacro: ExtensionMacro {
         ExtensionDeclSyntax(
           extendedType: type, inheritanceClause: inheritanceClause
         ) {
-          genCodingKeyEnumDecl(from: properties)
+          for namespaceDecl in namespaceTree.allCodingKeysEnums {
+            namespaceDecl
+          }
         }
       ]
     }
@@ -172,29 +180,6 @@ extension CodableMacro: MemberMacro {
 
 // MARK: Codable
 extension CodableMacro {
-  /// Generate the `CodingKeys` enum declaration.
-  ///
-  /// If a property has a `CodableKey` attribute, use the key passed in the attribute, otherwise use the property name.
-  fileprivate static func genCodingKeyEnumDecl(from properties: [Property]) -> EnumDeclSyntax {
-    EnumDeclSyntax(
-      name: "CodingKeys",
-      inheritanceClause: .init(
-        inheritedTypesBuilder: {
-          InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("String")))
-          InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("CodingKey")))
-        }
-      )
-    ) {
-      for property in properties where !property.ignored {
-        if let customCodableKey = property.customCodableKey {
-          "case \(property.name) = \"\(customCodableKey)\""
-        } else {
-          "case \(property.name)"
-        }
-      }
-    }
-  }
-
   /// Generate the `init(from decoder: Decoder)` method of the `Codable` protocol.
   fileprivate static func genInitDecoderDecl(
     from properties: [Property],

@@ -85,8 +85,8 @@ extension CodableProperty {
     declModifiers.first(where: \.name.isAccessModifierKeyword) ?? DeclModifierSyntax(name: .keyword(.internal))
   }
 
-  /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key
-  var customCodableKey: PatternSyntax? {
+  /// The key path for the property as specified in `@CodableKey`, split by `.`, e.g. ["data", "uid"]
+  var customCodableKeyPath: [String]? {
     guard
       let expr = codableKeyLabeledExprList?.first(where: {
         $0.label == nil  // the first argument without label is the custom Codable Key
@@ -97,9 +97,16 @@ extension CodableProperty {
     }
 
     // the expr is something like `"customKey"`, we need to remove the quotes
-    let identifier = "\(expr)".trimmingCharacters(in: .init(charactersIn: "\""))
+    return "\(expr)".trimmingCharacters(in: .init(charactersIn: "\"")).components(separatedBy: ".")
+  }
 
-    return PatternSyntax(IdentifierPatternSyntax(identifier: .identifier(identifier)))
+  /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key
+  var customCodableKey: PatternSyntax? {
+    if let identifier = customCodableKeyPath?.last {
+      PatternSyntax(IdentifierPatternSyntax(identifier: .identifier(identifier)))
+    } else {
+      nil
+    }
   }
 
   /// Options for customizing the behavior of a `CodableKey`.
