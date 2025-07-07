@@ -134,7 +134,7 @@ extension CodeGenCore {
   ///   - isOptional: Is the variable optional.
   ///   - explicitNil: Should encode nil explicitly.
   func genContainerEncodeExpr(
-    containerName: String = "container",
+    containerName: String,
     key: PatternSyntax,
     patternName: PatternSyntax,
     isOptional: Bool,
@@ -164,7 +164,7 @@ extension CodeGenCore {
   ///
   /// ```swift
   /// if let [rawStringName] = String(data: [rawDataName], encoding: .utf8) {
-  ///   try container.encode([rawStringName], forKey: .[key])
+  ///   try [containerName].encode([rawStringName], forKey: .[key])
   /// } else {
   ///   throw EncodingError.invalidValue(
   ///     [rawDataName],
@@ -179,6 +179,8 @@ extension CodeGenCore {
     key: PatternSyntax,
     rawDataName: PatternSyntax,
     rawStringName: PatternSyntax,
+    containerName: String,
+    codingPath: [(String, String)],
     message: String,
     isOptional: Bool,
     explicitNil: Bool
@@ -212,6 +214,7 @@ extension CodeGenCore {
           CodeBlockItemSyntax(
             item: .expr(
               genContainerEncodeExpr(
+                containerName: containerName,
                 key: key,
                 patternName: rawStringName,
                 isOptional: isOptional,
@@ -227,7 +230,7 @@ extension CodeGenCore {
               item: .stmt(
                 genInvalidValueEncodingErrorThrowStmt(
                   data: rawDataName,
-                  codingPath: key,
+                  codingPath: codingPath,
                   message: message
                 )
               )
@@ -252,7 +255,7 @@ extension CodeGenCore {
   /// ```
   func genInvalidValueEncodingErrorThrowStmt(
     data: PatternSyntax,
-    codingPath: PatternSyntax,
+    codingPath: [(String, String)],
     message: String
   ) -> StmtSyntax {
     StmtSyntax(
@@ -284,14 +287,9 @@ extension CodeGenCore {
                 label: "codingPath",
                 colon: .colonToken(),
                 expression: ArrayExprSyntax(
-                  expressions: [
-                    ExprSyntax(
-                      MemberAccessExprSyntax(
-                        base: DeclReferenceExprSyntax(baseName: .identifier("CodingKeys")),
-                        declName: DeclReferenceExprSyntax(baseName: .identifier("\(codingPath)"))
-                      )
-                    )
-                  ]
+                  expressions: codingPath.map { key, value in
+                    ExprSyntax(genChaningMembers(key, value))
+                  }
                 ),
                 trailingComma: .commaToken(trailingTrivia: .newline)
               )

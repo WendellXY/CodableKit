@@ -48,6 +48,20 @@ final class NamespaceNode {
     }
     return root
   }
+
+  func codingKeyChain(for property: CodableProperty) -> [(String, String)] {
+    var chain: [(String, String)] = []
+    chain.append((enumName, property.name.description))
+    var node = self
+    while let parent = node.parent {
+      let key = parent.enumName
+      let value = node.segment
+      chain.append((key, value))
+      node = parent
+    }
+    // Reverse the chain to have the root first
+    return chain.reversed()
+  }
 }
 
 // MARK: - CodingKeys Enum Generation
@@ -138,7 +152,7 @@ extension NamespaceNode {
         CodeBlockItemSyntax(
           item: .expr(
             core.genContainerDecodeExpr(
-              container: containerName,
+              containerName: containerName,
               variableName: property.name,
               patternName: property.name,
               isOptional: property.isOptional,
@@ -162,6 +176,7 @@ extension NamespaceNode {
           item: .decl(
             core.genContainerDecodeVariableDecl(
               variableName: rawKey,
+              containerName: containerName,
               patternName: key,
               isOptional: property.isOptional,
               useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
@@ -177,6 +192,7 @@ extension NamespaceNode {
               rawDataName: property.rawDataName,
               rawStringName: property.rawStringName,
               defaultValueExpr: defaultValueExpr,
+              codingPath: codingKeyChain(for: property),
               type: property.type,
               message: "Failed to convert raw string to data"
             )
@@ -263,6 +279,8 @@ extension NamespaceNode {
               key: property.name,
               rawDataName: property.rawDataName,
               rawStringName: property.rawStringName,
+              containerName: containerName,
+              codingPath: codingKeyChain(for: property),
               message: "Failed to transcode raw data to string",
               isOptional: property.isOptional,
               explicitNil: property.options.contains(.explicitNil)
