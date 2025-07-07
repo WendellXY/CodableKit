@@ -57,8 +57,8 @@
 ///
 /// - Parameters:
 ///   - options: Options for customizing the behavior of the key.
-@attached(extension, conformances: Codable, CodableHooks, names: named(CodingKeys), named(init(from:)))
-@attached(member, conformances: Codable, names: named(init(from:)), named(encode(to:)))
+@attached(extension, conformances: Codable, CodableHooks, names: named(CodingKeys), named(init(from:)), arbitrary)
+@attached(member, conformances: Codable, names: named(init(from:)), named(encode(to:)), arbitrary)
 public macro Codable(
   options: CodableOptions = .default
 ) = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
@@ -102,8 +102,8 @@ public macro Codable(
 ///
 /// - Parameters:
 ///   - options: Options for customizing the behavior of the key.
-@attached(extension, conformances: Decodable, DecodingHooks, names: named(CodingKeys), named(init(from:)))
-@attached(member, conformances: Decodable, names: named(init(from:)))
+@attached(extension, conformances: Decodable, DecodingHooks, names: named(CodingKeys), named(init(from:)), arbitrary)
+@attached(member, conformances: Decodable, names: named(init(from:)), arbitrary)
 public macro Decodable(
   options: CodableOptions = .default
 ) = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
@@ -147,16 +147,20 @@ public macro Decodable(
 ///
 /// - Parameters:
 ///   - options: Options for customizing the behavior of the key.
-@attached(extension, conformances: Encodable, EncodingHooks, names: named(CodingKeys))
-@attached(member, conformances: Encodable, names: named(encode(to:)))
+@attached(extension, conformances: Encodable, EncodingHooks, names: named(CodingKeys), arbitrary)
+@attached(member, conformances: Encodable, names: named(encode(to:)), arbitrary)
 public macro Encodable(
   options: CodableOptions = .default
 ) = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
 /// Custom the key used for encoding and decoding a property.
 ///
+/// The `key` parameter supports dot-separated key paths for mapping to nested JSON objects.
+/// For example, `@CodableKey("data.uid") let id: Int` will map the `id` property to the nested key
+/// path `data.uid` in the JSON.
+///
 /// - Parameters:
-///   - key: The custom key to use for encoding and decoding the property. If not provided,
+///   - key: The custom key or key path to use for encoding and decoding the property. If not provided,
 ///   the property name will be used.
 ///   - options: Options for customizing the behavior of the key.
 @attached(peer, names: arbitrary)

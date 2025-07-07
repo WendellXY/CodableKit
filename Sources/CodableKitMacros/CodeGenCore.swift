@@ -25,8 +25,6 @@ internal final class CodeGenCore: @unchecked Sendable {
   internal typealias Property = CodableMacro.Property
   internal typealias MacroContextKey = String
 
-  internal static let shared = CodeGenCore()
-
   /// Declarations that have been prepared for code generation
   private var preparedDeclarations: Set<MacroContextKey> = []
   private var properties: [MacroContextKey: [CodableMacro.Property]] = [:]
@@ -279,7 +277,7 @@ extension CodeGenCore {
 // MARK: Code Generation Helpers
 extension CodeGenCore {
   /// Generate a member access expression with a list of members like `A.B.C`.
-  fileprivate func genChaningMembers(
+  fileprivate static func genChaningMembers(
     _ names: some Collection<String>,
     attchedTo expr: ExprSyntax? = nil
   ) -> ExprSyntax {
@@ -309,14 +307,14 @@ extension CodeGenCore {
     }
   }
 
-  func genChaningMembers(_ names: String...) -> MemberAccessExprSyntax {
+  static func genChaningMembers(_ names: String...) -> MemberAccessExprSyntax {
     genChaningMembers(names, attchedTo: nil).as(MemberAccessExprSyntax.self)!
   }
 }
 
 extension CodeGenCore {
   /// Generate a variable declaration.
-  func genVariableDecl(
+  static func genVariableDecl(
     bindingSpecifier: TokenSyntax = .keyword(.let),
     name: String,
     type: String? = nil,

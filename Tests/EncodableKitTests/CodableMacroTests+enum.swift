@@ -9,10 +9,10 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
-import XCTest
+import Testing
 
-final class CodableKitTestsForEnum: XCTestCase {
-  func testMacros() throws {
+@Suite struct CodableKitTestsForEnum {
+  @Test func macros() throws {
 
     assertMacroExpansion(
       """
@@ -44,7 +44,7 @@ final class CodableKitTestsForEnum: XCTestCase {
 
   }
 
-  func testMacrosWithCodableKey() throws {
+  @Test func macrosWithCodableKey() throws {
 
     assertMacroExpansion(
       """
@@ -76,7 +76,7 @@ final class CodableKitTestsForEnum: XCTestCase {
 
   }
 
-  func testMacrosWithIgnoredCodableKey() throws {
+  @Test func macrosWithIgnoredCodableKey() throws {
 
     assertMacroExpansion(
       """
@@ -107,7 +107,7 @@ final class CodableKitTestsForEnum: XCTestCase {
 
   }
 
-  func testMacrosWithIndirectCase() throws {
+  @Test func macrosWithIndirectCase() throws {
 
     assertMacroExpansion(
       """

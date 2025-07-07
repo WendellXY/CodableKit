@@ -12,13 +12,8 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-public struct CodableMacro {
-  internal static let core = CodeGenCore.shared
-}
-
-// MARK: - ExtensionMacro
-
-extension CodableMacro: ExtensionMacro {
+public struct CodableMacro: ExtensionMacro {
+  // MARK: - ExtensionMacro
   public static func expansion(
     of node: AttributeSyntax,
     attachedTo declaration: some DeclGroupSyntax,
@@ -26,6 +21,7 @@ extension CodableMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
+    let core = CodeGenCore()
     try core.prepareCodeGeneration(of: node, for: declaration, in: context, conformingTo: protocols)
 
     let properties = try core.properties(for: declaration, in: context)
@@ -36,6 +32,8 @@ extension CodableMacro: ExtensionMacro {
 
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
+
+    let namespaceTree = NamespaceNode.buildTree(from: properties)
 
     let inheritanceClause: InheritanceClauseSyntax? =
       if case .classType(let hasSuperclass) = structureType,
@@ -57,7 +55,9 @@ extension CodableMacro: ExtensionMacro {
         ExtensionDeclSyntax(
           extendedType: type, inheritanceClause: inheritanceClause
         ) {
-          genCodingKeyEnumDecl(from: properties)
+          for namespaceDecl in namespaceTree.allCodingKeysEnums {
+            namespaceDecl
+          }
         }
       ]
     case .structType:
@@ -65,14 +65,17 @@ extension CodableMacro: ExtensionMacro {
         ExtensionDeclSyntax(
           extendedType: type, inheritanceClause: inheritanceClause
         ) {
-          genCodingKeyEnumDecl(from: properties)
+          for namespaceDecl in namespaceTree.allCodingKeysEnums {
+            namespaceDecl
+          }
           if codableType.contains(.decodable) {
             DeclSyntax(
               genInitDecoderDecl(
                 from: properties,
                 modifiers: [accessModifier],
                 codableOptions: codableOptions,
-                hasSuper: false
+                hasSuper: false,
+                tree: namespaceTree
               )
             )
           }
@@ -83,7 +86,9 @@ extension CodableMacro: ExtensionMacro {
         ExtensionDeclSyntax(
           extendedType: type, inheritanceClause: inheritanceClause
         ) {
-          genCodingKeyEnumDecl(from: properties)
+          for namespaceDecl in namespaceTree.allCodingKeysEnums {
+            namespaceDecl
+          }
         }
       ]
     }
@@ -99,6 +104,7 @@ extension CodableMacro: MemberMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [DeclSyntax] {
+    let core = CodeGenCore()
     try core.prepareCodeGeneration(of: node, for: declaration, in: context, conformingTo: protocols)
 
     let properties = try core.properties(for: declaration, in: context)
@@ -109,6 +115,8 @@ extension CodableMacro: MemberMacro {
 
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
+
+    let namespaceTree = NamespaceNode.buildTree(from: properties)
 
     var decodeModifiers = [accessModifier]
     var encodeModifiers = [accessModifier]
@@ -141,7 +149,8 @@ extension CodableMacro: MemberMacro {
               from: properties,
               modifiers: decodeModifiers,
               codableOptions: codableOptions,
-              hasSuper: hasSuper
+              hasSuper: hasSuper,
+              tree: namespaceTree
             )
           )
         )
@@ -155,7 +164,8 @@ extension CodableMacro: MemberMacro {
               from: properties,
               modifiers: encodeModifiers,
               codableOptions: codableOptions,
-              hasSuper: hasSuper
+              hasSuper: hasSuper,
+              tree: namespaceTree
             )
           )
         )
@@ -172,35 +182,13 @@ extension CodableMacro: MemberMacro {
 
 // MARK: Codable
 extension CodableMacro {
-  /// Generate the `CodingKeys` enum declaration.
-  ///
-  /// If a property has a `CodableKey` attribute, use the key passed in the attribute, otherwise use the property name.
-  fileprivate static func genCodingKeyEnumDecl(from properties: [Property]) -> EnumDeclSyntax {
-    EnumDeclSyntax(
-      name: "CodingKeys",
-      inheritanceClause: .init(
-        inheritedTypesBuilder: {
-          InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("String")))
-          InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("CodingKey")))
-        }
-      )
-    ) {
-      for property in properties where !property.ignored {
-        if let customCodableKey = property.customCodableKey {
-          "case \(property.name) = \"\(customCodableKey)\""
-        } else {
-          "case \(property.name)"
-        }
-      }
-    }
-  }
-
   /// Generate the `init(from decoder: Decoder)` method of the `Codable` protocol.
   fileprivate static func genInitDecoderDecl(
     from properties: [Property],
     modifiers: [DeclModifierSyntax],
     codableOptions: CodableOptions,
-    hasSuper: Bool
+    hasSuper: Bool,
+    tree: NamespaceNode
   ) -> InitializerDeclSyntax {
     InitializerDeclSyntax(
       leadingTrivia: .newline,
@@ -214,52 +202,8 @@ extension CodableMacro {
         effectSpecifiers: .init(throwsClause: .init(throwsSpecifier: .keyword(.throws)))
       )
     ) {
-      CodeBlockItemSyntax(item: .decl(core.genDecodeContainerDecl()))
-      for property in properties where property.isNormal {
-        CodeBlockItemSyntax(
-          item: .expr(
-            core.genContainerDecodeExpr(
-              variableName: property.name,
-              patternName: property.name,
-              isOptional: property.isOptional,
-              useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
-              defaultValueExpr: property.defaultValue,
-              type: property.type
-            )
-          )
-        )
-      }
-
-      for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
-        let key = property.name
-        let rawKey = property.rawStringName
-        CodeBlockItemSyntax(
-          item: .decl(
-            core.genContainerDecodeVariableDecl(
-              variableName: rawKey,
-              patternName: key,
-              isOptional: property.isOptional,
-              useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
-              defaultValueExpr: ExprSyntax(StringLiteralExprSyntax(content: "")),
-              type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String")))
-            )
-          )
-        )
-
-        let defaultValueExpr = property.defaultValue ?? (property.isOptional ? "nil": nil)
-
-        CodeBlockItemSyntax(
-          item: .expr(
-            core.genRawDataHandleExpr(
-              key: property.name,
-              rawDataName: property.rawDataName,
-              rawStringName: property.rawStringName,
-              defaultValueExpr: defaultValueExpr,
-              type: property.type,
-              message: "Failed to convert raw string to data"
-            )
-          )
-        )
+      for containerDecl in tree.decodeBlockItem {
+        containerDecl
       }
 
       if hasSuper {
@@ -279,7 +223,8 @@ extension CodableMacro {
     from properties: [Property],
     modifiers: [DeclModifierSyntax],
     codableOptions: CodableOptions,
-    hasSuper: Bool
+    hasSuper: Bool,
+    tree: NamespaceNode
   ) -> FunctionDeclSyntax {
     FunctionDeclSyntax(
       leadingTrivia: .newline,
@@ -294,43 +239,8 @@ extension CodableMacro {
     ) {
       "try willEncode(to: encoder)"
 
-      CodeBlockItemSyntax(item: .decl(core.genEncodeContainerDecl()))
-      for property in properties where property.isNormal {
-        CodeBlockItemSyntax(
-          item: .expr(
-            core.genContainerEncodeExpr(
-              key: property.name,
-              patternName: property.name,
-              isOptional: property.isOptional,
-              explicitNil: property.options.contains(.explicitNil)
-            )
-          )
-        )
-      }
-
-      // Decode from the rawString.
-      for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
-        CodeBlockItemSyntax(
-          item: .decl(
-            core.genJSONEncoderEncodeDecl(
-              variableName: property.rawDataName,
-              instance: property.name
-            )
-          )
-        )
-
-        CodeBlockItemSyntax(
-          item: .expr(
-            core.genEncodeRawDataHandleExpr(
-              key: property.name,
-              rawDataName: property.rawDataName,
-              rawStringName: property.rawStringName,
-              message: "Failed to transcode raw data to string",
-              isOptional: property.isOptional,
-              explicitNil: property.options.contains(.explicitNil)
-            )
-          )
-        )
+      for containerDecl in tree.encodeBlockItem {
+        containerDecl
       }
 
       if hasSuper, !codableOptions.contains(.skipSuperCoding) {

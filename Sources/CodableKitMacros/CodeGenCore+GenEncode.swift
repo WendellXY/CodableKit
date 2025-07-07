@@ -11,7 +11,7 @@ import SwiftSyntax
 // MARK: JSONEncoder
 
 extension CodeGenCore {
-  fileprivate func genJSONEncoderEncodeRightOperand(
+  fileprivate static func genJSONEncoderEncodeRightOperand(
     instance: PatternSyntax
   ) -> some ExprSyntaxProtocol {
     TryExprSyntax(
@@ -35,7 +35,7 @@ extension CodeGenCore {
     )
   }
 
-  func genJSONEncoderEncodeDecl(
+  static func genJSONEncoderEncodeDecl(
     bindingSpecifier: TokenSyntax = .keyword(.let),
     variableName: PatternSyntax,
     instance: PatternSyntax
@@ -56,7 +56,7 @@ extension CodeGenCore {
 // MARK: Container Encode
 
 extension CodeGenCore {
-  func genEncodeContainerDecl(
+  static func genEncodeContainerDecl(
     bindingSpecifier: TokenSyntax = .keyword(.var),
     patternName: String = "container",
     codingKeysName: String = "CodingKeys"
@@ -84,6 +84,41 @@ extension CodeGenCore {
     )
   }
 
+  static func genNestedEncodeContainerDecl(
+    bindingSpecifier: TokenSyntax = .keyword(.var),
+    container: String,
+    parentContainer: String,
+    keyedBy: String,
+    forKey: String
+  ) -> DeclSyntax {
+    let initializerExpr = FunctionCallExprSyntax(
+      calledExpression: MemberAccessExprSyntax(
+        base: DeclReferenceExprSyntax(baseName: .identifier(parentContainer)),
+        declName: DeclReferenceExprSyntax(baseName: .identifier("nestedContainer"))
+      ),
+      leftParen: .leftParenToken(),
+      rightParen: .rightParenToken()
+    ) {
+      LabeledExprSyntax(
+        label: "keyedBy",
+        expression: genChaningMembers(keyedBy, "self")
+      )
+
+      LabeledExprSyntax(
+        label: "forKey",
+        expression: genChaningMembers(forKey)
+      )
+    }
+
+    return DeclSyntax(
+      genVariableDecl(
+        bindingSpecifier: bindingSpecifier,
+        name: container,
+        initializer: ExprSyntax(initializerExpr)
+      )
+    )
+  }
+
   /// Generate the container encode expression.
   ///
   /// The generated expression is like:
@@ -98,8 +133,8 @@ extension CodeGenCore {
   ///   - patternName: The name of the pattern.
   ///   - isOptional: Is the variable optional.
   ///   - explicitNil: Should encode nil explicitly.
-  func genContainerEncodeExpr(
-    containerName: String = "container",
+  static func genContainerEncodeExpr(
+    containerName: String,
     key: PatternSyntax,
     patternName: PatternSyntax,
     isOptional: Bool,
@@ -129,7 +164,7 @@ extension CodeGenCore {
   ///
   /// ```swift
   /// if let [rawStringName] = String(data: [rawDataName], encoding: .utf8) {
-  ///   try container.encode([rawStringName], forKey: .[key])
+  ///   try [containerName].encode([rawStringName], forKey: .[key])
   /// } else {
   ///   throw EncodingError.invalidValue(
   ///     [rawDataName],
@@ -140,10 +175,12 @@ extension CodeGenCore {
   ///   )
   /// }
   /// ```
-  func genEncodeRawDataHandleExpr(
+  static func genEncodeRawDataHandleExpr(
     key: PatternSyntax,
     rawDataName: PatternSyntax,
     rawStringName: PatternSyntax,
+    containerName: String,
+    codingPath: [(String, String)],
     message: String,
     isOptional: Bool,
     explicitNil: Bool
@@ -177,6 +214,7 @@ extension CodeGenCore {
           CodeBlockItemSyntax(
             item: .expr(
               genContainerEncodeExpr(
+                containerName: containerName,
                 key: key,
                 patternName: rawStringName,
                 isOptional: isOptional,
@@ -192,7 +230,7 @@ extension CodeGenCore {
               item: .stmt(
                 genInvalidValueEncodingErrorThrowStmt(
                   data: rawDataName,
-                  codingPath: key,
+                  codingPath: codingPath,
                   message: message
                 )
               )
@@ -215,9 +253,9 @@ extension CodeGenCore {
   ///   )
   /// )
   /// ```
-  func genInvalidValueEncodingErrorThrowStmt(
+  static func genInvalidValueEncodingErrorThrowStmt(
     data: PatternSyntax,
-    codingPath: PatternSyntax,
+    codingPath: [(String, String)],
     message: String
   ) -> StmtSyntax {
     StmtSyntax(
@@ -249,14 +287,9 @@ extension CodeGenCore {
                 label: "codingPath",
                 colon: .colonToken(),
                 expression: ArrayExprSyntax(
-                  expressions: [
-                    ExprSyntax(
-                      MemberAccessExprSyntax(
-                        base: DeclReferenceExprSyntax(baseName: .identifier("CodingKeys")),
-                        declName: DeclReferenceExprSyntax(baseName: .identifier("\(codingPath)"))
-                      )
-                    )
-                  ]
+                  expressions: codingPath.map { key, value in
+                    ExprSyntax(genChaningMembers(key, value))
+                  }
                 ),
                 trailingComma: .commaToken(trailingTrivia: .newline)
               )

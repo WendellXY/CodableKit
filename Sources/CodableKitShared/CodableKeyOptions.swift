@@ -17,7 +17,7 @@ public struct CodableKeyOptions: OptionSet, Sendable {
 
   /// The default options for a `CodableKey`, which is equivalent to an empty set.
   public static let `default`: Self = []
-  
+
   /// A convenience option combining ``transcodeRawString`` and ``useDefaultOnFailure`` for safe JSON string transcoding.
   ///
   /// This option provides a safer way to handle string-encoded JSON by automatically falling back to

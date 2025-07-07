@@ -10,10 +10,10 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
-import XCTest
+import Testing
 
-final class CodableKitDiagnosticsTests: XCTestCase {
-  func testMacroWithNoTypeAnnotation() throws {
+@Suite struct CodableKitDiagnosticsTests {
+  @Test func macroWithNoTypeAnnotation() throws {
     assertMacroExpansion(
       """
       @Codable
@@ -38,7 +38,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
     )
   }
 
-  func testMacroWithIgnoredPropertyTypeAnnotation() throws {
+  @Test func macroWithIgnoredPropertyTypeAnnotation() throws {
 
     assertMacroExpansion(
       """
@@ -90,7 +90,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
 
   }
 
-  func testMacroWithStaticTypeAnnotation() throws {
+  @Test func macroWithStaticTypeAnnotation() throws {
 
     assertMacroExpansion(
       """
@@ -143,7 +143,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
 
   }
 
-  func testMacroOnComputeProperty() throws {
+  @Test func macroOnComputeProperty() throws {
 
     assertMacroExpansion(
       """
@@ -202,7 +202,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
 
   }
 
-  func testMacroOnStaticComputeProperty() throws {
+  @Test func macroOnStaticComputeProperty() throws {
 
     assertMacroExpansion(
       """
@@ -261,7 +261,7 @@ final class CodableKitDiagnosticsTests: XCTestCase {
 
   }
 
-  func testMacroOnStaticProperty() throws {
+  @Test func macroOnStaticProperty() throws {
 
     assertMacroExpansion(
       """

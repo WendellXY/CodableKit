@@ -12,7 +12,7 @@ import SwiftSyntaxBuilder
 // MARK: JSONDecoder
 
 extension CodeGenCore {
-  fileprivate func genJSONDecoderDecodeRightOperand(
+  fileprivate static func genJSONDecoderDecodeRightOperand(
     type: TypeSyntax,
     data: PatternSyntax,
     withQuestionMark: Bool
@@ -41,7 +41,7 @@ extension CodeGenCore {
     )
   }
 
-  fileprivate func genJSONDecoderDecodeExpr(
+  fileprivate static func genJSONDecoderDecodeExpr(
     variableName: PatternSyntax,
     type: TypeSyntax,
     data: PatternSyntax,
@@ -72,7 +72,7 @@ extension CodeGenCore {
 // MARK: Container Decode
 
 extension CodeGenCore {
-  func genDecodeContainerDecl(
+  static func genDecodeContainerDecl(
     bindingSpecifier: TokenSyntax = .keyword(.let),
     patternName: String = "container",
     codingKeysName: String = "CodingKeys"
@@ -102,7 +102,44 @@ extension CodeGenCore {
     )
   }
 
-  fileprivate func genContainerDecodeExprRightOperand(
+  static func genNestedDecodeContainerDecl(
+    bindingSpecifier: TokenSyntax = .keyword(.let),
+    container: String,
+    parentContainer: String,
+    keyedBy: String,
+    forKey: String
+  ) -> DeclSyntax {
+    let initializerExpr = TryExprSyntax(
+      expression: FunctionCallExprSyntax(
+        calledExpression: MemberAccessExprSyntax(
+          base: DeclReferenceExprSyntax(baseName: .identifier(parentContainer)),
+          declName: DeclReferenceExprSyntax(baseName: .identifier("nestedContainer"))
+        ),
+        leftParen: .leftParenToken(),
+        rightParen: .rightParenToken()
+      ) {
+        LabeledExprSyntax(
+          label: "keyedBy",
+          expression: genChaningMembers(keyedBy, "self")
+        )
+        LabeledExprSyntax(
+          label: "forKey",
+          expression: genChaningMembers(forKey)
+        )
+      }
+    )
+
+    return DeclSyntax(
+      genVariableDecl(
+        bindingSpecifier: bindingSpecifier,
+        name: container,
+        initializer: ExprSyntax(initializerExpr)
+      )
+    )
+  }
+
+  fileprivate static func genContainerDecodeExprRightOperand(
+    containerName: String,
     patternName: PatternSyntax,
     isOptional: Bool,
     useDefaultOnFailure: Bool,
@@ -115,7 +152,7 @@ extension CodeGenCore {
     // The main function call expression, like `container.decodeIfPresent(Type.self, forKey: .yourEnumCase)`
     let funcCallExpr = FunctionCallExprSyntax(
       calledExpression: MemberAccessExprSyntax(
-        base: DeclReferenceExprSyntax(baseName: .identifier("container")),
+        base: DeclReferenceExprSyntax(baseName: .identifier(containerName)),
         declName: DeclReferenceExprSyntax(baseName: .identifier(decodeIfPresent ? "decodeIfPresent" : "decode"))
       ),
       leftParen: .leftParenToken(),
@@ -176,7 +213,7 @@ extension CodeGenCore {
   /// The generated expression will be like below:
   ///
   /// ```swift
-  /// yourProperty = try? container.decodeIfPresent(Type.self, forKey: .yourEnumCase) ?? defaultValue
+  /// yourProperty = try? [containerName].decodeIfPresent(Type.self, forKey: .yourEnumCase) ?? defaultValue
   /// ```
   ///
   /// - Parameters:
@@ -186,7 +223,8 @@ extension CodeGenCore {
   ///   - defaultValueExpr: The default value expression. If `nil`, the default value will not be used. If not `nil`,
   ///    the `decodeIfPresent` method will be used.
   ///   - type: The type of the property.
-  func genContainerDecodeExpr(
+  static func genContainerDecodeExpr(
+    containerName: String,
     variableName: PatternSyntax,
     patternName: PatternSyntax,
     isOptional: Bool,
@@ -199,6 +237,7 @@ extension CodeGenCore {
         leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(variableName)")),
         operator: AssignmentExprSyntax(equal: .equalToken()),
         rightOperand: genContainerDecodeExprRightOperand(
+          containerName: containerName,
           patternName: patternName,
           isOptional: isOptional,
           useDefaultOnFailure: useDefaultOnFailure,
@@ -213,11 +252,12 @@ extension CodeGenCore {
   ///
   /// The generated declaration will be like below:
   /// ```swift
-  /// let [variableName] = try? container.decodeIfPresent([type].self, forKey: .[patternName]) ?? [defaultValueExpr]
+  /// let [variableName] = try? [containerName].decodeIfPresent([type].self, forKey: .[patternName]) ?? [defaultValueExpr]
   /// ```
-  func genContainerDecodeVariableDecl(
+  static func genContainerDecodeVariableDecl(
     bindingSpecifier: TokenSyntax = .keyword(.let),
     variableName: PatternSyntax,
+    containerName: String,
     patternName: PatternSyntax,
     isOptional: Bool,
     useDefaultOnFailure: Bool,
@@ -229,6 +269,7 @@ extension CodeGenCore {
         bindingSpecifier: bindingSpecifier,
         name: "\(variableName)",
         initializer: genContainerDecodeExprRightOperand(
+          containerName: containerName,
           patternName: patternName,
           isOptional: isOptional,
           useDefaultOnFailure: useDefaultOnFailure,
@@ -266,11 +307,12 @@ extension CodeGenCore {
   ///   [key] = [defaultValueExpr]
   /// }
   /// ```
-  func genRawDataHandleExpr(
+  static func genRawDataHandleExpr(
     key: PatternSyntax,
     rawDataName: PatternSyntax,
     rawStringName: PatternSyntax,
     defaultValueExpr: ExprSyntax?,
+    codingPath: [(String, String)],
     type: TypeSyntax,
     message: String
   ) -> ExprSyntax {
@@ -313,7 +355,7 @@ extension CodeGenCore {
                 )
               )
             )
-          )
+          ),
         ],
         body: CodeBlockSyntax {
           CodeBlockItemSyntax(
@@ -347,7 +389,7 @@ extension CodeGenCore {
                 item: .stmt(
                   genValueNotFoundDecodingErrorThrowStmt(
                     type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String"))),
-                    codingPath: key,
+                    codingPath: codingPath,
                     message: message
                   )
                 )
@@ -371,9 +413,9 @@ extension CodeGenCore {
   ///   )
   /// )
   /// ```
-  func genValueNotFoundDecodingErrorThrowStmt(
+  static func genValueNotFoundDecodingErrorThrowStmt(
     type: TypeSyntax,
-    codingPath: PatternSyntax,
+    codingPath: [(String, String)],
     message: String
   ) -> StmtSyntax {
     StmtSyntax(
@@ -405,14 +447,9 @@ extension CodeGenCore {
                 label: "codingPath",
                 colon: .colonToken(),
                 expression: ArrayExprSyntax(
-                  expressions: [
-                    ExprSyntax(
-                      MemberAccessExprSyntax(
-                        base: DeclReferenceExprSyntax(baseName: .identifier("CodingKeys")),
-                        declName: DeclReferenceExprSyntax(baseName: .identifier("\(codingPath)"))
-                      )
-                    )
-                  ]
+                  expressions: codingPath.map { key, value in
+                    ExprSyntax(genChaningMembers(key, value))
+                  }
                 ),
                 trailingComma: .commaToken(trailingTrivia: .newline)
               )
