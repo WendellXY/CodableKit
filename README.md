@@ -30,6 +30,8 @@ It provides macros for generating `Codable`, `Encodable`, and `Decodable` implem
 - **Custom coding keys:**  
   Change the mapping from property names to coding keys, with full support for nested models.
 
+- **Nested coding key paths:**  Use `@CodableKey("data.uid")` or deeper paths to map properties to nested keys in the JSON hierarchy (e.g., `{ "data": { "uid": 0 } }`).
+
 - **Graceful decoding failures:**  
   Specify that a property should fallback to a default (or `nil`) instead of throwing on invalid/missing input.
 
@@ -70,6 +72,7 @@ struct Car {
 | ------------------------------ | --------------------------------------------------- | ----------------------------------------------- |
 | Default values                 | `var count: Int = 0`                                | Use a fallback when data is missing             |
 | Custom coding key              | `@CodableKey("uid") let id: UUID`                   | Map property to custom JSON key                 |
+| Nested coding key path         | `@CodableKey("data.uid") let id: Int`                 | Support mapping to deeply nested JSON keys        |
 | Ignore property                | `@CodableKey(options: .ignored) var temp: String`   | Exclude property from coding                    |
 | String ↔ Struct transcoding    | `@CodableKey(options: .transcodeRawString)`         | Decode/encode via JSON string field             |
 | Use default on failure         | `@CodableKey(options: .useDefaultOnFailure)`        | Fallback to default or nil on decoding error    |
@@ -105,6 +108,27 @@ struct User {
 
     @CodableKey(options: .ignored)
     let cacheToken: String = ""
+}
+```
+
+### Nested Coding Keys
+
+You can map a property to a deeply nested key in your JSON using dot notation with `@CodableKey`. For example, this struct:
+
+```swift
+@Codable
+struct User {
+    @CodableKey("data.uid") let id: Int
+    @CodableKey("profile.info.name") let name: String
+}
+```
+
+...will encode/decode JSON like:
+
+```json
+{
+  "data": { "uid": 123 },
+  "profile": { "info": { "name": "Alice" } }
 }
 ```
 
@@ -294,6 +318,8 @@ class HashableUser: Hashable { }
 class HashableUser { }
 extension HashableUser: Hashable { }
 ```
+
+**Note:** For highly unusual or invalid Swift identifiers in key paths (e.g., reserved words), the generated coding key enum/case names will be sanitized to ensure valid Swift code.
 
 ## Contributing
 

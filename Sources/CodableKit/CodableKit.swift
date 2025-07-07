@@ -155,8 +155,12 @@ public macro Encodable(
 
 /// Custom the key used for encoding and decoding a property.
 ///
+/// The `key` parameter supports dot-separated key paths for mapping to nested JSON objects.
+/// For example, `@CodableKey("data.uid") let id: Int` will map the `id` property to the nested key
+/// path `data.uid` in the JSON.
+///
 /// - Parameters:
-///   - key: The custom key to use for encoding and decoding the property. If not provided,
+///   - key: The custom key or key path to use for encoding and decoding the property. If not provided,
 ///   the property name will be used.
 ///   - options: Options for customizing the behavior of the key.
 @attached(peer, names: arbitrary)
