@@ -9,10 +9,10 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
-import XCTest
+import Testing
 
-final class CodableKitTestsForStruct: XCTestCase {
-  func testMacros() throws {
+@Suite struct CodableKitTestsForStruct {
+  @Test func macros() throws {
 
     assertMacroExpansion(
       """
@@ -53,7 +53,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacroWithDefaultValue() throws {
+  @Test func macroWithDefaultValue() throws {
 
     assertMacroExpansion(
       """
@@ -94,7 +94,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacroWithCodableKeyAndDefaultValue() throws {
+  @Test func macroWithCodableKeyAndDefaultValue() throws {
 
     assertMacroExpansion(
       """
@@ -136,7 +136,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacroWithOptionalValue() throws {
+  @Test func macroWithOptionalValue() throws {
 
     assertMacroExpansion(
       """
@@ -177,7 +177,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacroWithIgnoredCodableKey() throws {
+  @Test func macroWithIgnoredCodableKey() throws {
 
     assertMacroExpansion(
       """
@@ -221,7 +221,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacroWithExplicitNil() throws {
+  @Test func macroWithExplicitNil() throws {
 
     assertMacroExpansion(
       """
@@ -267,7 +267,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacroWithOneCustomKeyGenerated() throws {
+  @Test func macroWithOneCustomKeyGenerated() throws {
 
     assertMacroExpansion(
       """
@@ -313,7 +313,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacroWithTwoCustomKeyGenerated() throws {
+  @Test func macroWithTwoCustomKeyGenerated() throws {
 
     assertMacroExpansion(
       """
@@ -364,7 +364,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacroWithDecodingRawString() throws {
+  @Test func macroWithDecodingRawString() throws {
 
     assertMacroExpansion(
       """
@@ -429,7 +429,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacroWithDecodingRawStringAndIgnoreError() throws {
+  @Test func macroWithDecodingRawStringAndIgnoreError() throws {
 
     assertMacroExpansion(
       """
@@ -494,7 +494,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacroWithDecodingRawStringWithDefaultValueAndIgnoreError() throws {
+  @Test func macroWithDecodingRawStringWithDefaultValueAndIgnoreError() throws {
 
     assertMacroExpansion(
       """
@@ -559,7 +559,7 @@ final class CodableKitTestsForStruct: XCTestCase {
 
   }
 
-  func testMacrosWithOptionUseDefaultOnFailure() throws {
+  @Test func macrosWithOptionUseDefaultOnFailure() throws {
 
     assertMacroExpansion(
       """
