@@ -10,8 +10,6 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 final class NamespaceNode {
-  private let core = CodeGenCore.shared
-
   let segment: String
   var children: [String: NamespaceNode] = [:]
   var properties: [CodableProperty] = []  // Track properties at this node (usually leaf)
@@ -122,7 +120,7 @@ extension NamespaceNode {
 
     if parent == nil {
       result.append(
-        CodeBlockItemSyntax(item: .decl(core.genDecodeContainerDecl()))
+        CodeBlockItemSyntax(item: .decl(CodeGenCore.genDecodeContainerDecl()))
       )
     }
 
@@ -130,7 +128,7 @@ extension NamespaceNode {
       result.append(
         CodeBlockItemSyntax(
           item: .decl(
-            core.genNestedDecodeContainerDecl(
+            CodeGenCore.genNestedDecodeContainerDecl(
               container: child.containerName,
               parentContainer: containerName,
               keyedBy: child.enumName,
@@ -151,7 +149,7 @@ extension NamespaceNode {
       contentsOf: properties.filter(\.isNormal).map { property in
         CodeBlockItemSyntax(
           item: .expr(
-            core.genContainerDecodeExpr(
+            CodeGenCore.genContainerDecodeExpr(
               containerName: containerName,
               variableName: property.name,
               patternName: property.name,
@@ -174,7 +172,7 @@ extension NamespaceNode {
       result.append(contentsOf: [
         CodeBlockItemSyntax(
           item: .decl(
-            core.genContainerDecodeVariableDecl(
+            CodeGenCore.genContainerDecodeVariableDecl(
               variableName: rawKey,
               containerName: containerName,
               patternName: key,
@@ -187,7 +185,7 @@ extension NamespaceNode {
         ),
         CodeBlockItemSyntax(
           item: .expr(
-            core.genRawDataHandleExpr(
+            CodeGenCore.genRawDataHandleExpr(
               key: property.name,
               rawDataName: property.rawDataName,
               rawStringName: property.rawStringName,
@@ -223,14 +221,14 @@ extension NamespaceNode {
     var result: [CodeBlockItemSyntax] = []
 
     if parent == nil {
-      result.append(CodeBlockItemSyntax(item: .decl(core.genEncodeContainerDecl())))
+      result.append(CodeBlockItemSyntax(item: .decl(CodeGenCore.genEncodeContainerDecl())))
     }
 
     for child in children.values {
       result.append(
         CodeBlockItemSyntax(
           item: .decl(
-            core.genNestedEncodeContainerDecl(
+            CodeGenCore.genNestedEncodeContainerDecl(
               container: child.containerName,
               parentContainer: containerName,
               keyedBy: child.enumName,
@@ -251,7 +249,7 @@ extension NamespaceNode {
       contentsOf: properties.filter(\.isNormal).map { property in
         CodeBlockItemSyntax(
           item: .expr(
-            core.genContainerEncodeExpr(
+            CodeGenCore.genContainerEncodeExpr(
               containerName: containerName,
               key: property.name,
               patternName: property.name,
@@ -267,7 +265,7 @@ extension NamespaceNode {
       result.append(contentsOf: [
         CodeBlockItemSyntax(
           item: .decl(
-            core.genJSONEncoderEncodeDecl(
+            CodeGenCore.genJSONEncoderEncodeDecl(
               variableName: property.rawDataName,
               instance: property.name
             )
@@ -275,7 +273,7 @@ extension NamespaceNode {
         ),
         CodeBlockItemSyntax(
           item: .expr(
-            core.genEncodeRawDataHandleExpr(
+            CodeGenCore.genEncodeRawDataHandleExpr(
               key: property.name,
               rawDataName: property.rawDataName,
               rawStringName: property.rawStringName,

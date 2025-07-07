@@ -12,7 +12,7 @@ import SwiftSyntaxBuilder
 // MARK: JSONDecoder
 
 extension CodeGenCore {
-  fileprivate func genJSONDecoderDecodeRightOperand(
+  fileprivate static func genJSONDecoderDecodeRightOperand(
     type: TypeSyntax,
     data: PatternSyntax,
     withQuestionMark: Bool
@@ -41,7 +41,7 @@ extension CodeGenCore {
     )
   }
 
-  fileprivate func genJSONDecoderDecodeExpr(
+  fileprivate static func genJSONDecoderDecodeExpr(
     variableName: PatternSyntax,
     type: TypeSyntax,
     data: PatternSyntax,
@@ -72,7 +72,7 @@ extension CodeGenCore {
 // MARK: Container Decode
 
 extension CodeGenCore {
-  func genDecodeContainerDecl(
+  static func genDecodeContainerDecl(
     bindingSpecifier: TokenSyntax = .keyword(.let),
     patternName: String = "container",
     codingKeysName: String = "CodingKeys"
@@ -102,7 +102,7 @@ extension CodeGenCore {
     )
   }
 
-  func genNestedDecodeContainerDecl(
+  static func genNestedDecodeContainerDecl(
     bindingSpecifier: TokenSyntax = .keyword(.let),
     container: String,
     parentContainer: String,
@@ -138,7 +138,7 @@ extension CodeGenCore {
     )
   }
 
-  fileprivate func genContainerDecodeExprRightOperand(
+  fileprivate static func genContainerDecodeExprRightOperand(
     containerName: String,
     patternName: PatternSyntax,
     isOptional: Bool,
@@ -223,7 +223,7 @@ extension CodeGenCore {
   ///   - defaultValueExpr: The default value expression. If `nil`, the default value will not be used. If not `nil`,
   ///    the `decodeIfPresent` method will be used.
   ///   - type: The type of the property.
-  func genContainerDecodeExpr(
+  static func genContainerDecodeExpr(
     containerName: String,
     variableName: PatternSyntax,
     patternName: PatternSyntax,
@@ -254,7 +254,7 @@ extension CodeGenCore {
   /// ```swift
   /// let [variableName] = try? [containerName].decodeIfPresent([type].self, forKey: .[patternName]) ?? [defaultValueExpr]
   /// ```
-  func genContainerDecodeVariableDecl(
+  static func genContainerDecodeVariableDecl(
     bindingSpecifier: TokenSyntax = .keyword(.let),
     variableName: PatternSyntax,
     containerName: String,
@@ -307,7 +307,7 @@ extension CodeGenCore {
   ///   [key] = [defaultValueExpr]
   /// }
   /// ```
-  func genRawDataHandleExpr(
+  static func genRawDataHandleExpr(
     key: PatternSyntax,
     rawDataName: PatternSyntax,
     rawStringName: PatternSyntax,
@@ -413,7 +413,7 @@ extension CodeGenCore {
   ///   )
   /// )
   /// ```
-  func genValueNotFoundDecodingErrorThrowStmt(
+  static func genValueNotFoundDecodingErrorThrowStmt(
     type: TypeSyntax,
     codingPath: [(String, String)],
     message: String

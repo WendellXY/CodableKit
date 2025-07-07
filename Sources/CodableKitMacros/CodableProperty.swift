@@ -158,14 +158,16 @@ extension CodableProperty {
   static func extract(from declaration: some DeclGroupSyntax) throws -> [Self] {
     let declarations = declaration.memberBlock.members.map(\.decl)
 
-    let vars = try declarations
+    let vars =
+      try declarations
       .compactMap { $0.as(VariableDeclSyntax.self) }
-      .filter { $0.bindings.first?.accessorBlock == nil } // Ignore computed properties
+      .filter { $0.bindings.first?.accessorBlock == nil }  // Ignore computed properties
       .flatMap(extract)
 
-    let cases = try declarations
-        .compactMap { $0.as(EnumCaseDeclSyntax.self) }
-        .flatMap(extract)
+    let cases =
+      try declarations
+      .compactMap { $0.as(EnumCaseDeclSyntax.self) }
+      .flatMap(extract)
 
     return vars + cases
   }

@@ -12,13 +12,8 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-public struct CodableMacro {
-  internal static let core = CodeGenCore.shared
-}
-
-// MARK: - ExtensionMacro
-
-extension CodableMacro: ExtensionMacro {
+public struct CodableMacro: ExtensionMacro {
+  // MARK: - ExtensionMacro
   public static func expansion(
     of node: AttributeSyntax,
     attachedTo declaration: some DeclGroupSyntax,
@@ -26,6 +21,7 @@ extension CodableMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
+    let core = CodeGenCore()
     try core.prepareCodeGeneration(of: node, for: declaration, in: context, conformingTo: protocols)
 
     let properties = try core.properties(for: declaration, in: context)
@@ -108,6 +104,7 @@ extension CodableMacro: MemberMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [DeclSyntax] {
+    let core = CodeGenCore()
     try core.prepareCodeGeneration(of: node, for: declaration, in: context, conformingTo: protocols)
 
     let properties = try core.properties(for: declaration, in: context)

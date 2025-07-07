@@ -11,7 +11,7 @@ import SwiftSyntax
 // MARK: JSONEncoder
 
 extension CodeGenCore {
-  fileprivate func genJSONEncoderEncodeRightOperand(
+  fileprivate static func genJSONEncoderEncodeRightOperand(
     instance: PatternSyntax
   ) -> some ExprSyntaxProtocol {
     TryExprSyntax(
@@ -35,7 +35,7 @@ extension CodeGenCore {
     )
   }
 
-  func genJSONEncoderEncodeDecl(
+  static func genJSONEncoderEncodeDecl(
     bindingSpecifier: TokenSyntax = .keyword(.let),
     variableName: PatternSyntax,
     instance: PatternSyntax
@@ -56,7 +56,7 @@ extension CodeGenCore {
 // MARK: Container Encode
 
 extension CodeGenCore {
-  func genEncodeContainerDecl(
+  static func genEncodeContainerDecl(
     bindingSpecifier: TokenSyntax = .keyword(.var),
     patternName: String = "container",
     codingKeysName: String = "CodingKeys"
@@ -84,7 +84,7 @@ extension CodeGenCore {
     )
   }
 
-  func genNestedEncodeContainerDecl(
+  static func genNestedEncodeContainerDecl(
     bindingSpecifier: TokenSyntax = .keyword(.var),
     container: String,
     parentContainer: String,
@@ -133,7 +133,7 @@ extension CodeGenCore {
   ///   - patternName: The name of the pattern.
   ///   - isOptional: Is the variable optional.
   ///   - explicitNil: Should encode nil explicitly.
-  func genContainerEncodeExpr(
+  static func genContainerEncodeExpr(
     containerName: String,
     key: PatternSyntax,
     patternName: PatternSyntax,
@@ -175,7 +175,7 @@ extension CodeGenCore {
   ///   )
   /// }
   /// ```
-  func genEncodeRawDataHandleExpr(
+  static func genEncodeRawDataHandleExpr(
     key: PatternSyntax,
     rawDataName: PatternSyntax,
     rawStringName: PatternSyntax,
@@ -253,7 +253,7 @@ extension CodeGenCore {
   ///   )
   /// )
   /// ```
-  func genInvalidValueEncodingErrorThrowStmt(
+  static func genInvalidValueEncodingErrorThrowStmt(
     data: PatternSyntax,
     codingPath: [(String, String)],
     message: String
