@@ -102,7 +102,44 @@ extension CodeGenCore {
     )
   }
 
+  func genNestedDecodeContainerDecl(
+    bindingSpecifier: TokenSyntax = .keyword(.let),
+    container: String,
+    parentContainer: String,
+    keyedBy: String,
+    forKey: String
+  ) -> DeclSyntax {
+    let initializerExpr = TryExprSyntax(
+      expression: FunctionCallExprSyntax(
+        calledExpression: MemberAccessExprSyntax(
+          base: DeclReferenceExprSyntax(baseName: .identifier(parentContainer)),
+          declName: DeclReferenceExprSyntax(baseName: .identifier("nestedContainer"))
+        ),
+        leftParen: .leftParenToken(),
+        rightParen: .rightParenToken()
+      ) {
+        LabeledExprSyntax(
+          label: "keyedBy",
+          expression: genChaningMembers(keyedBy, "self")
+        )
+        LabeledExprSyntax(
+          label: "forKey",
+          expression: genChaningMembers(forKey)
+        )
+      }
+    )
+
+    return DeclSyntax(
+      genVariableDecl(
+        bindingSpecifier: bindingSpecifier,
+        name: container,
+        initializer: ExprSyntax(initializerExpr)
+      )
+    )
+  }
+
   fileprivate func genContainerDecodeExprRightOperand(
+    container: String = "container",
     patternName: PatternSyntax,
     isOptional: Bool,
     useDefaultOnFailure: Bool,
@@ -115,7 +152,7 @@ extension CodeGenCore {
     // The main function call expression, like `container.decodeIfPresent(Type.self, forKey: .yourEnumCase)`
     let funcCallExpr = FunctionCallExprSyntax(
       calledExpression: MemberAccessExprSyntax(
-        base: DeclReferenceExprSyntax(baseName: .identifier("container")),
+        base: DeclReferenceExprSyntax(baseName: .identifier(container)),
         declName: DeclReferenceExprSyntax(baseName: .identifier(decodeIfPresent ? "decodeIfPresent" : "decode"))
       ),
       leftParen: .leftParenToken(),
@@ -187,6 +224,7 @@ extension CodeGenCore {
   ///    the `decodeIfPresent` method will be used.
   ///   - type: The type of the property.
   func genContainerDecodeExpr(
+    container: String = "container",
     variableName: PatternSyntax,
     patternName: PatternSyntax,
     isOptional: Bool,
@@ -199,6 +237,7 @@ extension CodeGenCore {
         leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(variableName)")),
         operator: AssignmentExprSyntax(equal: .equalToken()),
         rightOperand: genContainerDecodeExprRightOperand(
+          container: container,
           patternName: patternName,
           isOptional: isOptional,
           useDefaultOnFailure: useDefaultOnFailure,

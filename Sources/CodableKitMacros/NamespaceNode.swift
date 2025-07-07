@@ -94,3 +94,107 @@ extension NamespaceNode {
   }
 }
 
+// MARK: - Decoder Generation
+extension NamespaceNode {
+
+  private var containerName: String {
+    parent == nil ? "container" : segment + "Container"
+  }
+
+  private var containersAssignment: [CodeBlockItemSyntax] {
+    var result: [CodeBlockItemSyntax] = []
+
+    if parent == nil {
+      result.append(
+        CodeBlockItemSyntax(item: .decl(core.genDecodeContainerDecl()))
+      )
+    }
+
+    for child in children.values {
+      result.append(
+        CodeBlockItemSyntax(
+          item: .decl(
+            core.genNestedDecodeContainerDecl(
+              container: child.containerName,
+              parentContainer: containerName,
+              keyedBy: child.enumName,
+              forKey: child.segment
+            )
+          )
+        )
+      )
+    }
+
+    return result
+  }
+
+  private var propertyAssignment: [CodeBlockItemSyntax] {
+    var result: [CodeBlockItemSyntax] = []
+
+    result.append(
+      contentsOf: properties.filter(\.isNormal).map { property in
+        CodeBlockItemSyntax(
+          item: .expr(
+            core.genContainerDecodeExpr(
+              container: containerName,
+              variableName: property.name,
+              patternName: property.name,
+              isOptional: property.isOptional,
+              useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
+              defaultValueExpr: property.defaultValue,
+              type: property.type
+            )
+          )
+        )
+      }
+    )
+
+    for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
+      let key = property.name
+      let rawKey = property.rawStringName
+
+      let defaultValueExpr = property.defaultValue ?? (property.isOptional ? "nil" : nil)
+
+      result.append(contentsOf: [
+        CodeBlockItemSyntax(
+          item: .decl(
+            core.genContainerDecodeVariableDecl(
+              variableName: rawKey,
+              patternName: key,
+              isOptional: property.isOptional,
+              useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
+              defaultValueExpr: ExprSyntax(StringLiteralExprSyntax(content: "")),
+              type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String")))
+            )
+          )
+        ),
+        CodeBlockItemSyntax(
+          item: .expr(
+            core.genRawDataHandleExpr(
+              key: property.name,
+              rawDataName: property.rawDataName,
+              rawStringName: property.rawStringName,
+              defaultValueExpr: defaultValueExpr,
+              type: property.type,
+              message: "Failed to convert raw string to data"
+            )
+          )
+        ),
+      ])
+    }
+
+    return result
+  }
+
+  var decodeBlockItem: [CodeBlockItemSyntax] {
+    var result: [CodeBlockItemSyntax] = []
+
+    result.append(contentsOf: containersAssignment)
+    result.append(contentsOf: propertyAssignment)
+    for child in children.values {
+      result.append(contentsOf: child.decodeBlockItem)
+    }
+
+    return result
+  }
+}
