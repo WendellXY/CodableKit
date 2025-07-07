@@ -94,12 +94,14 @@ extension NamespaceNode {
   }
 }
 
-// MARK: - Decoder Generation
 extension NamespaceNode {
-
   private var containerName: String {
     parent == nil ? "container" : segment + "Container"
   }
+}
+
+// MARK: - Decoder Generation
+extension NamespaceNode {
 
   private var containersAssignment: [CodeBlockItemSyntax] {
     var result: [CodeBlockItemSyntax] = []
@@ -193,6 +195,93 @@ extension NamespaceNode {
     result.append(contentsOf: propertyAssignment)
     for child in children.values {
       result.append(contentsOf: child.decodeBlockItem)
+    }
+
+    return result
+  }
+}
+
+// MARK: - Encoder Generation
+extension NamespaceNode {
+  private var encodeContainersAssignment: [CodeBlockItemSyntax] {
+    var result: [CodeBlockItemSyntax] = []
+
+    if parent == nil {
+      result.append(CodeBlockItemSyntax(item: .decl(core.genEncodeContainerDecl())))
+    }
+
+    for child in children.values {
+      result.append(
+        CodeBlockItemSyntax(
+          item: .decl(
+            core.genNestedEncodeContainerDecl(
+              container: child.containerName,
+              parentContainer: containerName,
+              keyedBy: child.enumName,
+              forKey: child.segment
+            )
+          )
+        )
+      )
+    }
+
+    return result
+  }
+
+  private var propertyEncodeAssignment: [CodeBlockItemSyntax] {
+    var result: [CodeBlockItemSyntax] = []
+
+    result.append(
+      contentsOf: properties.filter(\.isNormal).map { property in
+        CodeBlockItemSyntax(
+          item: .expr(
+            core.genContainerEncodeExpr(
+              containerName: containerName,
+              key: property.name,
+              patternName: property.name,
+              isOptional: property.isOptional,
+              explicitNil: property.options.contains(.explicitNil)
+            )
+          )
+        )
+      })
+
+    // Decode from the rawString.
+    for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
+      result.append(contentsOf: [
+        CodeBlockItemSyntax(
+          item: .decl(
+            core.genJSONEncoderEncodeDecl(
+              variableName: property.rawDataName,
+              instance: property.name
+            )
+          )
+        ),
+        CodeBlockItemSyntax(
+          item: .expr(
+            core.genEncodeRawDataHandleExpr(
+              key: property.name,
+              rawDataName: property.rawDataName,
+              rawStringName: property.rawStringName,
+              message: "Failed to transcode raw data to string",
+              isOptional: property.isOptional,
+              explicitNil: property.options.contains(.explicitNil)
+            )
+          )
+        ),
+      ])
+    }
+
+    return result
+  }
+
+  var encodeBlockItem: [CodeBlockItemSyntax] {
+    var result: [CodeBlockItemSyntax] = []
+
+    result.append(contentsOf: encodeContainersAssignment)
+    result.append(contentsOf: propertyEncodeAssignment)
+    for child in children.values {
+      result.append(contentsOf: child.encodeBlockItem)
     }
 
     return result

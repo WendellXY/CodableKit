@@ -84,6 +84,41 @@ extension CodeGenCore {
     )
   }
 
+  func genNestedEncodeContainerDecl(
+    bindingSpecifier: TokenSyntax = .keyword(.var),
+    container: String,
+    parentContainer: String,
+    keyedBy: String,
+    forKey: String
+  ) -> DeclSyntax {
+    let initializerExpr = FunctionCallExprSyntax(
+      calledExpression: MemberAccessExprSyntax(
+        base: DeclReferenceExprSyntax(baseName: .identifier(parentContainer)),
+        declName: DeclReferenceExprSyntax(baseName: .identifier("nestedContainer"))
+      ),
+      leftParen: .leftParenToken(),
+      rightParen: .rightParenToken()
+    ) {
+      LabeledExprSyntax(
+        label: "keyedBy",
+        expression: genChaningMembers(keyedBy, "self")
+      )
+
+      LabeledExprSyntax(
+        label: "forKey",
+        expression: genChaningMembers(forKey)
+      )
+    }
+
+    return DeclSyntax(
+      genVariableDecl(
+        bindingSpecifier: bindingSpecifier,
+        name: container,
+        initializer: ExprSyntax(initializerExpr)
+      )
+    )
+  }
+
   /// Generate the container encode expression.
   ///
   /// The generated expression is like:

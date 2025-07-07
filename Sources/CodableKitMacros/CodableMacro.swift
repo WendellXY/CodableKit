@@ -167,7 +167,8 @@ extension CodableMacro: MemberMacro {
               from: properties,
               modifiers: encodeModifiers,
               codableOptions: codableOptions,
-              hasSuper: hasSuper
+              hasSuper: hasSuper,
+              tree: namespaceTree
             )
           )
         )
@@ -225,7 +226,8 @@ extension CodableMacro {
     from properties: [Property],
     modifiers: [DeclModifierSyntax],
     codableOptions: CodableOptions,
-    hasSuper: Bool
+    hasSuper: Bool,
+    tree: NamespaceNode
   ) -> FunctionDeclSyntax {
     FunctionDeclSyntax(
       leadingTrivia: .newline,
@@ -240,43 +242,8 @@ extension CodableMacro {
     ) {
       "try willEncode(to: encoder)"
 
-      CodeBlockItemSyntax(item: .decl(core.genEncodeContainerDecl()))
-      for property in properties where property.isNormal {
-        CodeBlockItemSyntax(
-          item: .expr(
-            core.genContainerEncodeExpr(
-              key: property.name,
-              patternName: property.name,
-              isOptional: property.isOptional,
-              explicitNil: property.options.contains(.explicitNil)
-            )
-          )
-        )
-      }
-
-      // Decode from the rawString.
-      for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
-        CodeBlockItemSyntax(
-          item: .decl(
-            core.genJSONEncoderEncodeDecl(
-              variableName: property.rawDataName,
-              instance: property.name
-            )
-          )
-        )
-
-        CodeBlockItemSyntax(
-          item: .expr(
-            core.genEncodeRawDataHandleExpr(
-              key: property.name,
-              rawDataName: property.rawDataName,
-              rawStringName: property.rawStringName,
-              message: "Failed to transcode raw data to string",
-              isOptional: property.isOptional,
-              explicitNil: property.options.contains(.explicitNil)
-            )
-          )
-        )
+      for containerDecl in tree.encodeBlockItem {
+        containerDecl
       }
 
       if hasSuper, !codableOptions.contains(.skipSuperCoding) {
