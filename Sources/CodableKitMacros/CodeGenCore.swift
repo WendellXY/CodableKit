@@ -277,9 +277,9 @@ extension CodeGenCore {
 // MARK: Code Generation Helpers
 extension CodeGenCore {
   /// Generate a member access expression with a list of members like `A.B.C`.
-  fileprivate static func genChaningMembers(
+  fileprivate static func genChainingMembers(
     _ names: some Collection<String>,
-    attchedTo expr: ExprSyntax? = nil
+    attachedTo expr: ExprSyntax? = nil
   ) -> ExprSyntax {
     if let first = names.first {
       switch names.count {
@@ -292,9 +292,9 @@ extension CodeGenCore {
           )
         )
       default:
-        genChaningMembers(
+        genChainingMembers(
           names.dropFirst(),
-          attchedTo: ExprSyntax(
+          attachedTo: ExprSyntax(
             fromProtocol: MemberAccessExprSyntax(
               base: expr,
               declName: DeclReferenceExprSyntax(baseName: .identifier(first))
@@ -307,8 +307,8 @@ extension CodeGenCore {
     }
   }
 
-  static func genChaningMembers(_ names: String...) -> MemberAccessExprSyntax {
-    genChaningMembers(names, attchedTo: nil).as(MemberAccessExprSyntax.self)!
+  static func genChainingMembers(_ names: String...) -> MemberAccessExprSyntax {
+    genChainingMembers(names, attachedTo: nil).as(MemberAccessExprSyntax.self)!
   }
 }
 

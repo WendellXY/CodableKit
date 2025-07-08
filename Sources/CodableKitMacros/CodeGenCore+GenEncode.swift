@@ -71,7 +71,7 @@ extension CodeGenCore {
     ) {
       LabeledExprSyntax(
         label: "keyedBy",
-        expression: genChaningMembers(codingKeysName, "self")
+        expression: genChainingMembers(codingKeysName, "self")
       )
     }
 
@@ -101,12 +101,12 @@ extension CodeGenCore {
     ) {
       LabeledExprSyntax(
         label: "keyedBy",
-        expression: genChaningMembers(keyedBy, "self")
+        expression: genChainingMembers(keyedBy, "self")
       )
 
       LabeledExprSyntax(
         label: "forKey",
-        expression: genChaningMembers(forKey)
+        expression: genChainingMembers(forKey)
       )
     }
 
@@ -152,7 +152,7 @@ extension CodeGenCore {
           rightParen: .rightParenToken()
         ) {
           LabeledExprSyntax(expression: DeclReferenceExprSyntax(baseName: .identifier("\(patternName)")))
-          LabeledExprSyntax(label: "forKey", expression: genChaningMembers("\(key)"))
+          LabeledExprSyntax(label: "forKey", expression: genChainingMembers("\(key)"))
         }
       )
     )
@@ -203,7 +203,7 @@ extension CodeGenCore {
                       label: "data",
                       expression: DeclReferenceExprSyntax(baseName: .identifier("\(rawDataName)"))
                     )
-                    LabeledExprSyntax(label: "encoding", expression: genChaningMembers("utf8"))
+                    LabeledExprSyntax(label: "encoding", expression: genChainingMembers("utf8"))
                   }
                 )
               )
@@ -288,7 +288,7 @@ extension CodeGenCore {
                 colon: .colonToken(),
                 expression: ArrayExprSyntax(
                   expressions: codingPath.map { key, value in
-                    ExprSyntax(genChaningMembers(key, value))
+                    ExprSyntax(genChainingMembers(key, value))
                   }
                 ),
                 trailingComma: .commaToken(trailingTrivia: .newline)
