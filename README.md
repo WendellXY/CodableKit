@@ -187,6 +187,8 @@ struct User {
 
 Run custom logic before or after (en|de)coding, e.g. postprocessing or validation:
 
+**Note:** The hook protocols (`DecodingHooks`, `EncodingHooks`, `CodableHooks`) are helper protocols for code completion and will be removed after compilation if you do not provide any hooks. You can implement these methods in different forms:
+
 ```swift
 @Codable
 struct User {
@@ -195,6 +197,28 @@ struct User {
     var age: Int
 
     mutating func didDecode(from decoder: any Decoder) throws {
+        id = "\(name)-\(age)" // e.g., recompute derived values
+    }
+
+    func willEncode(to encoder: any Encoder) throws {
+        // Custom preparation before encoding
+    }
+
+    func didEncode(to encoder: any Encoder) throws {
+        // Cleanup or logging after encoding
+    }
+}
+```
+
+For classes, you can use non-mutating functions:
+```swift
+@Codable
+class User {
+    var id: String = ""
+    var name: String
+    var age: Int
+
+    func didDecode(from decoder: any Decoder) throws {
         id = "\(name)-\(age)" // e.g., recompute derived values
     }
 
