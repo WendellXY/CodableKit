@@ -10,14 +10,14 @@ This roadmap outlines the major priorities and phased delivery plan for CodableK
 - Strong test coverage (snapshots + behavior) and CI signal
 
 ## Milestones
-- 1.5.x (In review): Phase 1 — correctness & stability (PR #10)
+- 1.5.x (In review): Phase 1 — correctness & stability (PRs #10, #11)
 - 1.6.x: Phase 2 — ergonomics & resilience
 - 1.7.x: Phase 3 — expressiveness & conventions
 - 1.8.x: Phase 4 — docs, performance, CI
 - 2.0.0: Breaking changes window (only if truly necessary)
 
 ## Phase 1 — Correctness and Stability (Target: 1.5.x)
-- Status: In review ([PR #10](https://github.com/WendellXY/CodableKit/pull/10))
+- Status: ([PR #10](https://github.com/WendellXY/CodableKit/pull/10), [PR #11](https://github.com/WendellXY/CodableKit/pull/11))
 - [x] Optional raw-string transcode: omit key when value is nil unless `.explicitNil`
   - Acceptance:
     - Optional property with `.transcodeRawString` encodes no key when `nil`
@@ -30,7 +30,13 @@ This roadmap outlines the major priorities and phased delivery plan for CodableK
 - [x] Deterministic codegen order for nested key-paths and containers
   - Acceptance:
     - Snapshot tests reveal stable order across runs/platforms
-- [ ] Diagnostics improvements (clearer messages, targeted fix-its)
+- [ ] Diagnostics improvements (clearer messages, targeted fix-its) — ([PR #11](https://github.com/WendellXY/CodableKit/pull/11))
+  - [x] Warn when `.useDefaultOnFailure` on non-optional without default
+  - [x] Warn when `.explicitNil` on non-optional property
+  - [x] Suggest `.skipSuperCoding` for classes with inheritance when superclass may be non-Codable
+  - [ ] Add fix-it for missing type annotation
+  - [ ] Improve multi-binding with custom key error messaging
+  - [ ] Enum options validation warnings
   - Acceptance:
     - Missing type annotation reports actionable error and fix-it
     - Multi-binding with custom key reports clear error
