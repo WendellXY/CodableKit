@@ -30,7 +30,7 @@ This roadmap outlines the major priorities and phased delivery plan for CodableK
 - [x] Deterministic codegen order for nested key-paths and containers
   - Acceptance:
     - Snapshot tests reveal stable order across runs/platforms
-- [ ] Diagnostics improvements (clearer messages, targeted fix-its) — In review ([PR #11](https://github.com/WendellXY/CodableKit/pull/11))
+- [ ] Diagnostics improvements (clearer messages, targeted fix-its) — ([PR #11](https://github.com/WendellXY/CodableKit/pull/11))
   - [x] Warn when `.useDefaultOnFailure` on non-optional without default
   - [x] Warn when `.explicitNil` on non-optional property
   - [x] Suggest `.skipSuperCoding` for classes with inheritance when superclass may be non-Codable
