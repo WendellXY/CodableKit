@@ -10,33 +10,34 @@ This roadmap outlines the major priorities and phased delivery plan for CodableK
 - Strong test coverage (snapshots + behavior) and CI signal
 
 ## Milestones
-- 1.5.x (Next): Phase 1 — correctness & stability
+- 1.5.x (In review): Phase 1 — correctness & stability (PR #10)
 - 1.6.x: Phase 2 — ergonomics & resilience
 - 1.7.x: Phase 3 — expressiveness & conventions
 - 1.8.x: Phase 4 — docs, performance, CI
 - 2.0.0: Breaking changes window (only if truly necessary)
 
 ## Phase 1 — Correctness and Stability (Target: 1.5.x)
-- Optional raw-string transcode: omit key when value is nil unless `.explicitNil`
+- Status: In review ([PR #10](https://github.com/WendellXY/CodableKit/pull/10))
+- [x] Optional raw-string transcode: omit key when value is nil unless `.explicitNil`
   - Acceptance:
     - Optional property with `.transcodeRawString` encodes no key when `nil`
     - With `.explicitNil`, encodes null semantics appropriately
     - Decode path honors defaults/optionals as configured
-- Reuse a single `JSONEncoder`/`JSONDecoder` per encode/decode function
+- [x] Reuse a single `JSONEncoder`/`JSONDecoder` per encode/decode function
   - Acceptance:
     - Generated code creates one encoder/decoder per function
     - Tests assert behavior unchanged; micro-bench shows reduced churn
-- Deterministic codegen order for nested key-paths and containers
+- [x] Deterministic codegen order for nested key-paths and containers
   - Acceptance:
     - Snapshot tests reveal stable order across runs/platforms
-- Diagnostics improvements (clearer messages, targeted fix-its)
+- [ ] Diagnostics improvements (clearer messages, targeted fix-its)
   - Acceptance:
     - Missing type annotation reports actionable error and fix-it
     - Multi-binding with custom key reports clear error
     - Enum options validation warns appropriately
 - Tests
-  - Optional transcode: encode/decode (with/without `.explicitNil`)
-  - Deterministic nested ordering snapshots
+  - [x] Optional transcode: encode/decode (with/without `.explicitNil`)
+  - [x] Deterministic nested ordering snapshots
 
 ## Phase 2 — Ergonomics and Resilience (Target: 1.6.x)
 - Lossy decoding for arrays/dictionaries (`.lossy`)

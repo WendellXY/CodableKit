@@ -12,21 +12,43 @@ import SwiftSyntaxBuilder
 // MARK: JSONDecoder
 
 extension CodeGenCore {
+  static func genJSONDecoderVariableDecl(
+    variableName: String = "__ckDecoder"
+  ) -> DeclSyntax {
+    let initializerExpr = FunctionCallExprSyntax(
+      calledExpression: DeclReferenceExprSyntax(baseName: .identifier("JSONDecoder")),
+      leftParen: .leftParenToken(),
+      rightParen: .rightParenToken(),
+      argumentsBuilder: {}
+    )
+    return DeclSyntax(
+      genVariableDecl(
+        bindingSpecifier: .keyword(.let),
+        name: variableName,
+        initializer: ExprSyntax(initializerExpr)
+      )
+    )
+  }
   fileprivate static func genJSONDecoderDecodeRightOperand(
     type: TypeSyntax,
     data: PatternSyntax,
-    withQuestionMark: Bool
+    withQuestionMark: Bool,
+    decoderVarName: String? = nil
   ) -> some ExprSyntaxProtocol {
     TryExprSyntax(
       questionOrExclamationMark: withQuestionMark ? .infixQuestionMarkToken(leadingTrivia: .spaces(0)) : nil,
       expression: FunctionCallExprSyntax(
         calledExpression: MemberAccessExprSyntax(
-          base: FunctionCallExprSyntax(
-            calledExpression: DeclReferenceExprSyntax(baseName: .identifier("JSONDecoder")),
-            leftParen: .leftParenToken(),
-            rightParen: .rightParenToken(),
-            argumentsBuilder: {}
-          ),
+          base: decoderVarName == nil
+            ? ExprSyntax(
+              FunctionCallExprSyntax(
+                calledExpression: DeclReferenceExprSyntax(baseName: .identifier("JSONDecoder")),
+                leftParen: .leftParenToken(),
+                rightParen: .rightParenToken(),
+                argumentsBuilder: {}
+              )
+            )
+            : ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier(decoderVarName!))),
           declName: DeclReferenceExprSyntax(baseName: .identifier("decode"))
         ),
         leftParen: .leftParenToken(),
@@ -45,10 +67,16 @@ extension CodeGenCore {
     variableName: PatternSyntax,
     type: TypeSyntax,
     data: PatternSyntax,
-    defaultValueExpr: ExprSyntax?
+    defaultValueExpr: ExprSyntax?,
+    decoderVarName: String? = nil
   ) -> ExprSyntax {
     let jsonDecoderExpr = ExprSyntax(
-      genJSONDecoderDecodeRightOperand(type: type, data: data, withQuestionMark: defaultValueExpr != nil)
+      genJSONDecoderDecodeRightOperand(
+        type: type,
+        data: data,
+        withQuestionMark: defaultValueExpr != nil,
+        decoderVarName: decoderVarName
+      )
     )
 
     let defaultExpr = ExprSyntax(
@@ -262,7 +290,8 @@ extension CodeGenCore {
     isOptional: Bool,
     useDefaultOnFailure: Bool,
     defaultValueExpr: ExprSyntax?,
-    type: TypeSyntax
+    type: TypeSyntax,
+    decoderVarName: String? = nil
   ) -> DeclSyntax {
     DeclSyntax(
       genVariableDecl(
@@ -314,7 +343,8 @@ extension CodeGenCore {
     defaultValueExpr: ExprSyntax?,
     codingPath: [(String, String)],
     type: TypeSyntax,
-    message: String
+    message: String,
+    decoderVarName: String? = nil
   ) -> ExprSyntax {
     ExprSyntax(
       IfExprSyntax(
@@ -364,7 +394,8 @@ extension CodeGenCore {
                 variableName: key,
                 type: type,
                 data: rawDataName,
-                defaultValueExpr: defaultValueExpr
+                defaultValueExpr: defaultValueExpr,
+                decoderVarName: decoderVarName
               )
             )
           )
