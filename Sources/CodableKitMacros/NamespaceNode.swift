@@ -122,6 +122,10 @@ extension NamespaceNode {
       result.append(
         CodeBlockItemSyntax(item: .decl(CodeGenCore.genDecodeContainerDecl()))
       )
+      // Declare a shared JSONDecoder for this function
+      result.append(
+        CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONDecoderVariableDecl(variableName: "__ckDecoder")))
+      )
     }
 
     for child in children.values {
@@ -192,7 +196,8 @@ extension NamespaceNode {
               defaultValueExpr: defaultValueExpr,
               codingPath: codingKeyChain(for: property),
               type: property.type,
-              message: "Failed to convert raw string to data"
+              message: "Failed to convert raw string to data",
+              decoderVarName: "__ckDecoder"
             )
           )
         ),
@@ -222,6 +227,9 @@ extension NamespaceNode {
 
     if parent == nil {
       result.append(CodeBlockItemSyntax(item: .decl(CodeGenCore.genEncodeContainerDecl())))
+      // Declare a shared JSONEncoder for this function
+      result.append(
+        CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONEncoderVariableDecl(variableName: "__ckEncoder"))))
     }
 
     for child in children.values {
@@ -260,32 +268,87 @@ extension NamespaceNode {
         )
       })
 
-    // Decode from the rawString.
+    // Encode as raw JSON string (transcoding). For optionals without `.explicitNil`, omit the key when nil.
     for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
-      result.append(contentsOf: [
-        CodeBlockItemSyntax(
-          item: .decl(
-            CodeGenCore.genJSONEncoderEncodeDecl(
-              variableName: property.rawDataName,
-              instance: property.name
+      if property.isOptional && !property.options.contains(.explicitNil) {
+        // if let <name>Unwrapped = <name> { ... encode ... }
+        let unwrappedName = PatternSyntax(IdentifierPatternSyntax(identifier: .identifier("\(property.name)Unwrapped")))
+        result.append(
+          CodeBlockItemSyntax(
+            item: .expr(
+              ExprSyntax(
+                IfExprSyntax(
+                  conditions: [
+                    ConditionElementSyntax(
+                      condition: .optionalBinding(
+                        OptionalBindingConditionSyntax(
+                          bindingSpecifier: .keyword(.let),
+                          pattern: unwrappedName,
+                          initializer: InitializerClauseSyntax(
+                            value: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)"))
+                          )
+                        )
+                      )
+                    )
+                  ],
+                  body: CodeBlockSyntax {
+                    CodeBlockItemSyntax(
+                      item: .decl(
+                        CodeGenCore.genJSONEncoderEncodeDecl(
+                          variableName: property.rawDataName,
+                          instance: unwrappedName,
+                          encoderVarName: "__ckEncoder"
+                        )
+                      )
+                    )
+                    CodeBlockItemSyntax(
+                      item: .expr(
+                        CodeGenCore.genEncodeRawDataHandleExpr(
+                          key: property.name,
+                          rawDataName: property.rawDataName,
+                          rawStringName: property.rawStringName,
+                          containerName: containerName,
+                          codingPath: codingKeyChain(for: property),
+                          message: "Failed to transcode raw data to string",
+                          isOptional: false,
+                          explicitNil: false
+                        )
+                      )
+                    )
+                  }
+                )
+              )
             )
           )
-        ),
-        CodeBlockItemSyntax(
-          item: .expr(
-            CodeGenCore.genEncodeRawDataHandleExpr(
-              key: property.name,
-              rawDataName: property.rawDataName,
-              rawStringName: property.rawStringName,
-              containerName: containerName,
-              codingPath: codingKeyChain(for: property),
-              message: "Failed to transcode raw data to string",
-              isOptional: property.isOptional,
-              explicitNil: property.options.contains(.explicitNil)
+        )
+      } else {
+        // Non-optional or `.explicitNil` option: encode current value, allowing explicit nil as string
+        result.append(contentsOf: [
+          CodeBlockItemSyntax(
+            item: .decl(
+              CodeGenCore.genJSONEncoderEncodeDecl(
+                variableName: property.rawDataName,
+                instance: property.name,
+                encoderVarName: "__ckEncoder"
+              )
             )
-          )
-        ),
-      ])
+          ),
+          CodeBlockItemSyntax(
+            item: .expr(
+              CodeGenCore.genEncodeRawDataHandleExpr(
+                key: property.name,
+                rawDataName: property.rawDataName,
+                rawStringName: property.rawStringName,
+                containerName: containerName,
+                codingPath: codingKeyChain(for: property),
+                message: "Failed to transcode raw data to string",
+                isOptional: property.isOptional,
+                explicitNil: property.options.contains(.explicitNil)
+              )
+            )
+          ),
+        ])
+      }
     }
 
     return result

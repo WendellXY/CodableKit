@@ -12,17 +12,22 @@ import SwiftSyntax
 
 extension CodeGenCore {
   fileprivate static func genJSONEncoderEncodeRightOperand(
-    instance: PatternSyntax
+    instance: PatternSyntax,
+    encoderVarName: String? = nil
   ) -> some ExprSyntaxProtocol {
     TryExprSyntax(
       expression: FunctionCallExprSyntax(
         calledExpression: MemberAccessExprSyntax(
-          base: FunctionCallExprSyntax(
-            calledExpression: DeclReferenceExprSyntax(baseName: .identifier("JSONEncoder")),
-            leftParen: .leftParenToken(),
-            rightParen: .rightParenToken(),
-            argumentsBuilder: {}
-          ),
+          base: encoderVarName == nil
+            ? ExprSyntax(
+              FunctionCallExprSyntax(
+                calledExpression: DeclReferenceExprSyntax(baseName: .identifier("JSONEncoder")),
+                leftParen: .leftParenToken(),
+                rightParen: .rightParenToken(),
+                argumentsBuilder: {}
+              )
+            )
+            : ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier(encoderVarName!))),
           declName: DeclReferenceExprSyntax(baseName: .identifier("encode"))
         ),
         leftParen: .leftParenToken(),
@@ -38,17 +43,36 @@ extension CodeGenCore {
   static func genJSONEncoderEncodeDecl(
     bindingSpecifier: TokenSyntax = .keyword(.let),
     variableName: PatternSyntax,
-    instance: PatternSyntax
+    instance: PatternSyntax,
+    encoderVarName: String? = nil
   ) -> DeclSyntax {
     DeclSyntax(
       VariableDeclSyntax(bindingSpecifier: bindingSpecifier) {
         PatternBindingSyntax(
           pattern: variableName,
           initializer: InitializerClauseSyntax(
-            value: genJSONEncoderEncodeRightOperand(instance: instance)
+            value: genJSONEncoderEncodeRightOperand(instance: instance, encoderVarName: encoderVarName)
           )
         )
       }
+    )
+  }
+
+  static func genJSONEncoderVariableDecl(
+    variableName: String = "__ckEncoder"
+  ) -> DeclSyntax {
+    let initializerExpr = FunctionCallExprSyntax(
+      calledExpression: DeclReferenceExprSyntax(baseName: .identifier("JSONEncoder")),
+      leftParen: .leftParenToken(),
+      rightParen: .rightParenToken(),
+      argumentsBuilder: {}
+    )
+    return DeclSyntax(
+      genVariableDecl(
+        bindingSpecifier: .keyword(.let),
+        name: variableName,
+        initializer: ExprSyntax(initializerExpr)
+      )
     )
   }
 }
