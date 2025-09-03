@@ -99,7 +99,7 @@ extension NamespaceNode {
     if let codingKeysEnum {
       result.append(codingKeysEnum)
     }
-    for child in children.values {
+    for child in children.values.sorted(by: { $0.segment < $1.segment }) {
       result.append(contentsOf: child.allCodingKeysEnums)
     }
     return result
@@ -128,7 +128,7 @@ extension NamespaceNode {
       )
     }
 
-    for child in children.values {
+    for child in children.values.sorted(by: { $0.segment < $1.segment }) {
       result.append(
         CodeBlockItemSyntax(
           item: .decl(
@@ -212,7 +212,7 @@ extension NamespaceNode {
 
     result.append(contentsOf: containersAssignment)
     result.append(contentsOf: propertyAssignment)
-    for child in children.values {
+    for child in children.values.sorted(by: { $0.segment < $1.segment }) {
       result.append(contentsOf: child.decodeBlockItem)
     }
 
@@ -232,7 +232,7 @@ extension NamespaceNode {
         CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONEncoderVariableDecl(variableName: "__ckEncoder"))))
     }
 
-    for child in children.values {
+    for child in children.values.sorted(by: { $0.segment < $1.segment }) {
       result.append(
         CodeBlockItemSyntax(
           item: .decl(
@@ -359,7 +359,7 @@ extension NamespaceNode {
 
     result.append(contentsOf: encodeContainersAssignment)
     result.append(contentsOf: propertyEncodeAssignment)
-    for child in children.values {
+    for child in children.values.sorted(by: { $0.segment < $1.segment }) {
       result.append(contentsOf: child.encodeBlockItem)
     }
 
