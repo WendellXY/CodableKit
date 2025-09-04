@@ -44,7 +44,7 @@ struct CodableProperty {
   ) {
     self.attributes = attributes
     self.declModifiers = declModifiers
-    self.name = binding.pattern
+    self.name = binding.pattern.trimmed
     self.type = binding.typeAnnotation?.type.trimmed ?? type.trimmed
     self.defaultValue = binding.initializer?.value
   }
@@ -62,7 +62,7 @@ struct CodableProperty {
   ) {
     self.attributes = attributes
     self.declModifiers = declModifiers
-    self.name = PatternSyntax(IdentifierPatternSyntax(identifier: caseElement.name))
+    self.name = PatternSyntax(IdentifierPatternSyntax(identifier: caseElement.name.trimmed))
     self.type = "Never"
     self.defaultValue = nil
   }
