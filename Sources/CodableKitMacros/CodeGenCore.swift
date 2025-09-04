@@ -151,7 +151,8 @@ extension CodeGenCore {
     of node: AttributeSyntax,
     for declaration: some DeclGroupSyntax,
     in context: some MacroExpansionContext,
-    conformingTo protocols: [TypeSyntax] = []
+    conformingTo protocols: [TypeSyntax] = [],
+    emitAdvisories: Bool = true
   ) throws {
     let id = key(for: declaration, in: context)
 
@@ -201,7 +202,9 @@ extension CodeGenCore {
     }
 
     // Emit advisory (non-fatal) diagnostics to guide users
-    emitAdvisoryDiagnostics(of: node, for: declaration, in: context)
+    if emitAdvisories {
+      emitAdvisoryDiagnostics(of: node, for: declaration, in: context)
+    }
   }
 
   func prepareCodeGeneration(
@@ -324,21 +327,23 @@ extension CodeGenCore {
     in context: some MacroExpansionContext
   ) {
     let properties = (try? self.properties(for: declaration, in: context)) ?? []
-    let structureType = try? accessStructureType(for: declaration, in: context)
-    let options = (try? accessCodableOptions(for: declaration, in: context)) ?? .default
+    _ = try? accessStructureType(for: declaration, in: context)
+    _ = (try? accessCodableOptions(for: declaration, in: context)) ?? .default
 
     // Warn when `.useDefaultOnFailure` has no effect (non-optional, no default value)
     for property in properties {
       if property.options.contains(.useDefaultOnFailure), !property.isOptional, property.defaultValue == nil {
         let message = "Option '.useDefaultOnFailure' has no effect for non-optional property without a default value"
-        let diag = Diagnostic(node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
+        let diag = Diagnostic(
+          node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
         context.diagnose(diag)
       }
 
       // Warn when `.explicitNil` is used on a non-optional property
       if property.options.contains(.explicitNil), !property.isOptional {
         let message = "Option '.explicitNil' has no effect on non-optional property"
-        let diag = Diagnostic(node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
+        let diag = Diagnostic(
+          node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
         context.diagnose(diag)
       }
     }

@@ -32,7 +32,6 @@ import Testing
         """,
       diagnostics: [
         .init(message: "Properties must have a type annotation", line: 1, column: 1),
-        .init(message: "Properties must have a type annotation", line: 1, column: 1),
       ]
     )
   }

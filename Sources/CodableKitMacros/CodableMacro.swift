@@ -21,76 +21,86 @@ public struct CodableMacro: ExtensionMacro {
     conformingTo protocols: [TypeSyntax],
     in context: some MacroExpansionContext
   ) throws -> [ExtensionDeclSyntax] {
-    let core = CodeGenCore()
-    try core.prepareCodeGeneration(of: node, for: declaration, in: context, conformingTo: protocols)
+    do {
+      let core = CodeGenCore()
+      // Run preparation but do not emit advisory diagnostics here to avoid duplicate warnings.
+      try core.prepareCodeGeneration(
+        of: node, for: declaration, in: context, conformingTo: protocols, emitAdvisories: false)
 
-    let properties = try core.properties(for: declaration, in: context)
-    let accessModifier = try core.accessModifier(for: declaration, in: context)
-    let structureType = try core.accessStructureType(for: declaration, in: context)
-    let codableType = try core.accessCodableType(for: declaration, in: context)
-    let codableOptions = try core.accessCodableOptions(for: declaration, in: context)
+      let properties = try core.properties(for: declaration, in: context)
+      let accessModifier = try core.accessModifier(for: declaration, in: context)
+      let structureType = try core.accessStructureType(for: declaration, in: context)
+      let codableType = try core.accessCodableType(for: declaration, in: context)
+      let codableOptions = try core.accessCodableOptions(for: declaration, in: context)
 
-    // If there are no properties, return an empty array.
-    guard !properties.isEmpty else { return [] }
+      // If there are no properties, return an empty array.
+      guard !properties.isEmpty else { return [] }
 
-    let namespaceTree = NamespaceNode.buildTree(from: properties)
+      let namespaceTree = NamespaceNode.buildTree(from: properties)
 
-    let inheritanceClause: InheritanceClauseSyntax? =
-      if case .classType(let hasSuperclass) = structureType,
-        hasSuperclass,
-        !codableOptions.contains(.skipSuperCoding)
-      {
-        nil
-      } else {
-        InheritanceClauseSyntax {
-          for `protocol` in protocols {
-            InheritedTypeSyntax(type: `protocol`)
+      let inheritanceClause: InheritanceClauseSyntax? =
+        if case .classType(let hasSuperclass) = structureType,
+          hasSuperclass,
+          !codableOptions.contains(.skipSuperCoding)
+        {
+          nil
+        } else {
+          InheritanceClauseSyntax {
+            for `protocol` in protocols {
+              InheritedTypeSyntax(type: `protocol`)
+            }
           }
         }
-      }
 
-    return switch structureType {
-    case .classType:
-      [
-        ExtensionDeclSyntax(
-          extendedType: type, inheritanceClause: inheritanceClause
-        ) {
-          for namespaceDecl in namespaceTree.allCodingKeysEnums {
-            namespaceDecl
+      return switch structureType {
+      case .classType:
+        [
+          ExtensionDeclSyntax(
+            extendedType: type, inheritanceClause: inheritanceClause
+          ) {
+            for namespaceDecl in namespaceTree.allCodingKeysEnums {
+              namespaceDecl
+            }
           }
-        }
-      ]
-    case .structType:
-      [
-        ExtensionDeclSyntax(
-          extendedType: type, inheritanceClause: inheritanceClause
-        ) {
-          for namespaceDecl in namespaceTree.allCodingKeysEnums {
-            namespaceDecl
-          }
-          if codableType.contains(.decodable) {
-            DeclSyntax(
-              genInitDecoderDecl(
-                from: properties,
-                modifiers: [accessModifier],
-                codableOptions: codableOptions,
-                hasSuper: false,
-                tree: namespaceTree
+        ]
+      case .structType:
+        [
+          ExtensionDeclSyntax(
+            extendedType: type, inheritanceClause: inheritanceClause
+          ) {
+            for namespaceDecl in namespaceTree.allCodingKeysEnums {
+              namespaceDecl
+            }
+            if codableType.contains(.decodable) {
+              DeclSyntax(
+                genInitDecoderDecl(
+                  from: properties,
+                  modifiers: [accessModifier],
+                  codableOptions: codableOptions,
+                  hasSuper: false,
+                  tree: namespaceTree
+                )
               )
-            )
+            }
           }
-        }
-      ]
-    case .enumType:
-      [
-        ExtensionDeclSyntax(
-          extendedType: type, inheritanceClause: inheritanceClause
-        ) {
-          for namespaceDecl in namespaceTree.allCodingKeysEnums {
-            namespaceDecl
+        ]
+      case .enumType:
+        [
+          ExtensionDeclSyntax(
+            extendedType: type, inheritanceClause: inheritanceClause
+          ) {
+            for namespaceDecl in namespaceTree.allCodingKeysEnums {
+              namespaceDecl
+            }
           }
-        }
-      ]
+        ]
+      }
+    } catch is SimpleDiagnosticMessage {
+      // Swallow known diagnostics here to avoid emitting duplicates across macro roles.
+      // The member macro will surface the diagnostic once.
+      return []
+    } catch {
+      throw error
     }
   }
 }
@@ -105,7 +115,9 @@ extension CodableMacro: MemberMacro {
     in context: some MacroExpansionContext
   ) throws -> [DeclSyntax] {
     let core = CodeGenCore()
-    try core.prepareCodeGeneration(of: node, for: declaration, in: context, conformingTo: protocols)
+    // Member macro path: allow advisory diagnostics to be emitted once here
+    try core.prepareCodeGeneration(
+      of: node, for: declaration, in: context, conformingTo: protocols, emitAdvisories: true)
 
     let properties = try core.properties(for: declaration, in: context)
     let accessModifier = try core.accessModifier(for: declaration, in: context)

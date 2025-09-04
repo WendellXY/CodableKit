@@ -605,12 +605,6 @@ import Testing
           line: 11,
           column: 7,
           severity: .warning
-        ),
-        .init(
-          message: "Option '.useDefaultOnFailure' has no effect for non-optional property without a default value",
-          line: 11,
-          column: 7,
-          severity: .warning
         )
       ]
     )
@@ -782,12 +776,6 @@ import Testing
         }
         """,
       diagnostics: [
-        .init(
-          message: "Option '.useDefaultOnFailure' has no effect for non-optional property without a default value",
-          line: 11,
-          column: 7,
-          severity: .warning
-        ),
         .init(
           message: "Option '.useDefaultOnFailure' has no effect for non-optional property without a default value",
           line: 11,

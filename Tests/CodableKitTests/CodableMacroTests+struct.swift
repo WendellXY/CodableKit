@@ -195,7 +195,7 @@ import Testing
             try didDecode(from: decoder)
           }
         }
-        """,
+        """
     )
 
   }
