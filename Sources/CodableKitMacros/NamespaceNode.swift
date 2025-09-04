@@ -112,6 +112,14 @@ extension NamespaceNode {
   }
 }
 
+extension NamespaceNode {
+  /// Whether any property in this subtree requires raw string transcoding
+  var hasTranscodeRawStringInSubtree: Bool {
+    let selfHas = properties.contains { !$0.ignored && $0.options.contains(.transcodeRawString) }
+    return selfHas || children.values.contains { $0.hasTranscodeRawStringInSubtree }
+  }
+}
+
 // MARK: - Decoder Generation
 extension NamespaceNode {
 
@@ -122,10 +130,12 @@ extension NamespaceNode {
       result.append(
         CodeBlockItemSyntax(item: .decl(CodeGenCore.genDecodeContainerDecl()))
       )
-      // Declare a shared JSONDecoder for this function
-      result.append(
-        CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONDecoderVariableDecl(variableName: "__ckDecoder")))
-      )
+      // Declare a shared JSONDecoder for this function only when needed
+      if hasTranscodeRawStringInSubtree {
+        result.append(
+          CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONDecoderVariableDecl(variableName: "__ckDecoder")))
+        )
+      }
     }
 
     for child in children.values.sorted(by: { $0.segment < $1.segment }) {
@@ -197,7 +207,7 @@ extension NamespaceNode {
               codingPath: codingKeyChain(for: property),
               type: property.type,
               message: "Failed to convert raw string to data",
-              decoderVarName: "__ckDecoder"
+              decoderVarName: hasTranscodeRawStringInSubtree ? "__ckDecoder" : nil
             )
           )
         ),
@@ -227,9 +237,11 @@ extension NamespaceNode {
 
     if parent == nil {
       result.append(CodeBlockItemSyntax(item: .decl(CodeGenCore.genEncodeContainerDecl())))
-      // Declare a shared JSONEncoder for this function
-      result.append(
-        CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONEncoderVariableDecl(variableName: "__ckEncoder"))))
+      // Declare a shared JSONEncoder for this function only when needed
+      if hasTranscodeRawStringInSubtree {
+        result.append(
+          CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONEncoderVariableDecl(variableName: "__ckEncoder"))))
+      }
     }
 
     for child in children.values.sorted(by: { $0.segment < $1.segment }) {
@@ -297,7 +309,7 @@ extension NamespaceNode {
                         CodeGenCore.genJSONEncoderEncodeDecl(
                           variableName: property.rawDataName,
                           instance: unwrappedName,
-                          encoderVarName: "__ckEncoder"
+                          encoderVarName: hasTranscodeRawStringInSubtree ? "__ckEncoder" : nil
                         )
                       )
                     )
@@ -329,7 +341,7 @@ extension NamespaceNode {
               CodeGenCore.genJSONEncoderEncodeDecl(
                 variableName: property.rawDataName,
                 instance: property.name,
-                encoderVarName: "__ckEncoder"
+                encoderVarName: hasTranscodeRawStringInSubtree ? "__ckEncoder" : nil
               )
             )
           ),
