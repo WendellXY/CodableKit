@@ -191,6 +191,39 @@ extension CodableProperty {
     if let tuple = expr.as(TupleExprSyntax.self), let only = tuple.elements.first, tuple.elements.count == 1 {
       return inferType(from: ExprSyntax(only.expression))
     }
+    // Array literals with homogeneous simple literal elements
+    if let array = expr.as(ArrayExprSyntax.self) {
+      var sawString = false
+      var sawBool = false
+      var sawInt = false
+      var sawDouble = false
+
+      // Empty array cannot be inferred without context
+      if array.elements.isEmpty { return nil }
+
+      for element in array.elements {
+        guard let elementType = inferType(from: ExprSyntax(element.expression)) else { return nil }
+        switch "\(elementType)" {
+        case "String": sawString = true
+        case "Bool": sawBool = true
+        case "Int": sawInt = true
+        case "Double": sawDouble = true
+        default: return nil
+        }
+      }
+
+      // Ensure homogeneity across non-numeric categories
+      let nonNumericKinds = (sawString ? 1 : 0) + (sawBool ? 1 : 0)
+      if nonNumericKinds > 1 { return nil }
+      if nonNumericKinds == 1 && (sawInt || sawDouble) { return nil }
+
+      if sawString { return "[String]" }
+      if sawBool { return "[Bool]" }
+      if sawDouble || (sawInt && sawDouble) { return "[Double]" }
+      if sawInt { return "[Int]" }
+
+      return nil
+    }
     if expr.as(StringLiteralExprSyntax.self) != nil { return "String" }
     if expr.as(BooleanLiteralExprSyntax.self) != nil { return "Bool" }
     if expr.as(IntegerLiteralExprSyntax.self) != nil { return "Int" }
