@@ -44,7 +44,7 @@ struct CodableProperty {
   ) {
     self.attributes = attributes
     self.declModifiers = declModifiers
-    self.name = binding.pattern
+    self.name = binding.pattern.trimmed
     self.type = binding.typeAnnotation?.type.trimmed ?? type.trimmed
     self.defaultValue = binding.initializer?.value
   }
@@ -62,7 +62,7 @@ struct CodableProperty {
   ) {
     self.attributes = attributes
     self.declModifiers = declModifiers
-    self.name = PatternSyntax(IdentifierPatternSyntax(identifier: caseElement.name))
+    self.name = PatternSyntax(IdentifierPatternSyntax(identifier: caseElement.name.trimmed))
     self.type = "Never"
     self.defaultValue = nil
   }
@@ -132,7 +132,7 @@ extension CodableProperty {
   /// Normalized property name, if the property has a custom CodableKey, it will be the custom key,
   /// otherwise it will be the property name. For coding key pattern binding, the normalized name is
   /// string joined by `.`.
-  /// 
+  ///
   /// This normalized name could be considered as the unique identifier of the property.
   var normalizedName: String {
     customCodableKeyPath?.joined(separator: ".") ?? name.trimmedDescription
@@ -183,6 +183,62 @@ extension CodableProperty {
     return vars + cases
   }
 
+  /// Infer a simple literal type from an initializer expression when no type annotation is present.
+  /// Currently supports String, Int, Double, and Bool literals.
+  private static func inferType(from initializer: ExprSyntax?) -> TypeSyntax? {
+    guard let expr = initializer else { return nil }
+    // Unwrap simple parenthesized expression: represented as a single-element tuple expression
+    if let tuple = expr.as(TupleExprSyntax.self), let only = tuple.elements.first, tuple.elements.count == 1 {
+      return inferType(from: ExprSyntax(only.expression))
+    }
+    // Array literals with homogeneous simple literal elements
+    if let array = expr.as(ArrayExprSyntax.self) {
+      var sawString = false
+      var sawBool = false
+      var sawInt = false
+      var sawDouble = false
+
+      // Empty array cannot be inferred without context
+      if array.elements.isEmpty { return nil }
+
+      for element in array.elements {
+        guard let elementType = inferType(from: ExprSyntax(element.expression)) else { return nil }
+        switch "\(elementType)" {
+        case "String": sawString = true
+        case "Bool": sawBool = true
+        case "Int": sawInt = true
+        case "Double": sawDouble = true
+        default: return nil
+        }
+      }
+
+      // Ensure homogeneity across non-numeric categories
+      let nonNumericKinds = (sawString ? 1 : 0) + (sawBool ? 1 : 0)
+      if nonNumericKinds > 1 { return nil }
+      if nonNumericKinds == 1 && (sawInt || sawDouble) { return nil }
+
+      if sawString { return "[String]" }
+      if sawBool { return "[Bool]" }
+      if sawDouble { return "[Double]" }
+      if sawInt { return "[Int]" }
+
+      return nil
+    }
+    if expr.as(StringLiteralExprSyntax.self) != nil { return "String" }
+    if expr.as(BooleanLiteralExprSyntax.self) != nil { return "Bool" }
+    if expr.as(IntegerLiteralExprSyntax.self) != nil { return "Int" }
+    if expr.as(FloatLiteralExprSyntax.self) != nil { return "Double" }
+    // Handle negative numeric literals like -1 or -3.14
+    if let prefix = expr.as(PrefixOperatorExprSyntax.self),
+      prefix.operator.tokenKind == .prefixOperator("-")
+    {
+      let baseExpr = ExprSyntax(prefix.expression)
+      if baseExpr.as(IntegerLiteralExprSyntax.self) != nil { return "Int" }
+      if baseExpr.as(FloatLiteralExprSyntax.self) != nil { return "Double" }
+    }
+    return nil
+  }
+
   static func extract(from variable: VariableDeclSyntax) throws -> [Self] {
     let attributes = variable.attributes.compactMap { $0.as(AttributeSyntax.self) }
 
@@ -191,26 +247,37 @@ extension CodableProperty {
     // Ignore static properties
     guard !modifiers.contains(where: \.name.isTypePropertyKeyword) else { return [] }
 
-    guard let defaultType = variable.bindings.last?.typeAnnotation?.type else {
-      // If no binding is found, return empty array.
-      guard let lastBinding = variable.bindings.last else { return [] }
-      // To check if a property is ignored, create a temporary property. If the property is ignored, return an empty
-      // array. Otherwise, throw an error.
-      let tmpProperty = Self(attributes: attributes, declModifiers: [], binding: lastBinding, defaultType: "Any")
+    let globalDefaultType = variable.bindings.last?.typeAnnotation?.type
 
-      if tmpProperty.ignored {
-        return []
-      } else {
-        throw SimpleDiagnosticMessage(
-          message: "Properties must have a type annotation",
-          severity: .error
-        )
+    var properties: [Self] = []
+    for binding in variable.bindings {
+      // Prefer explicit type annotation on the binding, then a shared trailing annotation (e.g. `let a, b: String`),
+      // then infer from a simple literal initializer.
+      let fallbackType =
+        binding.typeAnnotation?.type
+        ?? globalDefaultType
+        ?? inferType(from: binding.initializer?.value)
+
+      if let fallbackType {
+        properties.append(
+          Self(attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: fallbackType))
+        continue
       }
+
+      // If we cannot determine a type and the property is ignored, skip it silently.
+      let tmpProperty = Self(attributes: attributes, declModifiers: [], binding: binding, defaultType: "Any")
+      if tmpProperty.ignored {
+        continue
+      }
+
+      // Otherwise, emit the original error.
+      throw SimpleDiagnosticMessage(
+        message: "Properties must have a type annotation",
+        severity: .error
+      )
     }
 
-    return variable.bindings.map { binding in
-      Self(attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: defaultType)
-    }
+    return properties
   }
 
   static func extract(from caseDecl: EnumCaseDeclSyntax) throws -> [Self] {

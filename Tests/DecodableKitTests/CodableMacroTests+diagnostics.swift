@@ -21,14 +21,14 @@ import Testing
       public struct User {
         let id: UUID
         let name: String
-        var age = 24
+        var age = genSomeThing()
       }
       """,
       expandedSource: """
         public struct User {
           let id: UUID
           let name: String
-          var age = 24
+          var age = genSomeThing()
         }
         """,
       diagnostics: [
