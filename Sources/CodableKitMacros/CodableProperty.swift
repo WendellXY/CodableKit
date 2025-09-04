@@ -219,7 +219,7 @@ extension CodableProperty {
 
       if sawString { return "[String]" }
       if sawBool { return "[Bool]" }
-      if sawDouble || (sawInt && sawDouble) { return "[Double]" }
+      if sawDouble { return "[Double]" }
       if sawInt { return "[Int]" }
 
       return nil
