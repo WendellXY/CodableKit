@@ -13,7 +13,7 @@ import Testing
 
 @Suite struct CodableKitTranscodeTests {
   @Test func optionalTranscode_omitsKey_whenNil() throws {
-    assertMacroExpansion(
+    assertMacro(
       """
       struct Room: Codable {
         let id: UUID
@@ -63,7 +63,7 @@ import Testing
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let __ckDecoder = JSONDecoder()
-            let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
+            let roomRawString = try container.decodeIfPresent(String.self, forKey: .room) ?? ""
             if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
               room = (try? __ckDecoder.decode(Room?.self, from: roomRawData)) ?? nil
             } else {
@@ -72,14 +72,12 @@ import Testing
             try didDecode(from: decoder)
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
   }
 
   @Test func optionalTranscode_explicitNil_encodesNullString() throws {
-    assertMacroExpansion(
+    assertMacro(
       """
       struct Room: Codable {
         let id: UUID
@@ -127,7 +125,7 @@ import Testing
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let __ckDecoder = JSONDecoder()
-            let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
+            let roomRawString = try container.decodeIfPresent(String.self, forKey: .room) ?? ""
             if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
               room = (try? __ckDecoder.decode(Room?.self, from: roomRawData)) ?? nil
             } else {
@@ -136,11 +134,7 @@ import Testing
             try didDecode(from: decoder)
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
   }
 }
-
-

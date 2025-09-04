@@ -14,7 +14,7 @@ import Testing
 @Suite struct CodableKitTestsForEnum {
   @Test func macros() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public enum TestEnum {
@@ -37,16 +37,14 @@ import Testing
             case none
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macrosWithCodableKey() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public enum TestEnum {
@@ -69,16 +67,14 @@ import Testing
             case none = "empty"
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macrosWithIgnoredCodableKey() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public enum TestEnum {
@@ -100,16 +96,14 @@ import Testing
             case int
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macrosWithIndirectCase() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public enum TestEnum {
@@ -138,9 +132,7 @@ import Testing
             case nestedB = "b"
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }

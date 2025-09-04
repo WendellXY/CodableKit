@@ -14,7 +14,7 @@ import Testing
 @Suite struct CodableKitTestsForSubClass {
   @Test func macros() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public class User: MetaUser {
@@ -47,16 +47,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithDefaultValue() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public class User: MetaUser {
@@ -89,16 +87,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithCodableKeyAndDefaultValue() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public class User: MetaUser {
@@ -132,16 +128,14 @@ import Testing
             case age = "currentAge"
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithOptionalValue() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public class User: MetaUser {
@@ -174,16 +168,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithIgnoredCodableKey() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public class User: MetaUser {
@@ -219,16 +211,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithExplicitNil() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public class User: MetaUser {
@@ -266,16 +256,14 @@ import Testing
             case explicitNil
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithOneCustomKeyGenerated() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public class User: MetaUser {
@@ -313,16 +301,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithTwoCustomKeyGenerated() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public class User: MetaUser {
@@ -365,16 +351,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithDecodingRawString() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       struct Room: Codable {
         let id: UUID
@@ -403,10 +387,11 @@ import Testing
           public override func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
+            let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            let roomRawData = try JSONEncoder().encode(room)
+            let roomRawData = try __ckEncoder.encode(room)
             if let roomRawString = String(data: roomRawData, encoding: .utf8) {
               try container.encode(roomRawString, forKey: .room)
             } else {
@@ -431,16 +416,14 @@ import Testing
             case room
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithDecodingRawStringAndIgnoreError() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       struct Room: Codable {
         let id: UUID
@@ -469,10 +452,11 @@ import Testing
           public override func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
+            let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            let roomRawData = try JSONEncoder().encode(room)
+            let roomRawData = try __ckEncoder.encode(room)
             if let roomRawString = String(data: roomRawData, encoding: .utf8) {
               try container.encode(roomRawString, forKey: .room)
             } else {
@@ -498,15 +482,27 @@ import Testing
           }
         }
         """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+      diagnostics: [
+        .init(
+          message: "Option '.useDefaultOnFailure' has no effect for non-optional property without a default value",
+          line: 11,
+          column: 7,
+          severity: .warning
+        ),
+        .init(
+          message: "Option '.useDefaultOnFailure' has no effect for non-optional property without a default value",
+          line: 11,
+          column: 7,
+          severity: .warning
+        )
+      ]
     )
 
   }
 
   @Test func macroWithDecodingRawStringWithDefaultValueAndIgnoreError() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       struct Room: Codable {
         let id: UUID
@@ -535,10 +531,11 @@ import Testing
           public override func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
+            let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            let roomRawData = try JSONEncoder().encode(room)
+            let roomRawData = try __ckEncoder.encode(room)
             if let roomRawString = String(data: roomRawData, encoding: .utf8) {
               try container.encode(roomRawString, forKey: .room)
             } else {
@@ -563,16 +560,14 @@ import Testing
             case room
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macrosWithOptionUseDefaultOnFailure() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       enum Role: UInt8, Codable {
         case unknown = 255
@@ -620,16 +615,14 @@ import Testing
             case role
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macrosWithCodableOptionSkipSuperCoding() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable(options: .skipSuperCoding)
       public class User: NSObject {
@@ -661,9 +654,7 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }

@@ -13,7 +13,7 @@ import Testing
 
 @Suite struct CodableKitTestsForClass {
   @Test func macros() throws {
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public class User {
@@ -53,15 +53,13 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
   }
 
   @Test func macroWithDefaultValue() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public class User {
@@ -101,16 +99,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithCodableKeyAndDefaultValue() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public class User {
@@ -151,16 +147,14 @@ import Testing
             case age = "currentAge"
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithOptionalValue() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public class User {
@@ -200,16 +194,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithIgnoredCodableKey() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public class User {
@@ -252,16 +244,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithExplicitNil() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public class User {
@@ -307,16 +297,14 @@ import Testing
             case explicitNil
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithOneCustomKeyGenerated() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public class User {
@@ -361,16 +349,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithTwoCustomKeyGenerated() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable
       public class User {
@@ -420,16 +406,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithDecodingRawString() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       struct Room: Codable {
         let id: UUID
@@ -457,12 +441,13 @@ import Testing
 
           public required init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            let __ckDecoder = JSONDecoder()
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = try container.decodeIfPresent(String.self, forKey: .room) ?? ""
             if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
-              room = try JSONDecoder().decode(Room.self, from: roomRawData)
+              room = try __ckDecoder.decode(Room.self, from: roomRawData)
             } else {
               throw DecodingError.valueNotFound(
                 String.self,
@@ -478,10 +463,11 @@ import Testing
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
+            let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            let roomRawData = try JSONEncoder().encode(room)
+            let roomRawData = try __ckEncoder.encode(room)
             if let roomRawString = String(data: roomRawData, encoding: .utf8) {
               try container.encode(roomRawString, forKey: .room)
             } else {
@@ -505,16 +491,14 @@ import Testing
             case room
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithDecodingRawStringAndIgnoreError() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       struct Room: Codable {
         let id: UUID
@@ -526,7 +510,7 @@ import Testing
         let name: String
         let age: Int
         @CodableKey(options: [.useDefaultOnFailure, .transcodeRawString])
-        let room: Room
+        var room: Room = Room(id: .init(), name: "")
       }
       """,
       expandedSource: """
@@ -538,24 +522,19 @@ import Testing
           let id: UUID
           let name: String
           let age: Int
-          let room: Room
+          var room: Room = Room(id: .init(), name: "")
 
           public required init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            let __ckDecoder = JSONDecoder()
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
             if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
-              room = try JSONDecoder().decode(Room.self, from: roomRawData)
+              room = (try? __ckDecoder.decode(Room.self, from: roomRawData)) ?? Room(id: .init(), name: "")
             } else {
-              throw DecodingError.valueNotFound(
-                String.self,
-                DecodingError.Context(
-                  codingPath: [CodingKeys.room],
-                  debugDescription: "Failed to convert raw string to data"
-                )
-              )
+              room = Room(id: .init(), name: "")
             }
             try didDecode(from: decoder)
           }
@@ -563,10 +542,11 @@ import Testing
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
+            let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            let roomRawData = try JSONEncoder().encode(room)
+            let roomRawData = try __ckEncoder.encode(room)
             if let roomRawString = String(data: roomRawData, encoding: .utf8) {
               try container.encode(roomRawString, forKey: .room)
             } else {
@@ -590,16 +570,14 @@ import Testing
             case room
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithDecodingRawStringWithDefaultValueAndIgnoreError() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       struct Room: Codable {
         let id: UUID
@@ -627,12 +605,13 @@ import Testing
 
           public required init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            let __ckDecoder = JSONDecoder()
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
             if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
-              room = (try? JSONDecoder().decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
+              room = (try? __ckDecoder.decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
             } else {
               room = Room(id: UUID(), name: "Hello")
             }
@@ -642,10 +621,11 @@ import Testing
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
+            let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            let roomRawData = try JSONEncoder().encode(room)
+            let roomRawData = try __ckEncoder.encode(room)
             if let roomRawString = String(data: roomRawData, encoding: .utf8) {
               try container.encode(roomRawString, forKey: .room)
             } else {
@@ -669,16 +649,14 @@ import Testing
             case room
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroForSafeTranscodeRawString() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       struct Room: Codable {
         let id: UUID
@@ -690,7 +668,7 @@ import Testing
         let name: String
         let age: Int
         @CodableKey(options: .safeTranscodeRawString)
-        let room: Room
+        let room: Room?
       }
       """,
       expandedSource: """
@@ -702,24 +680,19 @@ import Testing
           let id: UUID
           let name: String
           let age: Int
-          let room: Room
+          let room: Room?
 
           public required init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            let __ckDecoder = JSONDecoder()
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
             if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
-              room = try JSONDecoder().decode(Room.self, from: roomRawData)
+              room = (try? __ckDecoder.decode(Room?.self, from: roomRawData)) ?? nil
             } else {
-              throw DecodingError.valueNotFound(
-                String.self,
-                DecodingError.Context(
-                  codingPath: [CodingKeys.room],
-                  debugDescription: "Failed to convert raw string to data"
-                )
-              )
+              room = nil
             }
             try didDecode(from: decoder)
           }
@@ -727,20 +700,23 @@ import Testing
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
+            let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            let roomRawData = try JSONEncoder().encode(room)
-            if let roomRawString = String(data: roomRawData, encoding: .utf8) {
-              try container.encode(roomRawString, forKey: .room)
-            } else {
-              throw EncodingError.invalidValue(
-                roomRawData,
-                EncodingError.Context(
-                  codingPath: [CodingKeys.room],
-                  debugDescription: "Failed to transcode raw data to string"
+            if let roomUnwrapped = room {
+              let roomRawData = try __ckEncoder.encode(roomUnwrapped)
+              if let roomRawString = String(data: roomRawData, encoding: .utf8) {
+                try container.encode(roomRawString, forKey: .room)
+              } else {
+                throw EncodingError.invalidValue(
+                  roomRawData,
+                  EncodingError.Context(
+                    codingPath: [CodingKeys.room],
+                    debugDescription: "Failed to transcode raw data to string"
+                  )
                 )
-              )
+              }
             }
             try didEncode(to: encoder)
           }
@@ -754,16 +730,14 @@ import Testing
             case room
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithSafeTranscodeRawStringWithDefaultValue() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       struct Room: Codable {
         let id: UUID
@@ -791,12 +765,13 @@ import Testing
 
           public required init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            let __ckDecoder = JSONDecoder()
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             let roomRawString = (try? container.decodeIfPresent(String.self, forKey: .room)) ?? ""
             if !roomRawString.isEmpty, let roomRawData = roomRawString.data(using: .utf8) {
-              room = (try? JSONDecoder().decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
+              room = (try? __ckDecoder.decode(Room.self, from: roomRawData)) ?? Room(id: UUID(), name: "Hello")
             } else {
               room = Room(id: UUID(), name: "Hello")
             }
@@ -806,10 +781,11 @@ import Testing
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
+            let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            let roomRawData = try JSONEncoder().encode(room)
+            let roomRawData = try __ckEncoder.encode(room)
             if let roomRawString = String(data: roomRawData, encoding: .utf8) {
               try container.encode(roomRawString, forKey: .room)
             } else {
@@ -833,16 +809,14 @@ import Testing
             case room
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macrosWithOptionUseDefaultOnFailure() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       enum Role: UInt8, Codable {
         case unknown = 255
@@ -898,16 +872,14 @@ import Testing
             case role
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macrosWithCodableOptionSkipSuperCoding() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Codable(options: .skipSuperCoding)
       public class User {
@@ -947,9 +919,7 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }

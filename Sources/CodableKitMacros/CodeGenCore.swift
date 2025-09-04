@@ -342,13 +342,6 @@ extension CodeGenCore {
         context.diagnose(diag)
       }
     }
-
-    // For classes with inheritance, if superclass might be non-Codable, suggest `.skipSuperCoding`
-    if case let .classType(hasSuperclass)? = structureType, hasSuperclass, !options.contains(.skipSuperCoding) {
-      let message = "If the superclass does not conform to Codable, use 'options: .skipSuperCoding' or make the superclass Codable"
-      let diag = Diagnostic(node: Syntax(attribute), message: SimpleDiagnosticMessage(message: message, severity: .warning))
-      context.diagnose(diag)
-    }
   }
 }
 

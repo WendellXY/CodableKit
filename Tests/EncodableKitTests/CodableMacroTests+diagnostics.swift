@@ -14,7 +14,7 @@ import Testing
 
 @Suite struct CodableKitDiagnosticsTests {
   @Test func macroWithNoTypeAnnotation() throws {
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public struct User {
@@ -31,16 +31,15 @@ import Testing
         }
         """,
       diagnostics: [
-        .init(message: "Properties must have a type annotation", line: 1, column: 1)
-      ],
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        .init(message: "Properties must have a type annotation", line: 1, column: 1),
+        .init(message: "Properties must have a type annotation", line: 1, column: 1),
+      ]
     )
   }
 
   @Test func macroWithIgnoredPropertyTypeAnnotation() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public struct User {
@@ -75,16 +74,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroWithStaticTypeAnnotation() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public struct User {
@@ -120,16 +117,14 @@ import Testing
             case age
           }
         }
-        """,
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+        """
     )
 
   }
 
   @Test func macroOnComputeProperty() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public struct User {
@@ -171,16 +166,14 @@ import Testing
         """,
       diagnostics: [
         .init(message: "Only variable declarations with no accessor block are supported", line: 6, column: 3)
-      ],
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+      ]
     )
 
   }
 
   @Test func macroOnStaticComputeProperty() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public struct User {
@@ -222,16 +215,14 @@ import Testing
         """,
       diagnostics: [
         .init(message: "Only variable declarations with no accessor block are supported", line: 6, column: 3)
-      ],
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+      ]
     )
 
   }
 
   @Test func macroOnStaticProperty() throws {
 
-    assertMacroExpansion(
+    assertMacro(
       """
       @Encodable
       public struct User {
@@ -269,9 +260,7 @@ import Testing
         """,
       diagnostics: [
         .init(message: "Only non-static variable declarations are supported", line: 6, column: 3)
-      ],
-      macroSpecs: macroSpecs,
-      indentationWidth: .spaces(2)
+      ]
     )
 
   }

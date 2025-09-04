@@ -88,7 +88,7 @@ extension NamespaceNode {
           "case \(property.name)"
         }
       }
-      for child in children.values {
+      for child in children.values.sorted(by: { $0.segment < $1.segment }) {
         "case \(raw: child.segment)"
       }
     }
