@@ -31,7 +31,7 @@ import Testing
         }
         """,
       diagnostics: [
-        .init(message: "Properties must have a type annotation", line: 1, column: 1),
+        .init(message: "Properties must have a type annotation", line: 1, column: 1)
       ]
     )
   }
@@ -301,6 +301,27 @@ import Testing
         .init(message: "Only non-static variable declarations are supported", line: 6, column: 3)
       ]
     )
+  }
 
+  @Test func nameKeyConflict() async throws {
+    assertMacro(
+      """
+      @Codable
+      public struct User {
+        let id: UUID
+        @CodableKey("id") let name: String
+      }
+      """,
+      expandedSource:
+        """
+        public struct User {
+          let id: UUID
+          let name: String
+        }
+        """,
+      diagnostics: [
+        .init(message: "Key conflict found: id", line: 1, column: 1)
+      ]
+    )
   }
 }

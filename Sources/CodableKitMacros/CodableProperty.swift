@@ -129,6 +129,17 @@ extension CodableProperty {
 }
 
 extension CodableProperty {
+  /// Normalized property name, if the property has a custom CodableKey, it will be the custom key,
+  /// otherwise it will be the property name. For coding key pattern binding, the normalized name is
+  /// string joined by `.`.
+  /// 
+  /// This normalized name could be considered as the unique identifier of the property.
+  var normalizedName: String {
+    customCodableKeyPath?.joined(separator: ".") ?? name.trimmedDescription
+  }
+}
+
+extension CodableProperty {
   var shouldGenerateCustomCodingKeyVariable: Bool {
     customCodableKey != nil && options.contains(.generateCustomKey)
   }

@@ -198,6 +198,19 @@ extension CodeGenCore {
         )
       }
 
+      // Check if there are key conflicts
+      let propertiesKeySet = Set(extractedProperties.map(\.normalizedName))
+      if propertiesKeySet.count != extractedProperties.count {
+        for property in extractedProperties {
+          if propertiesKeySet.contains(property.normalizedName) {
+            throw SimpleDiagnosticMessage(
+              message: "Key conflict found: \(property.normalizedName)",
+              severity: .error
+            )
+          }
+        }
+      }
+
       properties[id] = extractedProperties
     }
 
