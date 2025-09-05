@@ -227,28 +227,30 @@ public struct CodableKeyOptions: OptionSet, Sendable {
   ///             entire decoding process. With this option, failures are handled gracefully
   ///             by falling back to the default value or `nil`.
   public static let useDefaultOnFailure = Self(rawValue: 1 << 4)
+
+  /// Decode the value as a lossy array.
+  ///
+  /// This option is useful when you want to decode a JSON array as a lossy array.
+  /// The invalid items will be dropped, and the valid items will be decoded.
+  ///
+  /// - Note: This option is only supported for array properties.
+  public static let lossy = Self(rawValue: 1 << 5)
 }
 
 // MARK: It will be nice to use a macro to generate this code below.
 extension CodableKeyOptions {
   package init(from expr: MemberAccessExprSyntax) {
-    let variableName = expr.declName.baseName.text
-    switch variableName {
-    case "ignored":
-      self = .ignored
-    case "explicitNil":
-      self = .explicitNil
-    case "generateCustomKey":
-      self = .generateCustomKey
-    case "transcodeRawString":
-      self = .transcodeRawString
-    case "useDefaultOnFailure":
-      self = .useDefaultOnFailure
-    case "safeTranscodeRawString":
-      self = .safeTranscodeRawString
-    default:
-      self = .default
-    }
+    self =
+      switch expr.declName.baseName.text {
+      case "ignored": .ignored
+      case "explicitNil": .explicitNil
+      case "generateCustomKey": .generateCustomKey
+      case "transcodeRawString": .transcodeRawString
+      case "useDefaultOnFailure": .useDefaultOnFailure
+      case "safeTranscodeRawString": .safeTranscodeRawString
+      case "lossy": .lossy
+      default: .default
+      }
   }
 }
 
