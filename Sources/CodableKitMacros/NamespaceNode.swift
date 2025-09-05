@@ -177,6 +177,158 @@ extension NamespaceNode {
       }
     )
 
+    // Lossy decode for arrays and sets
+    for property in properties where property.options.contains(.lossy) && !property.ignored {
+      guard property.isArrayType || property.isSetType, let elementType = property.collectionElementType else {
+        continue
+      }
+
+      let lossyType = TypeSyntax(
+        IdentifierTypeSyntax(
+          name: .identifier("LossyArray"),
+          genericArgumentClause: GenericArgumentClauseSyntax(
+            leftAngle: .leftAngleToken(),
+            arguments: GenericArgumentListSyntax([
+              .init(argument: elementType)
+            ]),
+            rightAngle: .rightAngleToken()
+          )
+        )
+      )
+
+      let shouldUseDecodeIfPresent = property.isOptional || property.defaultValue != nil
+
+      // let <name>LossyWrapper = try? container.decodeIfPresent(LossyArray<Element>.self, forKey: .name)
+      let decodeDecl = CodeGenCore.genContainerDecodeVariableDecl(
+        variableName: property.lossyWrapperName,
+        containerName: containerName,
+        patternName: property.name,
+        isOptional: shouldUseDecodeIfPresent,
+        useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
+        defaultValueExpr: nil,
+        type: lossyType
+      )
+
+      result.append(CodeBlockItemSyntax(item: .decl(decodeDecl)))
+
+      // Build assignment respecting optionality and defaults
+      if shouldUseDecodeIfPresent {
+        let unwrappedName = PatternSyntax(
+          IdentifierPatternSyntax(identifier: .identifier("\(property.name)LossyUnwrapped")))
+
+        let assignedRHSWhenUnwrapped: ExprSyntax = {
+          let elementsAccess = ExprSyntax(
+            MemberAccessExprSyntax(
+              base: DeclReferenceExprSyntax(baseName: .identifier("\(unwrappedName)")),
+              declName: DeclReferenceExprSyntax(baseName: .identifier("elements"))
+            )
+          )
+          if property.isSetType {
+            return ExprSyntax(
+              FunctionCallExprSyntax(
+                calledExpression: DeclReferenceExprSyntax(baseName: .identifier("Set")),
+                leftParen: .leftParenToken(),
+                rightParen: .rightParenToken()
+              ) {
+                LabeledExprSyntax(expression: elementsAccess)
+              }
+            )
+          } else {
+            return elementsAccess
+          }
+        }()
+
+        let defaultExpr: ExprSyntax = property.defaultValue ?? ExprSyntax(NilLiteralExprSyntax())
+
+        result.append(
+          CodeBlockItemSyntax(
+            item: .expr(
+              ExprSyntax(
+                IfExprSyntax(
+                  conditions: [
+                    ConditionElementSyntax(
+                      condition: .optionalBinding(
+                        OptionalBindingConditionSyntax(
+                          bindingSpecifier: .keyword(.let),
+                          pattern: unwrappedName,
+                          initializer: InitializerClauseSyntax(
+                            value: DeclReferenceExprSyntax(baseName: .identifier("\(property.lossyWrapperName)"))
+                          )
+                        )
+                      )
+                    )
+                  ],
+                  body: CodeBlockSyntax {
+                    CodeBlockItemSyntax(
+                      item: .expr(
+                        ExprSyntax(
+                          InfixOperatorExprSyntax(
+                            leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
+                            operator: AssignmentExprSyntax(equal: .equalToken()),
+                            rightOperand: assignedRHSWhenUnwrapped
+                          )
+                        )
+                      )
+                    )
+                  },
+                  elseKeyword: .keyword(.else),
+                  elseBody: .init(
+                    CodeBlockSyntax {
+                      CodeBlockItemSyntax(
+                        item: .expr(
+                          ExprSyntax(
+                            InfixOperatorExprSyntax(
+                              leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
+                              operator: AssignmentExprSyntax(equal: .equalToken()),
+                              rightOperand: defaultExpr
+                            )
+                          )
+                        )
+                      )
+                    }
+                  )
+                )
+              )
+            )
+          )
+        )
+      } else {
+        // Non-optional decode path, wrapper is non-optional here
+        let elementsAccess = ExprSyntax(
+          MemberAccessExprSyntax(
+            base: DeclReferenceExprSyntax(baseName: .identifier("\(property.lossyWrapperName)")),
+            declName: DeclReferenceExprSyntax(baseName: .identifier("elements"))
+          )
+        )
+        let rhs =
+          property.isSetType
+          ? ExprSyntax(
+            FunctionCallExprSyntax(
+              calledExpression: DeclReferenceExprSyntax(baseName: .identifier("Set")),
+              leftParen: .leftParenToken(),
+              rightParen: .rightParenToken()
+            ) {
+              LabeledExprSyntax(expression: elementsAccess)
+            }
+          )
+          : elementsAccess
+
+        result.append(
+          CodeBlockItemSyntax(
+            item: .expr(
+              ExprSyntax(
+                InfixOperatorExprSyntax(
+                  leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
+                  operator: AssignmentExprSyntax(equal: .equalToken()),
+                  rightOperand: rhs
+                )
+              )
+            )
+          )
+        )
+      }
+    }
+
     for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
       let key = property.name
       let rawKey = property.rawStringName

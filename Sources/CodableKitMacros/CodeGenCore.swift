@@ -359,6 +359,22 @@ extension CodeGenCore {
           node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
         context.diagnose(diag)
       }
+
+      // Warn on `.lossy` used on non-collection type
+      if property.options.contains(.lossy) && !(property.isArrayType || property.isSetType) {
+        let message = "Option '.lossy' currently only supports Array<T> or Set<T> properties"
+        let diag = Diagnostic(
+          node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
+        context.diagnose(diag)
+      }
+
+      // Warn if `.lossy` is combined with `.transcodeRawString` (unsupported for now)
+      if property.options.contains(.lossy) && property.options.contains(.transcodeRawString) {
+        let message = "Options '.lossy' and '.transcodeRawString' cannot be combined on the same property"
+        let diag = Diagnostic(
+          node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .error))
+        context.diagnose(diag)
+      }
     }
   }
 }
