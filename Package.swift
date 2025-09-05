@@ -43,6 +43,7 @@ let package = Package(
     .testTarget(
       name: "CodableKitTests",
       dependencies: [
+        "CodableKit",
         "CodableKitShared",
         "CodableKitMacros",
         .product(name: "SwiftSyntax", package: "swift-syntax"),
@@ -52,6 +53,7 @@ let package = Package(
     .testTarget(
       name: "DecodableKitTests",
       dependencies: [
+        "CodableKit",
         "CodableKitShared",
         "CodableKitMacros",
         .product(name: "SwiftSyntax", package: "swift-syntax"),
@@ -61,6 +63,7 @@ let package = Package(
     .testTarget(
       name: "EncodableKitTests",
       dependencies: [
+        "CodableKit",
         "CodableKitShared",
         "CodableKitMacros",
         .product(name: "SwiftSyntax", package: "swift-syntax"),
