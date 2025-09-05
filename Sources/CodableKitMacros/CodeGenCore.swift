@@ -359,6 +359,16 @@ extension CodeGenCore {
           node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
         context.diagnose(diag)
       }
+
+      // Warn on `.lossy` used on non-collection type
+      if property.options.contains(.lossy) && !(property.isArrayType || property.isSetType) {
+        let message = "Option '.lossy' currently only supports Array<T> or Set<T> properties"
+        let diag = Diagnostic(
+          node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
+        context.diagnose(diag)
+      }
+
+      // Combined `.lossy` & `.transcodeRawString` is supported for Array/Set. No diagnostic.
     }
   }
 }

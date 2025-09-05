@@ -41,6 +41,9 @@ It provides macros for generating `Codable`, `Encodable`, and `Decodable` implem
 - **Property ignoring:**  
   Mark properties to be ignored for coding, without splitting up your models.
 
+- **Lossy collection decoding:**  
+  Decode arrays/sets while dropping invalid elements; composes with transcode options.
+
 - **Explicit nil encoding:**  
   Encode optionals as `null` instead of omitting them.
 
@@ -72,9 +75,10 @@ struct Car {
 | ------------------------------ | --------------------------------------------------- | ----------------------------------------------- |
 | Default values                 | `var count: Int = 0`                                | Use a fallback when data is missing             |
 | Custom coding key              | `@CodableKey("uid") let id: UUID`                   | Map property to custom JSON key                 |
-| Nested coding key path         | `@CodableKey("data.uid") let id: Int`                 | Support mapping to deeply nested JSON keys        |
+| Nested coding key path         | `@CodableKey("data.uid") let id: Int`               | Support mapping to deeply nested JSON keys      |
 | Ignore property                | `@CodableKey(options: .ignored) var temp: String`   | Exclude property from coding                    |
 | String ↔ Struct transcoding    | `@CodableKey(options: .transcodeRawString)`         | Decode/encode via JSON string field             |
+| Lossy collection decoding      | `@CodableKey(options: .lossy)`                      | Decode arrays/sets and drop invalid elements    |
 | Use default on failure         | `@CodableKey(options: .useDefaultOnFailure)`        | Fallback to default or nil on decoding error    |
 | Generate custom key property   | `@CodableKey("id", options: .generateCustomKey)`    | Adds computed property for custom key           |
 | Explicit nil encoding          | `@CodableKey(options: .explicitNil)`                | Encode nil as null, not omitted                 |
@@ -169,6 +173,44 @@ struct User {
 }
 ```
 
+### Lossy Decoding (Arrays and Sets)
+
+Drop invalid elements when decoding collections.
+
+```swift
+@Codable
+struct Feed {
+    // Keeps only valid integers; malformed items are ignored
+    @CodableKey(options: .lossy)
+    var ids: [Int]
+
+    // Optional Set; when key absent → nil
+    @CodableKey(options: .lossy)
+    var tags: Set<String>?
+}
+```
+
+Combined with transcoding (array payload is a JSON string):
+
+```swift
+@Codable
+struct Payload {
+    // Raw string → Data → decode LossyArray<Int> → use .elements
+    @CodableKey(options: [.lossy, .transcodeRawString])
+    var values: [Int]
+}
+```
+
+Safe variant with default fallback when raw string is missing/invalid:
+
+```swift
+@Codable
+struct SafePayload {
+    @CodableKey(options: [.lossy, .safeTranscodeRawString])
+    var values: [Int] = [1, 2]
+}
+```
+
 ### Enum Fallbacks (Graceful Decoding)
 
 ```swift
@@ -243,14 +285,15 @@ CodableKit exposes powerful customization points via two sets of options:
 
 Use with `@CodableKey` to control how a specific property is encoded/decoded.
 
-| Option                        | Description                                                         |
-| ----------------------------- | ------------------------------------------------------------------- |
-| `.ignored`                    | Exclude this property from (en|de)coding                            |
-| `.explicitNil`                | Encode nil optionals as `null` (not omitted)                        |
-| `.generateCustomKey`          | Generate a computed property for the custom key                     |
-| `.transcodeRawString`         | Transcode value via JSON string (for nested model as string fields) |
-| `.useDefaultOnFailure`        | Use default or nil if (en|de)coding fails                           |
-| `.safeTranscodeRawString`     | Combine `.transcodeRawString` and `.useDefaultOnFailure`            |
+| Option                        | Description                                                              |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| `.ignored`                    | Exclude this property from (en|de)coding                                 |
+| `.explicitNil`                | Encode nil optionals as `null` (not omitted)                             |
+| `.generateCustomKey`          | Generate a computed property for the custom key                          |
+| `.transcodeRawString`         | Transcode value via JSON string (for nested model as string fields)      |
+| `.useDefaultOnFailure`        | Use default or nil if (en|de)coding fails                                |
+| `.safeTranscodeRawString`     | Combine `.transcodeRawString` and `.useDefaultOnFailure`                 |
+| `.lossy`                      | Lossy decode arrays/sets; drop invalid elements; composes with transcode |
 
 **Example:**
 

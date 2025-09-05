@@ -119,7 +119,9 @@ extension CodableProperty {
   /// Indicates if the property should be considered as normal property, which mean it should be
   ///  encoded and decoded without changing any process.
   var isNormal: Bool {
-    !options.contains(.ignored) && !options.contains(.transcodeRawString)
+    !options.contains(.ignored)
+      && !options.contains(.transcodeRawString)
+      && !(options.contains(.lossy) && (isArrayType || isSetType))
   }
 
   /// Indicates if the property should be ignored when encoding and decoding
@@ -162,6 +164,61 @@ extension CodableProperty {
   }
   var rawDataName: PatternSyntax {
     PatternSyntax(IdentifierPatternSyntax(identifier: .identifier("\(name)RawData")))
+  }
+}
+
+// MARK: - Lossy helpers
+extension CodableProperty {
+  /// The underlying non-optional type if wrapped in Optional
+  private var nonOptionalType: TypeSyntax {
+    if let opt = type.as(OptionalTypeSyntax.self) {
+      return TypeSyntax(opt.wrappedType.trimmed)
+    }
+    if let ident = type.as(IdentifierTypeSyntax.self), ident.name.text == "Optional",
+      let arg = ident.genericArgumentClause?.arguments.first?.argument
+    {
+      return TypeSyntax(arg.trimmed)
+    }
+    return type.trimmed
+  }
+
+  /// Whether the property type is an Array
+  var isArrayType: Bool {
+    let baseType = nonOptionalType
+    if baseType.as(ArrayTypeSyntax.self) != nil { return true }
+    if let ident = baseType.as(IdentifierTypeSyntax.self) {
+      return ident.name.text == "Array" && (ident.genericArgumentClause?.arguments.count == 1)
+    }
+    return false
+  }
+
+  /// Whether the property type is a Set
+  var isSetType: Bool {
+    let baseType = nonOptionalType
+    if let ident = baseType.as(IdentifierTypeSyntax.self) {
+      return ident.name.text == "Set" && (ident.genericArgumentClause?.arguments.count == 1)
+    }
+    return false
+  }
+
+  /// The element type if the property is an Array<T> or Set<T>
+  var collectionElementType: TypeSyntax? {
+    let baseType = nonOptionalType
+    if let array = baseType.as(ArrayTypeSyntax.self) {
+      return TypeSyntax(array.element.trimmed)
+    }
+    if let ident = baseType.as(IdentifierTypeSyntax.self),
+      ident.name.text == "Array" || ident.name.text == "Set",
+      let arg = ident.genericArgumentClause?.arguments.first?.argument
+    {
+      return TypeSyntax(arg.trimmed)
+    }
+    return nil
+  }
+
+  /// Temporary wrapper variable name for lossy decoding
+  var lossyWrapperName: PatternSyntax {
+    PatternSyntax(IdentifierPatternSyntax(identifier: .identifier("\(name)LossyWrapper")))
   }
 }
 
