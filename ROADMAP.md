@@ -46,16 +46,22 @@ This roadmap outlines the major priorities and phased delivery plan for CodableK
   - [x] Deterministic nested ordering snapshots
 
 ## Phase 2 — Ergonomics and Resilience (Target: 1.6.x)
-- Lossy decoding for arrays/dictionaries (`.lossy`)
+- [x] Lossy decoding for arrays and sets (`.lossy`)
   - Acceptance:
-    - `[Lossy<T>]` semantics: invalid items dropped, valid items decoded
-    - Default/optional behaviors still respected
+    - `LossyArray<T>` semantics: invalid items dropped, valid items decoded
+    - Default/optional behaviors still respected (including `.useDefaultOnFailure`)
+    - Works with `Set<T>` (deduplication preserved)
+    - Composes with `.transcodeRawString` and `.safeTranscodeRawString` (decode lossy from transcoded payload)
+- [ ] Lossy decoding for dictionaries (`.lossy`)
+  - Acceptance:
+    - Gracefully drop invalid entries and decode valid key/value pairs
 - Size-limit guard for raw-string transcode decoding
   - Acceptance:
     - Reasonable default limit; configurable via option or macro-level configuration in a later patch
     - Exceeding limit produces decode error or default/`nil` when `.useDefaultOnFailure` present
 - Tests
-  - Mixed-validity collections round-trips
+  - Mixed-validity collections round-trips (Array and Set)
+  - Combined `.lossy` + `.transcodeRawString` and `.safeTranscodeRawString`
   - Guard behavior, with and without defaults and `.useDefaultOnFailure`
 
 ## Phase 3 — Expressiveness and Conventions (Target: 1.7.x)
