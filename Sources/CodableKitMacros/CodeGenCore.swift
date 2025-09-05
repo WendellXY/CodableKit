@@ -368,13 +368,7 @@ extension CodeGenCore {
         context.diagnose(diag)
       }
 
-      // Warn if `.lossy` is combined with `.transcodeRawString` (unsupported for now)
-      if property.options.contains(.lossy) && property.options.contains(.transcodeRawString) {
-        let message = "Options '.lossy' and '.transcodeRawString' cannot be combined on the same property"
-        let diag = Diagnostic(
-          node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .error))
-        context.diagnose(diag)
-      }
+      // Combined `.lossy` & `.transcodeRawString` is supported for Array/Set. No diagnostic.
     }
   }
 }

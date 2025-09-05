@@ -183,6 +183,192 @@ extension NamespaceNode {
         continue
       }
 
+      if property.options.contains(.transcodeRawString) {
+        // Combined lossy + transcodeRawString: decode raw string, transcode to data, decode LossyArray<Element>, assign .elements (or Set)
+        let defaultValueExpr = property.defaultValue ?? (property.isOptional ? "nil" : nil)
+
+        // raw string: let <name>RawString = try? container.decodeIfPresent(String.self, forKey: .name) ?? ""
+        result.append(
+          CodeBlockItemSyntax(
+            item: .decl(
+              CodeGenCore.genContainerDecodeVariableDecl(
+                variableName: property.rawStringName,
+                containerName: containerName,
+                patternName: property.name,
+                isOptional: true,
+                useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
+                defaultValueExpr: ExprSyntax(StringLiteralExprSyntax(content: "")),
+                type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String")))
+              )
+            )
+          )
+        )
+
+        // if !rawString.isEmpty, let rawData = rawString.data(using: .utf8) { ... } else { throw or assign default }
+        let lossyType = TypeSyntax(
+          IdentifierTypeSyntax(
+            name: .identifier("LossyArray"),
+            genericArgumentClause: GenericArgumentClauseSyntax(
+              leftAngle: .leftAngleToken(),
+              arguments: GenericArgumentListSyntax([
+                .init(argument: elementType)
+              ]),
+              rightAngle: .rightAngleToken()
+            )
+          )
+        )
+
+        result.append(
+          CodeBlockItemSyntax(
+            item: .expr(
+              ExprSyntax(
+                IfExprSyntax(
+                  conditions: [
+                    ConditionElementSyntax(
+                      condition: .expression(
+                        ExprSyntax(
+                          PrefixOperatorExprSyntax(
+                            operator: .prefixOperator("!"),
+                            expression: MemberAccessExprSyntax(
+                              base: DeclReferenceExprSyntax(baseName: .identifier("\(property.rawStringName)")),
+                              declName: DeclReferenceExprSyntax(baseName: .identifier("isEmpty"))
+                            )
+                          )
+                        )
+                      ),
+                      trailingComma: .commaToken(trailingTrivia: .spaces(1))
+                    ),
+                    ConditionElementSyntax(
+                      condition: .optionalBinding(
+                        OptionalBindingConditionSyntax(
+                          bindingSpecifier: .keyword(.let),
+                          pattern: property.rawDataName,
+                          initializer: InitializerClauseSyntax(
+                            value: FunctionCallExprSyntax(
+                              calledExpression: MemberAccessExprSyntax(
+                                base: DeclReferenceExprSyntax(baseName: .identifier("\(property.rawStringName)")),
+                                declName: DeclReferenceExprSyntax(baseName: .identifier("data"))
+                              ),
+                              leftParen: .leftParenToken(),
+                              rightParen: .rightParenToken()
+                            ) {
+                              LabeledExprSyntax(label: "using", expression: CodeGenCore.genChainingMembers("utf8"))
+                            }
+                          )
+                        )
+                      )
+                    ),
+                  ],
+                  body: CodeBlockSyntax {
+                    // let <name>LossyWrapper = try __ckDecoder.decode(LossyArray<Element>.self, from: <name>RawData)
+                    CodeBlockItemSyntax(
+                      item: .decl(
+                        DeclSyntax(
+                          CodeGenCore.genVariableDecl(
+                            bindingSpecifier: .keyword(.let),
+                            name: "\(property.lossyWrapperName)",
+                            initializer: TryExprSyntax(
+                              expression: FunctionCallExprSyntax(
+                                calledExpression: MemberAccessExprSyntax(
+                                  base: DeclReferenceExprSyntax(baseName: .identifier("__ckDecoder")),
+                                  declName: DeclReferenceExprSyntax(baseName: .identifier("decode"))
+                                ),
+                                leftParen: .leftParenToken(),
+                                rightParen: .rightParenToken()
+                              ) {
+                                LabeledExprSyntax(expression: ExprSyntax("\(lossyType).self"))
+                                LabeledExprSyntax(
+                                  label: "from",
+                                  expression: DeclReferenceExprSyntax(baseName: .identifier("\(property.rawDataName)"))
+                                )
+                              }
+                            )
+                          )
+                        )
+                      )
+                    )
+
+                    // <name> = <wrapper>.elements or Set(<wrapper>.elements)
+                    CodeBlockItemSyntax(
+                      item: .expr(
+                        ExprSyntax(
+                          InfixOperatorExprSyntax(
+                            leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
+                            operator: AssignmentExprSyntax(equal: .equalToken()),
+                            rightOperand: {
+                              let elementsAccess = ExprSyntax(
+                                MemberAccessExprSyntax(
+                                  base: DeclReferenceExprSyntax(baseName: .identifier("\(property.lossyWrapperName)")),
+                                  declName: DeclReferenceExprSyntax(baseName: .identifier("elements"))
+                                )
+                              )
+                              return property.isSetType
+                                ? ExprSyntax(
+                                  FunctionCallExprSyntax(
+                                    calledExpression: DeclReferenceExprSyntax(baseName: .identifier("Set")),
+                                    leftParen: .leftParenToken(),
+                                    rightParen: .rightParenToken()
+                                  ) {
+                                    LabeledExprSyntax(expression: elementsAccess)
+                                  }
+                                )
+                                : elementsAccess
+                            }()
+                          )
+                        )
+                      )
+                    )
+                  },
+                  elseKeyword: .keyword(.else),
+                  elseBody: .init(
+                    CodeBlockSyntax {
+                      if let defaultValueExpr {
+                        CodeBlockItemSyntax(
+                          item: .expr(
+                            ExprSyntax(
+                              InfixOperatorExprSyntax(
+                                leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
+                                operator: AssignmentExprSyntax(equal: .equalToken()),
+                                rightOperand: defaultValueExpr
+                              )
+                            )
+                          )
+                        )
+                      } else if property.isOptional {
+                        CodeBlockItemSyntax(
+                          item: .expr(
+                            ExprSyntax(
+                              InfixOperatorExprSyntax(
+                                leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
+                                operator: AssignmentExprSyntax(equal: .equalToken()),
+                                rightOperand: ExprSyntax(NilLiteralExprSyntax())
+                              )
+                            )
+                          )
+                        )
+                      } else {
+                        CodeBlockItemSyntax(
+                          item: .stmt(
+                            CodeGenCore.genValueNotFoundDecodingErrorThrowStmt(
+                              type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String"))),
+                              codingPath: codingKeyChain(for: property),
+                              message: "Failed to convert raw string to data"
+                            )
+                          )
+                        )
+                      }
+                    }
+                  )
+                )
+              )
+            )
+          )
+        )
+
+        // Done for combined case
+        continue
+      }
+
       let lossyType = TypeSyntax(
         IdentifierTypeSyntax(
           name: .identifier("LossyArray"),
@@ -329,7 +515,8 @@ extension NamespaceNode {
       }
     }
 
-    for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
+    for property in properties
+    where property.options.contains(.transcodeRawString) && !property.ignored && !property.options.contains(.lossy) {
       let key = property.name
       let rawKey = property.rawStringName
 

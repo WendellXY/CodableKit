@@ -150,7 +150,7 @@ import Testing
     )
   }
 
-  @Test func lossy_conflict_with_transcodeRawString() throws {
+  @Test func lossy_combined_with_transcodeRawString() throws {
     assertMacro(
       """
       @Decodable
@@ -172,11 +172,10 @@ import Testing
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let __ckDecoder = JSONDecoder()
-            let valuesLossyWrapper = try container.decode(LossyArray<Int>.self, forKey: .values)
-            values = valuesLossyWrapper.elements
             let valuesRawString = try container.decodeIfPresent(String.self, forKey: .values) ?? ""
             if !valuesRawString.isEmpty, let valuesRawData = valuesRawString.data(using: .utf8) {
-              values = try __ckDecoder.decode([Int].self, from: valuesRawData)
+              let valuesLossyWrapper = try __ckDecoder.decode(LossyArray<Int>.self, from: valuesRawData)
+              values = valuesLossyWrapper.elements
             } else {
               throw DecodingError.valueNotFound(
                 String.self,
@@ -189,15 +188,43 @@ import Testing
             try didDecode(from: decoder)
           }
         }
-        """,
-      diagnostics: [
-        .init(
-          message: "Options '.lossy' and '.transcodeRawString' cannot be combined on the same property",
-          line: 4,
-          column: 7,
-          severity: .error
-        )
-      ]
+        """
+    )
+  }
+
+  @Test func lossy_combined_with_safeTranscodeRawString() throws {
+    assertMacro(
+      """
+      @Decodable
+      public struct Model {
+        @CodableKey(options: [.lossy, .safeTranscodeRawString])
+        var values: [Int] = [1, 2]
+      }
+      """,
+      expandedSource: """
+        public struct Model {
+          var values: [Int] = [1, 2]
+        }
+
+        extension Model: Decodable {
+          enum CodingKeys: String, CodingKey {
+            case values
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let __ckDecoder = JSONDecoder()
+            let valuesRawString = (try? container.decodeIfPresent(String.self, forKey: .values)) ?? ""
+            if !valuesRawString.isEmpty, let valuesRawData = valuesRawString.data(using: .utf8) {
+              let valuesLossyWrapper = try __ckDecoder.decode(LossyArray<Int>.self, from: valuesRawData)
+              values = valuesLossyWrapper.elements
+            } else {
+              values = [1, 2]
+            }
+            try didDecode(from: decoder)
+          }
+        }
+        """
     )
   }
 }
