@@ -619,6 +619,26 @@ extension NamespaceNode {
         )
       })
 
+    // Encode lossy properties normally (lossy is decode-only). Skip when also using transcodeRawString.
+    for property in properties
+    where property.options.contains(.lossy)
+      && !property.options.contains(.transcodeRawString) && !property.ignored
+    {
+      result.append(
+        CodeBlockItemSyntax(
+          item: .expr(
+            CodeGenCore.genContainerEncodeExpr(
+              containerName: containerName,
+              key: property.name,
+              patternName: property.name,
+              isOptional: property.isOptional,
+              explicitNil: property.options.contains(.explicitNil)
+            )
+          )
+        )
+      )
+    }
+
     // Encode as raw JSON string (transcoding). For optionals without `.explicitNil`, omit the key when nil.
     for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
       if property.isOptional && !property.options.contains(.explicitNil) {

@@ -31,8 +31,8 @@ import Testing
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
-            container.encode(values, forKey: .values)
-            container.encode(values2, forKey: .values2)
+            try container.encode(values, forKey: .values)
+            try container.encode(values2, forKey: .values2)
             try didEncode(to: encoder)
           }
         }
@@ -59,11 +59,11 @@ import Testing
       expandedSource: """
         public struct Model {
           let values: [String]?
-        
+
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
-            container.encode(values, forKey: .values)
+            try container.encodeIfPresent(values, forKey: .values)
             try didEncode(to: encoder)
           }
         }
@@ -93,7 +93,7 @@ import Testing
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
-            container.encode(values, forKey: .values)
+            try container.encode(values, forKey: .values)
             try didEncode(to: encoder)
           }
         }
@@ -123,7 +123,7 @@ import Testing
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
-            container.encode(ids, forKey: .ids)
+            try container.encodeIfPresent(ids, forKey: .ids)
             try didEncode(to: encoder)
           }
         }
@@ -149,7 +149,7 @@ import Testing
       expandedSource: """
         public struct Model {
           let values: [Int]
-        
+
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
