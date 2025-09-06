@@ -10,7 +10,7 @@ This roadmap outlines the major priorities and phased delivery plan for CodableK
 - Strong test coverage (snapshots + behavior) and CI signal
 
 ## Milestones
-- 1.5.x (In review): Phase 1 — correctness & stability (PRs #10, #11)
+- 1.5.x: Phase 1 — correctness & stability (PRs #10, #11)
 - 1.6.x: Phase 2 — ergonomics & resilience
 - 1.7.x: Phase 3 — expressiveness & conventions
 - 1.8.x: Phase 4 — docs, performance, CI
