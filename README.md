@@ -24,7 +24,7 @@ Modern apps consume diverse JSON. Real‑world payloads include nested key paths
 - Custom coding keys and nested key paths (`@CodableKey("data.uid")`)
 - Graceful decoding failures with `.useDefaultOnFailure`
 - String ↔ Struct transcoding for string‑encoded JSON (`.transcodeRawString`, `.safeTranscodeRawString`)
-- Lossy collection decoding for arrays/sets (`.lossy`) — drop invalid elements
+- Lossy collection decoding for collection types (`.lossy`) — drop invalid elements/entries
 - Explicit `nil` encoding for optionals (`.explicitNil`)
 - Generated computed key properties (`.generateCustomKey`)
 - Lifecycle hooks: `didDecode`, `willEncode`, `didEncode`
@@ -169,6 +169,45 @@ struct SafePayload {
 }
 ```
 
+### Lossy Decoding for Dictionaries
+
+Decode dictionaries while dropping invalid entries (or keys that can’t be converted from JSON string keys).
+
+```swift
+@Codable
+struct MapModel {
+  // Keeps only entries with valid Int values
+  @CodableKey(options: .lossy)
+  var counts: [String: Int]
+
+  // Optional dictionary; when key missing → nil
+  @CodableKey(options: .lossy)
+  var scores: [Int: Double]?
+}
+```
+
+Combine with transcoding when the dictionary is encoded as a JSON string:
+
+```swift
+@Codable
+struct DictPayload {
+  // Raw string → Data → decode LossyDictionary<K, V> → use .elements
+  @CodableKey(options: [.lossy, .transcodeRawString])
+  var metrics: [String: Double]
+}
+
+@Codable
+struct SafeDictPayload {
+  // Falls back to default when the raw string is invalid/missing
+  @CodableKey(options: [.lossy, .safeTranscodeRawString])
+  var metrics: [Int: Double] = [:]
+}
+```
+
+Notes:
+- Dictionary keys must be `LosslessStringConvertible` (e.g., `String`, `Int`) so they can be constructed from JSON object keys, which are strings.
+- Lossy behavior is decode‑only. Encoding dictionaries proceeds normally.
+
 ### Enum Fallbacks (Graceful Decoding)
 
 ```swift
@@ -218,7 +257,7 @@ CodableKit exposes two option sets:
 | `.transcodeRawString`     | Transcode value via JSON string (nested model as string field)                |
 | `.useDefaultOnFailure`    | Use default or `nil` if (en|de)coding fails                                   |
 | `.safeTranscodeRawString` | Combine `.transcodeRawString` and `.useDefaultOnFailure`                      |
-| `.lossy`                  | Lossy decode arrays/sets; drop invalid elements; composes with transcode      |
+| `.lossy`                  | Lossy decode collections; drop invalid elements                               |
 
 ### CodableOptions (Macro‑Level)
 
