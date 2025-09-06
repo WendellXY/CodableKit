@@ -52,7 +52,7 @@ This roadmap outlines the major priorities and phased delivery plan for CodableK
     - Default/optional behaviors still respected (including `.useDefaultOnFailure`)
     - Works with `Set<T>` (deduplication preserved)
     - Composes with `.transcodeRawString` and `.safeTranscodeRawString` (decode lossy from transcoded payload)
-- [ ] Lossy decoding for dictionaries (`.lossy`)
+- [x] Lossy decoding for dictionaries (`.lossy`)
   - Acceptance:
     - Gracefully drop invalid entries and decode valid key/value pairs
 - Size-limit guard for raw-string transcode decoding
