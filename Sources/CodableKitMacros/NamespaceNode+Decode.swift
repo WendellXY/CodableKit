@@ -99,36 +99,37 @@ extension NamespaceNode {
         )
 
         // if !rawString.isEmpty, let rawData = rawString.data(using: .utf8) { ... } else { throw or assign default }
-        let lossyType: TypeSyntax = {
-          if isDict, let dict = dictTypes {
-            return TypeSyntax(
-              IdentifierTypeSyntax(
-                name: .identifier("LossyDictionary"),
-                genericArgumentClause: GenericArgumentClauseSyntax(
-                  leftAngle: .leftAngleToken(),
-                  arguments: GenericArgumentListSyntax([
-                    .init(argument: dict.key, trailingComma: .commaToken(trailingTrivia: .spaces(1))),
-                    .init(argument: dict.value),
-                  ]),
-                  rightAngle: .rightAngleToken()
-                )
+        let lossyType: TypeSyntax
+        if isDict, let dict = dictTypes {
+          lossyType = TypeSyntax(
+            IdentifierTypeSyntax(
+              name: .identifier("LossyDictionary"),
+              genericArgumentClause: GenericArgumentClauseSyntax(
+                leftAngle: .leftAngleToken(),
+                arguments: GenericArgumentListSyntax([
+                  .init(argument: dict.key, trailingComma: .commaToken(trailingTrivia: .spaces(1))),
+                  .init(argument: dict.value),
+                ]),
+                rightAngle: .rightAngleToken()
               )
             )
-          } else {
-            return TypeSyntax(
-              IdentifierTypeSyntax(
-                name: .identifier("LossyArray"),
-                genericArgumentClause: GenericArgumentClauseSyntax(
-                  leftAngle: .leftAngleToken(),
-                  arguments: GenericArgumentListSyntax([
-                    .init(argument: elementType!)
-                  ]),
-                  rightAngle: .rightAngleToken()
-                )
+          )
+        } else if let elementType {
+          lossyType = TypeSyntax(
+            IdentifierTypeSyntax(
+              name: .identifier("LossyArray"),
+              genericArgumentClause: GenericArgumentClauseSyntax(
+                leftAngle: .leftAngleToken(),
+                arguments: GenericArgumentListSyntax([
+                  .init(argument: elementType)
+                ]),
+                rightAngle: .rightAngleToken()
               )
             )
-          }
-        }()
+          )
+        } else {
+          continue
+        }
 
         result.append(
           CodeBlockItemSyntax(
@@ -281,36 +282,37 @@ extension NamespaceNode {
         continue
       }
 
-      let lossyType: TypeSyntax = {
-        if isDict, let dict = dictTypes {
-          return TypeSyntax(
-            IdentifierTypeSyntax(
-              name: .identifier("LossyDictionary"),
-              genericArgumentClause: GenericArgumentClauseSyntax(
-                leftAngle: .leftAngleToken(),
-                arguments: GenericArgumentListSyntax([
-                  .init(argument: dict.key, trailingComma: .commaToken(trailingTrivia: .spaces(1))),
-                  .init(argument: dict.value),
-                ]),
-                rightAngle: .rightAngleToken()
-              )
+      let lossyType: TypeSyntax
+      if isDict, let dict = dictTypes {
+        lossyType = TypeSyntax(
+          IdentifierTypeSyntax(
+            name: .identifier("LossyDictionary"),
+            genericArgumentClause: GenericArgumentClauseSyntax(
+              leftAngle: .leftAngleToken(),
+              arguments: GenericArgumentListSyntax([
+                .init(argument: dict.key, trailingComma: .commaToken(trailingTrivia: .spaces(1))),
+                .init(argument: dict.value),
+              ]),
+              rightAngle: .rightAngleToken()
             )
           )
-        } else {
-          return TypeSyntax(
-            IdentifierTypeSyntax(
-              name: .identifier("LossyArray"),
-              genericArgumentClause: GenericArgumentClauseSyntax(
-                leftAngle: .leftAngleToken(),
-                arguments: GenericArgumentListSyntax([
-                  .init(argument: elementType!)
-                ]),
-                rightAngle: .rightAngleToken()
-              )
+        )
+      } else if let elementType {
+        lossyType = TypeSyntax(
+          IdentifierTypeSyntax(
+            name: .identifier("LossyArray"),
+            genericArgumentClause: GenericArgumentClauseSyntax(
+              leftAngle: .leftAngleToken(),
+              arguments: GenericArgumentListSyntax([
+                .init(argument: elementType)
+              ]),
+              rightAngle: .rightAngleToken()
             )
           )
-        }
-      }()
+        )
+      } else {
+        continue
+      }
 
       let shouldUseDecodeIfPresent = property.isOptional || property.defaultValue != nil
 
