@@ -228,12 +228,14 @@ public struct CodableKeyOptions: OptionSet, Sendable {
   ///             by falling back to the default value or `nil`.
   public static let useDefaultOnFailure = Self(rawValue: 1 << 4)
 
-  /// Decode the value as a lossy array.
+  /// Decode the value in a lossy way for collections.
   ///
-  /// This option is useful when you want to decode a JSON array as a lossy array.
-  /// The invalid items will be dropped, and the valid items will be decoded.
+  /// - For arrays and sets: invalid elements are dropped.
+  /// - For dictionaries: entries with invalid values (or keys that cannot be
+  ///   converted from JSON string keys) are dropped.
   ///
-  /// - Note: This option is only supported for array properties.
+  /// This option is useful when you want to tolerate partially-invalid data
+  /// from APIs without failing the entire decode.
   public static let lossy = Self(rawValue: 1 << 5)
 }
 
