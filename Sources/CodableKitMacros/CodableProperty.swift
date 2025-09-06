@@ -121,7 +121,7 @@ extension CodableProperty {
   var isNormal: Bool {
     !options.contains(.ignored)
       && !options.contains(.transcodeRawString)
-      && !(options.contains(.lossy) && (isArrayType || isSetType))
+      && !(options.contains(.lossy) && (isArrayType || isSetType || isDictionaryType))
   }
 
   /// Indicates if the property should be ignored when encoding and decoding
@@ -201,6 +201,16 @@ extension CodableProperty {
     return false
   }
 
+  /// Whether the property type is a Dictionary
+  var isDictionaryType: Bool {
+    let baseType = nonOptionalType
+    if baseType.as(DictionaryTypeSyntax.self) != nil { return true }
+    if let ident = baseType.as(IdentifierTypeSyntax.self) {
+      return ident.name.text == "Dictionary" && (ident.genericArgumentClause?.arguments.count == 2)
+    }
+    return false
+  }
+
   /// The element type if the property is an Array<T> or Set<T>
   var collectionElementType: TypeSyntax? {
     let baseType = nonOptionalType
@@ -212,6 +222,24 @@ extension CodableProperty {
       let arg = ident.genericArgumentClause?.arguments.first?.argument
     {
       return TypeSyntax(arg.trimmed)
+    }
+    return nil
+  }
+
+  /// The key and value types if the property is a Dictionary<Key, Value>
+  var dictionaryKeyAndValueTypes: (key: TypeSyntax, value: TypeSyntax)? {
+    let baseType = nonOptionalType
+    if let dict = baseType.as(DictionaryTypeSyntax.self) {
+      return (TypeSyntax(dict.key.trimmed), TypeSyntax(dict.value.trimmed))
+    }
+    if let ident = baseType.as(IdentifierTypeSyntax.self),
+      ident.name.text == "Dictionary",
+      let args = ident.genericArgumentClause?.arguments,
+      args.count == 2
+    {
+      let key = args[args.startIndex].argument
+      let value = args[args.index(after: args.startIndex)].argument
+      return (TypeSyntax(key.trimmed), TypeSyntax(value.trimmed))
     }
     return nil
   }

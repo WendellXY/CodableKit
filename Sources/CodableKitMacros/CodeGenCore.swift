@@ -360,9 +360,11 @@ extension CodeGenCore {
         context.diagnose(diag)
       }
 
-      // Warn on `.lossy` used on non-collection type
-      if property.options.contains(.lossy) && !(property.isArrayType || property.isSetType) {
-        let message = "Option '.lossy' currently only supports Array<T> or Set<T> properties"
+      // Warn on `.lossy` used on unsupported type
+      if property.options.contains(.lossy)
+        && !(property.isArrayType || property.isSetType || property.isDictionaryType)
+      {
+        let message = "Option '.lossy' supports Array<T>, Set<T>, or Dictionary<K, V> properties"
         let diag = Diagnostic(
           node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
         context.diagnose(diag)

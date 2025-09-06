@@ -69,11 +69,13 @@ extension NamespaceNode {
       }
     )
 
-    // Lossy decode for arrays and sets
+    // Lossy decode for arrays, sets, and dictionaries
     for property in properties where property.options.contains(.lossy) && !property.ignored {
-      guard property.isArrayType || property.isSetType, let elementType = property.collectionElementType else {
-        continue
-      }
+      let isCollection = property.isArrayType || property.isSetType
+      let isDict = property.isDictionaryType
+      let elementType = property.collectionElementType
+      let dictTypes = property.dictionaryKeyAndValueTypes
+      guard (isCollection && elementType != nil) || (isDict && dictTypes != nil) else { continue }
 
       if property.options.contains(.transcodeRawString) {
         // Combined lossy + transcodeRawString: decode raw string, transcode to data, decode LossyArray<Element>, assign .elements (or Set)
@@ -97,18 +99,36 @@ extension NamespaceNode {
         )
 
         // if !rawString.isEmpty, let rawData = rawString.data(using: .utf8) { ... } else { throw or assign default }
-        let lossyType = TypeSyntax(
-          IdentifierTypeSyntax(
-            name: .identifier("LossyArray"),
-            genericArgumentClause: GenericArgumentClauseSyntax(
-              leftAngle: .leftAngleToken(),
-              arguments: GenericArgumentListSyntax([
-                .init(argument: elementType)
-              ]),
-              rightAngle: .rightAngleToken()
+        let lossyType: TypeSyntax = {
+          if isDict, let dict = dictTypes {
+            return TypeSyntax(
+              IdentifierTypeSyntax(
+                name: .identifier("LossyDictionary"),
+                genericArgumentClause: GenericArgumentClauseSyntax(
+                  leftAngle: .leftAngleToken(),
+                  arguments: GenericArgumentListSyntax([
+                    .init(argument: dict.key, trailingComma: .commaToken(trailingTrivia: .spaces(1))),
+                    .init(argument: dict.value),
+                  ]),
+                  rightAngle: .rightAngleToken()
+                )
+              )
             )
-          )
-        )
+          } else {
+            return TypeSyntax(
+              IdentifierTypeSyntax(
+                name: .identifier("LossyArray"),
+                genericArgumentClause: GenericArgumentClauseSyntax(
+                  leftAngle: .leftAngleToken(),
+                  arguments: GenericArgumentListSyntax([
+                    .init(argument: elementType!)
+                  ]),
+                  rightAngle: .rightAngleToken()
+                )
+              )
+            )
+          }
+        }()
 
         result.append(
           CodeBlockItemSyntax(
@@ -261,18 +281,36 @@ extension NamespaceNode {
         continue
       }
 
-      let lossyType = TypeSyntax(
-        IdentifierTypeSyntax(
-          name: .identifier("LossyArray"),
-          genericArgumentClause: GenericArgumentClauseSyntax(
-            leftAngle: .leftAngleToken(),
-            arguments: GenericArgumentListSyntax([
-              .init(argument: elementType)
-            ]),
-            rightAngle: .rightAngleToken()
+      let lossyType: TypeSyntax = {
+        if isDict, let dict = dictTypes {
+          return TypeSyntax(
+            IdentifierTypeSyntax(
+              name: .identifier("LossyDictionary"),
+              genericArgumentClause: GenericArgumentClauseSyntax(
+                leftAngle: .leftAngleToken(),
+                arguments: GenericArgumentListSyntax([
+                  .init(argument: dict.key, trailingComma: .commaToken(trailingTrivia: .spaces(1))),
+                  .init(argument: dict.value),
+                ]),
+                rightAngle: .rightAngleToken()
+              )
+            )
           )
-        )
-      )
+        } else {
+          return TypeSyntax(
+            IdentifierTypeSyntax(
+              name: .identifier("LossyArray"),
+              genericArgumentClause: GenericArgumentClauseSyntax(
+                leftAngle: .leftAngleToken(),
+                arguments: GenericArgumentListSyntax([
+                  .init(argument: elementType!)
+                ]),
+                rightAngle: .rightAngleToken()
+              )
+            )
+          )
+        }
+      }()
 
       let shouldUseDecodeIfPresent = property.isOptional || property.defaultValue != nil
 
