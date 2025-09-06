@@ -122,11 +122,19 @@ extension CodableProperty {
     !options.contains(.ignored)
       && !options.contains(.transcodeRawString)
       && !(options.contains(.lossy) && (isArrayType || isSetType || isDictionaryType))
+      && transformerExpr == nil
   }
 
   /// Indicates if the property should be ignored when encoding and decoding
   var ignored: Bool {
     options.contains(.ignored)
+  }
+}
+
+extension CodableProperty {
+  /// The transformer expression provided via `@CodableKey(transformer: ...)`
+  var transformerExpr: ExprSyntax? {
+    codableKeyLabeledExprList?.first(where: { $0.label?.text == "transformer" })?.expression
   }
 }
 

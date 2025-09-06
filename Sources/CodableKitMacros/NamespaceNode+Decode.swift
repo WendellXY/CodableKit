@@ -51,6 +51,98 @@ extension NamespaceNode {
   private var propertyAssignment: [CodeBlockItemSyntax] {
     var result: [CodeBlockItemSyntax] = []
 
+    // Transformer-based decoding (applies before normal path)
+    for property in properties where property.transformerExpr != nil && !property.ignored {
+      let useDefault = property.options.contains(.useDefaultOnFailure)
+
+      if property.isOptional || property.defaultValue != nil {
+        let callExpr = ExprSyntax(
+          TryExprSyntax(
+            expression: FunctionCallExprSyntax(
+              calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckDecodeTransformedIfPresent")),
+              leftParen: .leftParenToken(),
+              rightParen: .rightParenToken()
+            ) {
+              LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
+              LabeledExprSyntax(
+                label: "from", expression: DeclReferenceExprSyntax(baseName: .identifier(containerName)))
+              LabeledExprSyntax(label: "forKey", expression: CodeGenCore.genChainingMembers("\(property.name)"))
+              LabeledExprSyntax(
+                label: "useDefaultOnFailure",
+                expression: ExprSyntax(
+                  BooleanLiteralExprSyntax(literal: useDefault ? .keyword(.true) : .keyword(.false)))
+              )
+              if let def = property.defaultValue {
+                LabeledExprSyntax(label: "defaultValue", expression: def)
+              }
+            }
+          )
+        )
+
+        let rhs: ExprSyntax =
+          if property.isOptional {
+            callExpr
+          } else {
+            ExprSyntax(
+              InfixOperatorExprSyntax(
+                leftOperand: TupleExprSyntax(
+                  elements: LabeledExprListSyntax([LabeledExprSyntax(expression: callExpr)])),
+                operator: BinaryOperatorExprSyntax(operator: .binaryOperator("??")),
+                rightOperand: property.defaultValue ?? ExprSyntax(NilLiteralExprSyntax())
+              )
+            )
+          }
+
+        result.append(
+          CodeBlockItemSyntax(
+            item: .expr(
+              ExprSyntax(
+                InfixOperatorExprSyntax(
+                  leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
+                  operator: AssignmentExprSyntax(equal: .equalToken()),
+                  rightOperand: rhs
+                )
+              )
+            )
+          )
+        )
+        continue
+      }
+
+      let callExpr = ExprSyntax(
+        TryExprSyntax(
+          expression: FunctionCallExprSyntax(
+            calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckDecodeTransformed")),
+            leftParen: .leftParenToken(),
+            rightParen: .rightParenToken()
+          ) {
+            LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
+            LabeledExprSyntax(label: "from", expression: DeclReferenceExprSyntax(baseName: .identifier(containerName)))
+            LabeledExprSyntax(label: "forKey", expression: CodeGenCore.genChainingMembers("\(property.name)"))
+            LabeledExprSyntax(
+              label: "useDefaultOnFailure",
+              expression: ExprSyntax(
+                BooleanLiteralExprSyntax(literal: useDefault ? .keyword(.true) : .keyword(.false)))
+            )
+          }
+        )
+      )
+
+      result.append(
+        CodeBlockItemSyntax(
+          item: .expr(
+            ExprSyntax(
+              InfixOperatorExprSyntax(
+                leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
+                operator: AssignmentExprSyntax(equal: .equalToken()),
+                rightOperand: callExpr
+              )
+            )
+          )
+        )
+      )
+    }
+
     result.append(
       contentsOf: properties.filter(\.isNormal).map { property in
         CodeBlockItemSyntax(

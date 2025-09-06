@@ -40,6 +40,63 @@ extension NamespaceNode {
   private var propertyEncodeAssignment: [CodeBlockItemSyntax] {
     var result: [CodeBlockItemSyntax] = []
 
+    // Transformer-based encoding (before normal path and before transcodeRawString)
+    for property in properties where property.transformerExpr != nil && !property.ignored {
+      if property.isOptional {
+        result.append(
+          CodeBlockItemSyntax(
+            item: .expr(
+              ExprSyntax(
+                TryExprSyntax(
+                  expression: FunctionCallExprSyntax(
+                    calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckEncodeTransformedIfPresent")),
+                    leftParen: .leftParenToken(),
+                    rightParen: .rightParenToken()
+                  ) {
+                    LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
+                    LabeledExprSyntax(
+                      label: "value", expression: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")))
+                    LabeledExprSyntax(
+                      label: "into", expression: DeclReferenceExprSyntax(baseName: .identifier("&\(containerName)")))
+                    LabeledExprSyntax(label: "forKey", expression: CodeGenCore.genChainingMembers("\(property.name)"))
+                    LabeledExprSyntax(
+                      label: "explicitNil",
+                      expression: ExprSyntax(
+                        BooleanLiteralExprSyntax(
+                          literal: property.options.contains(.explicitNil) ? .keyword(.true) : .keyword(.false)))
+                    )
+                  }
+                )
+              )
+            )
+          )
+        )
+      } else {
+        result.append(
+          CodeBlockItemSyntax(
+            item: .expr(
+              ExprSyntax(
+                TryExprSyntax(
+                  expression: FunctionCallExprSyntax(
+                    calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckEncodeTransformed")),
+                    leftParen: .leftParenToken(),
+                    rightParen: .rightParenToken()
+                  ) {
+                    LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
+                    LabeledExprSyntax(
+                      label: "value", expression: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")))
+                    LabeledExprSyntax(
+                      label: "into", expression: DeclReferenceExprSyntax(baseName: .identifier("&\(containerName)")))
+                    LabeledExprSyntax(label: "forKey", expression: CodeGenCore.genChainingMembers("\(property.name)"))
+                  }
+                )
+              )
+            )
+          )
+        )
+      }
+    }
+
     result.append(
       contentsOf: properties.filter(\.isNormal).map { property in
         CodeBlockItemSyntax(
