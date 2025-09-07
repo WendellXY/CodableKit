@@ -7,6 +7,10 @@
 
 import Foundation
 
+/// Decodes a concrete `Value` at a given `CodingKey` from a keyed container.
+///
+/// Start a pipeline with `Result.success(())` and use this transformer to fetch
+/// the field as the first step when building manual chains.
 public struct DecodeAtKey<Key: CodingKey, Value: Decodable>: CodingTransformer {
   let container: KeyedDecodingContainer<Key>
   let key: Key
@@ -25,6 +29,9 @@ public struct DecodeAtKey<Key: CodingKey, Value: Decodable>: CodingTransformer {
   }
 }
 
+/// Decodes an optional `Value` if present at a given `CodingKey`.
+///
+/// Produces `nil` when the key is absent or explicitly `null`.
 public struct DecodeAtKeyIfPresent<Key: CodingKey, Value: Decodable>: CodingTransformer {
   let container: KeyedDecodingContainer<Key>
   let key: Key
@@ -43,6 +50,7 @@ public struct DecodeAtKeyIfPresent<Key: CodingKey, Value: Decodable>: CodingTran
   }
 }
 
+/// Pass-through transformer. Useful as a placeholder or for API symmetry.
 public struct IdentityTransformer<Value>: CodingTransformer {
   public typealias Input = Value
   public typealias Output = Value
@@ -54,6 +62,10 @@ public struct IdentityTransformer<Value>: CodingTransformer {
   }
 }
 
+/// Converts any failure into a success with `defaultValue` when provided.
+///
+/// The reverse direction is identical to the forward direction for same-type
+/// defaults, so only `transform(_)` is implemented.
 public struct DefaultOnFailureTransformer<Value>: BidirectionalCodingTransformer {
   public let defaultValue: Value?
 
@@ -74,6 +86,9 @@ public struct DefaultOnFailureTransformer<Value>: BidirectionalCodingTransformer
   }
 }
 
+/// Decodes a `Value` from a JSON string that contains serialized JSON.
+///
+/// Useful for APIs that nest objects as raw JSON strings.
 public struct RawStringDecodingTransformer<Value: Decodable>: CodingTransformer {
   public typealias Output = Value
 
@@ -98,6 +113,9 @@ public struct RawStringDecodingTransformer<Value: Decodable>: CodingTransformer 
   }
 }
 
+/// Encodes a `Value` into a JSON string containing its serialized representation.
+///
+/// Useful for APIs that expect objects as stringified JSON.
 public struct RawStringEncodingTransformer<Value: Encodable>: CodingTransformer {
   public let encoder: JSONEncoder
 
@@ -122,6 +140,7 @@ public struct RawStringEncodingTransformer<Value: Encodable>: CodingTransformer 
   }
 }
 
+/// Bidirectional wrapper combining raw-string encode and decode transforms.
 public struct RawStringTransformer<Value: Decodable & Encodable>: BidirectionalCodingTransformer {
   private let transformer: Paired<RawStringEncodingTransformer<Value>, RawStringDecodingTransformer<Value>>
 
@@ -141,6 +160,7 @@ public struct RawStringTransformer<Value: Decodable & Encodable>: BidirectionalC
   }
 }
 
+/// Maps `0/1` integers to booleans and back.
 public struct IntegerToBooleanTransformer<Input: BinaryInteger>: BidirectionalCodingTransformer {
   public typealias Output = Bool
 
@@ -153,6 +173,9 @@ public struct IntegerToBooleanTransformer<Input: BinaryInteger>: BidirectionalCo
   }
 }
 
+/// Projects a property via key path from an input value.
+///
+/// Useful to extract a sub-value before applying subsequent transforms.
 public struct KeyPathTransformer<T, U: Decodable>: CodingTransformer {
   public typealias Input = T
   public typealias Output = U

@@ -9,6 +9,9 @@ import Foundation
 
 // MARK: - Composed Transformers
 
+/// A composition that feeds the output of the first transformer into the second.
+///
+/// Use `a.chained(b)` to build a pipeline `a -> b`. Failures are propagated.
 struct Chained<T, U>: CodingTransformer
 where
   T: CodingTransformer,
@@ -38,6 +41,10 @@ where
   }
 }
 
+/// Adapts a bidirectional transformer into its inverse direction.
+///
+/// For a transformer `T: BidirectionalCodingTransformer<A, B>`, `Reversed(T)`
+/// behaves as `BidirectionalCodingTransformer<B, A>` by swapping directions.
 struct Reversed<T>: BidirectionalCodingTransformer
 where
   T: BidirectionalCodingTransformer
@@ -57,6 +64,10 @@ where
   }
 }
 
+/// Couples two one-way transformers into a bidirectional pair.
+///
+/// Useful when you have independent forward and reverse transformers and want
+/// a `BidirectionalCodingTransformer` facade for composition.
 struct Paired<T, U>: BidirectionalCodingTransformer
 where
   T: CodingTransformer,
@@ -84,6 +95,9 @@ where
   }
 }
 
+/// Conditionally applies an in-place transformer when `condition` is true.
+///
+/// When false, the input result is passed through unchanged.
 struct Conditionally<T>: CodingTransformer
 where
   T: CodingTransformer,
@@ -109,10 +123,15 @@ where
   }
 }
 
+/// Errors that can be thrown by `Wrapped` when no value or default exists.
 enum WrappedError: Error {
   case valueNotFound
 }
 
+/// Lifts `Result<T?, Error>` into `Result<T, Error>` with an optional default.
+///
+/// If the incoming optional is nil and a `defaultValue` is provided, the default
+/// is used; otherwise a `.valueNotFound` error is produced.
 struct Wrapped<T>: CodingTransformer {
   let defaultValue: T?
 
@@ -133,6 +152,7 @@ struct Wrapped<T>: CodingTransformer {
   }
 }
 
+/// Wraps a non-optional value into an optional result for further chaining.
 struct Optional<T>: CodingTransformer {
   init() {}
 
