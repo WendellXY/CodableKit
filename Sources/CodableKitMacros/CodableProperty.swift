@@ -75,7 +75,7 @@ extension CodableProperty {
       case .decodable: "DecodableKey"
       case .encodable: "EncodableKey"
       default: "CodableKey"
-    }
+      }
 
     let attributes = self.attributes.filter {
       $0.attributeName.as(IdentifierTypeSyntax.self)?.description == desc
@@ -86,16 +86,16 @@ extension CodableProperty {
     return copy
   }
 
-  var containsDifferntKeyPaths: Bool {
-    let nodes =
-      attributes
+  var containsDifferentKeyPaths: Bool {
+    Set(allCodableKeyLabeledExprList.compactMap(\.customCodableKeyPath)).count > 1
+  }
+
+  private var allCodableKeyLabeledExprList: [LabeledExprListSyntax] {
+    attributes
       .filter {
-        $0.attributeName.as(IdentifierTypeSyntax.self)?.description.contains("odableKey") ?? false
+        $0.attributeName.as(IdentifierTypeSyntax.self)?.description.lowercased().contains("codableKey") ?? false
       }
       .compactMap { $0.arguments?.as(LabeledExprListSyntax.self) }
-      .compactMap(\.customCodableKeyPath)
-
-    return Set(nodes).count > 1
   }
 }
 
@@ -106,9 +106,7 @@ extension CodableProperty {
   }
 
   private var codableKeyLabeledExprList: LabeledExprListSyntax? {
-    attributes.first {
-      $0.attributeName.as(IdentifierTypeSyntax.self)?.description.contains("odableKey") ?? false
-    }?.arguments?.as(LabeledExprListSyntax.self)
+    allCodableKeyLabeledExprList.first
   }
 
   /// The access modifier of the property, if not found, it will default to `internal`
@@ -361,8 +359,11 @@ extension CodableProperty {
         ?? inferType(from: binding.initializer?.value)
 
       if let fallbackType {
-        properties.append(
-          Self(attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: fallbackType))
+        let property = Self(
+          attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: fallbackType
+        )
+        try property.validated()
+        properties.append(property)
         continue
       }
 
@@ -389,6 +390,17 @@ extension CodableProperty {
 
     return caseDecl.elements.map { element in
       Self(attributes: attributes, declModifiers: modifiers, caseElement: element)
+    }
+  }
+
+  private func validated() throws {
+    // Make sure the option (.generateCustomKey) is not repeated in different coding key macro
+    let allOptions = allCodableKeyLabeledExprList.compactMap { $0.getExpr(label: nil)?.parseOptions() }
+    if allOptions.count(where: { $0.contains(.generateCustomKey) }) > 1 {
+      throw SimpleDiagnosticMessage(
+        message: "`@CodableKey(options: .generateCustomKey)` is not supported for multiple pattern bindings",
+        severity: .error
+      )
     }
   }
 }

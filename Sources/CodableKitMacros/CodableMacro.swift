@@ -36,7 +36,7 @@ public struct CodableMacro: ExtensionMacro {
       // If there are no properties, return an empty array.
       guard !properties.isEmpty else { return [] }
 
-      let needsSeparateKeys = properties.contains(where: \.containsDifferntKeyPaths)
+      let needsSeparateKeys = properties.contains(where: \.containsDifferentKeyPaths)
 
       let codingKeyDecls: [EnumDeclSyntax]
       let usingTree: NamespaceNode
@@ -136,7 +136,7 @@ extension CodableMacro: MemberMacro {
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
 
-    let needsSeparateKeys = properties.contains(where: \.containsDifferntKeyPaths)
+    let needsSeparateKeys = properties.contains(where: \.containsDifferentKeyPaths)
 
     let decodeTree: NamespaceNode
     let encodeTree: NamespaceNode
