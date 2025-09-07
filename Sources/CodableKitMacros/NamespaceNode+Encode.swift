@@ -12,7 +12,8 @@ extension NamespaceNode {
   var encodeContainersAssignment: [CodeBlockItemSyntax] {
     var result: [CodeBlockItemSyntax] = []
     if parent == nil {
-      result.append(CodeBlockItemSyntax(item: .decl(CodeGenCore.genEncodeContainerDecl())))
+      result.append(
+        CodeBlockItemSyntax(item: .decl(CodeGenCore.genEncodeContainerDecl(codingKeysName: enumName))))
       if hasTranscodeRawStringInSubtree {
         result.append(
           CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONEncoderVariableDecl(variableName: "__ckEncoder"))))
@@ -123,27 +124,6 @@ extension NamespaceNode {
           )
         )
       })
-
-    // Encode lossy properties normally (lossy is decode-only). Skip when also using transcodeRawString.
-    for property in properties
-    where (property.options.contains(.lossy) || property.encodeOptions.contains(.lossy))
-      && !(property.options.contains(.transcodeRawString) || property.encodeOptions.contains(.transcodeRawString))
-      && !(property.encodeOptions.contains(.ignored) || property.options.contains(.ignored))
-    {
-      result.append(
-        CodeBlockItemSyntax(
-          item: .expr(
-            CodeGenCore.genContainerEncodeExpr(
-              containerName: containerName,
-              key: property.name,
-              patternName: property.name,
-              isOptional: property.isOptional,
-              explicitNil: property.encodeOptions.contains(.explicitNil) || property.options.contains(.explicitNil)
-            )
-          )
-        )
-      )
-    }
 
     // Encode as raw JSON string (transcoding). For optionals without `.explicitNil`, omit the key when nil.
     for property in properties

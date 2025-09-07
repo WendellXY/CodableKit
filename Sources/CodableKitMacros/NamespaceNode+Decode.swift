@@ -28,7 +28,8 @@ extension NamespaceNode {
   var containersAssignment: [CodeBlockItemSyntax] {
     var result: [CodeBlockItemSyntax] = []
     if parent == nil {
-      result.append(CodeBlockItemSyntax(item: .decl(CodeGenCore.genDecodeContainerDecl())))
+      result.append(
+        CodeBlockItemSyntax(item: .decl(CodeGenCore.genDecodeContainerDecl(codingKeysName: enumName))))
       if hasTranscodeRawStringInSubtree {
         result.append(
           CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONDecoderVariableDecl(variableName: "__ckDecoder"))))
