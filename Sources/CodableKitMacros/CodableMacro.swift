@@ -36,7 +36,7 @@ public struct CodableMacro: ExtensionMacro {
       // If there are no properties, return an empty array.
       guard !properties.isEmpty else { return [] }
 
-      let needsSeparateKeys = properties.contains(where: \.containsDifferentKeyPaths)
+      let needsSeparateKeys = properties.contains { $0.containsDifferentKeyPaths(for: codableType) }
 
       let codingKeyDecls: [EnumDeclSyntax]
       let usingTree: NamespaceNode
@@ -125,7 +125,8 @@ extension CodableMacro: MemberMacro {
     let core = CodeGenCore()
     // Member macro path: allow advisory diagnostics to be emitted once here
     try core.prepareCodeGeneration(
-      of: node, for: declaration, in: context, conformingTo: protocols, emitAdvisories: true)
+      of: node, for: declaration, in: context, conformingTo: protocols, emitAdvisories: true
+    )
 
     let properties = try core.properties(for: declaration, in: context)
     let accessModifier = try core.accessModifier(for: declaration, in: context)
@@ -136,14 +137,14 @@ extension CodableMacro: MemberMacro {
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
 
-    let needsSeparateKeys = properties.contains(where: \.containsDifferentKeyPaths)
+    let needsSeparateKeys = properties.contains { $0.containsDifferentKeyPaths(for: codableType) }
 
     let decodeTree: NamespaceNode
     let encodeTree: NamespaceNode
 
     if needsSeparateKeys {
-      decodeTree = NamespaceNode.buildTree(.decodable, from: properties,)
-      encodeTree = NamespaceNode.buildTree(.encodable, from: properties,)
+      decodeTree = NamespaceNode.buildTree(.decodable, from: properties, )
+      encodeTree = NamespaceNode.buildTree(.encodable, from: properties, )
     } else {
       let sharedTree = NamespaceNode.buildTree(.codable, from: properties)
       decodeTree = sharedTree

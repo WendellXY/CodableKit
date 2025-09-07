@@ -92,14 +92,41 @@ extension CodableProperty {
     return copy
   }
 
-  var containsDifferentKeyPaths: Bool {
-    Set(allCodableKeyLabeledExprList.compactMap(\.customCodableKeyPath)).count > 1
+  func containsDifferentKeyPaths(for type: CodableType) -> Bool {
+    switch type {
+    case .codable:
+      var decodingPath: [String] = []
+      var encodingPath: [String] = []
+
+      attributesLoop: for attribute in attributes {
+        let path = attribute.arguments?.as(LabeledExprListSyntax.self)?.customCodableKeyPath ?? [name.trimmedDescription]
+        switch attribute.macroName {
+        case "DecodableKey":
+          decodingPath = path
+        case "EncodableKey":
+          encodingPath = path
+        default:
+          decodingPath = path
+          encodingPath = path
+          break attributesLoop
+        }
+      }
+
+      return decodingPath != encodingPath
+    default: return false
+    }
   }
 
   private var allCodableKeyLabeledExprList: [LabeledExprListSyntax] {
     attributes
       .filter(\.isCodableKeyMacro)
       .compactMap { $0.arguments?.as(LabeledExprListSyntax.self) }
+  }
+
+  var attachedKeyMacros: [String] {
+    attributes
+      .filter(\.isCodableKeyMacro)
+      .map(\.macroName)
   }
 }
 
