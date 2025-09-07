@@ -36,7 +36,21 @@ public struct CodableMacro: ExtensionMacro {
       // If there are no properties, return an empty array.
       guard !properties.isEmpty else { return [] }
 
-      let namespaceTree = NamespaceNode.buildTree(from: properties)
+      let needsSeparateKeys = properties.contains { $0.containsDifferentKeyPaths(for: codableType) }
+
+      let codingKeyDecls: [EnumDeclSyntax]
+      let usingTree: NamespaceNode
+
+      if needsSeparateKeys {
+        let decodeTree = NamespaceNode.buildTree(.decodable, from: properties)
+        let encodeTree = NamespaceNode.buildTree(.encodable, from: properties)
+        usingTree = decodeTree
+        codingKeyDecls = decodeTree.allCodingKeysEnums + encodeTree.allCodingKeysEnums
+      } else {
+        let sharedTree = NamespaceNode.buildTree(.codable, from: properties)
+        usingTree = sharedTree
+        codingKeyDecls = sharedTree.allCodingKeysEnums
+      }
 
       let inheritanceClause: InheritanceClauseSyntax? =
         if case .classType(let hasSuperclass) = structureType,
@@ -58,9 +72,7 @@ public struct CodableMacro: ExtensionMacro {
           ExtensionDeclSyntax(
             extendedType: type, inheritanceClause: inheritanceClause
           ) {
-            for namespaceDecl in namespaceTree.allCodingKeysEnums {
-              namespaceDecl
-            }
+            for namespaceDecl in codingKeyDecls { namespaceDecl }
           }
         ]
       case .structType:
@@ -68,9 +80,7 @@ public struct CodableMacro: ExtensionMacro {
           ExtensionDeclSyntax(
             extendedType: type, inheritanceClause: inheritanceClause
           ) {
-            for namespaceDecl in namespaceTree.allCodingKeysEnums {
-              namespaceDecl
-            }
+            for namespaceDecl in codingKeyDecls { namespaceDecl }
             if codableType.contains(.decodable) {
               DeclSyntax(
                 genInitDecoderDecl(
@@ -78,7 +88,7 @@ public struct CodableMacro: ExtensionMacro {
                   modifiers: [accessModifier],
                   codableOptions: codableOptions,
                   hasSuper: false,
-                  tree: namespaceTree
+                  tree: usingTree
                 )
               )
             }
@@ -89,9 +99,7 @@ public struct CodableMacro: ExtensionMacro {
           ExtensionDeclSyntax(
             extendedType: type, inheritanceClause: inheritanceClause
           ) {
-            for namespaceDecl in namespaceTree.allCodingKeysEnums {
-              namespaceDecl
-            }
+            for namespaceDecl in codingKeyDecls { namespaceDecl }
           }
         ]
       }
@@ -117,7 +125,8 @@ extension CodableMacro: MemberMacro {
     let core = CodeGenCore()
     // Member macro path: allow advisory diagnostics to be emitted once here
     try core.prepareCodeGeneration(
-      of: node, for: declaration, in: context, conformingTo: protocols, emitAdvisories: true)
+      of: node, for: declaration, in: context, conformingTo: protocols, emitAdvisories: true
+    )
 
     let properties = try core.properties(for: declaration, in: context)
     let accessModifier = try core.accessModifier(for: declaration, in: context)
@@ -128,7 +137,19 @@ extension CodableMacro: MemberMacro {
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
 
-    let namespaceTree = NamespaceNode.buildTree(from: properties)
+    let needsSeparateKeys = properties.contains { $0.containsDifferentKeyPaths(for: codableType) }
+
+    let decodeTree: NamespaceNode
+    let encodeTree: NamespaceNode
+
+    if needsSeparateKeys {
+      decodeTree = NamespaceNode.buildTree(.decodable, from: properties)
+      encodeTree = NamespaceNode.buildTree(.encodable, from: properties)
+    } else {
+      let sharedTree = NamespaceNode.buildTree(.codable, from: properties)
+      decodeTree = sharedTree
+      encodeTree = sharedTree
+    }
 
     var decodeModifiers = [accessModifier]
     var encodeModifiers = [accessModifier]
@@ -162,7 +183,7 @@ extension CodableMacro: MemberMacro {
               modifiers: decodeModifiers,
               codableOptions: codableOptions,
               hasSuper: hasSuper,
-              tree: namespaceTree
+              tree: decodeTree
             )
           )
         )
@@ -177,7 +198,7 @@ extension CodableMacro: MemberMacro {
               modifiers: encodeModifiers,
               codableOptions: codableOptions,
               hasSuper: hasSuper,
-              tree: namespaceTree
+              tree: encodeTree
             )
           )
         )

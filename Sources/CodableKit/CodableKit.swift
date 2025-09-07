@@ -573,6 +573,7 @@ public macro Encodable(
 /// - `.useDefaultOnFailure`: Use default value or `nil` if decoding fails
 /// - `.safeTranscodeRawString`: Combine `.transcodeRawString` and `.useDefaultOnFailure`
 /// - `.generateCustomKey`: Generate a computed property for the custom key
+/// - `.lossy`: Decode collections in a lossy way
 ///
 /// ## Compile-Time Safety
 ///
@@ -606,3 +607,31 @@ public macro CodableKey<T>(
   options: CodableKeyOptions = .default,
   transformer: T
 ) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro") where T: BidirectionalCodingTransformer
+
+// MARK: - DecodeKey / EncodeKey
+
+@attached(peer, names: arbitrary)
+public macro DecodeKey(
+  _ key: String? = nil,
+  options: CodableKeyOptions = .default
+) = #externalMacro(module: "CodableKitMacros", type: "DecodeKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro DecodeKey<T>(
+  _ key: String? = nil,
+  options: CodableKeyOptions = .default,
+  transformer: T
+) = #externalMacro(module: "CodableKitMacros", type: "DecodeKeyMacro") where T: CodingTransformer
+
+@attached(peer, names: arbitrary)
+public macro EncodeKey(
+  _ key: String? = nil,
+  options: CodableKeyOptions = .default
+) = #externalMacro(module: "CodableKitMacros", type: "EncodeKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro EncodeKey<T>(
+  _ key: String? = nil,
+  options: CodableKeyOptions = .default,
+  transformer: T
+) = #externalMacro(module: "CodableKitMacros", type: "EncodeKeyMacro") where T: CodingTransformer

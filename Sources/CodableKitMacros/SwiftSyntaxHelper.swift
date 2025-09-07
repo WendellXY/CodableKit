@@ -27,8 +27,27 @@ internal let accessModifiersKeywordSet: Set<String> = [
   TokenSyntax.keyword(.fileprivate).text,
 ]
 
+extension AttributeSyntax {
+  internal var macroName: String {
+    attributeName.as(IdentifierTypeSyntax.self)?.description ?? ""
+  }
+
+  internal var isCodableKeyMacro: Bool {
+    switch macroName {
+    case "CodableKey", "DecodableKey", "EncodableKey": true
+    default: false
+    }
+  }
+}
+
 extension TokenSyntax {
   internal var isAccessModifierKeyword: Bool {
     accessModifiersKeywordSet.contains(text)
+  }
+}
+
+extension LabeledExprListSyntax {
+  func getExpr(label: String?) -> LabeledExprSyntax? {
+    first(where: { $0.label?.text == label })
   }
 }

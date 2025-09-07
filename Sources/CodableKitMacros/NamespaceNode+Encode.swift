@@ -12,7 +12,8 @@ extension NamespaceNode {
   var encodeContainersAssignment: [CodeBlockItemSyntax] {
     var result: [CodeBlockItemSyntax] = []
     if parent == nil {
-      result.append(CodeBlockItemSyntax(item: .decl(CodeGenCore.genEncodeContainerDecl())))
+      result.append(
+        CodeBlockItemSyntax(item: .decl(CodeGenCore.genEncodeContainerDecl(codingKeysName: enumName))))
       if hasTranscodeRawStringInSubtree {
         result.append(
           CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONEncoderVariableDecl(variableName: "__ckEncoder"))))
@@ -41,7 +42,7 @@ extension NamespaceNode {
     var result: [CodeBlockItemSyntax] = []
 
     // Transformer-based encoding (before normal path and before transcodeRawString)
-    for property in properties where property.transformerExpr != nil && !property.ignored {
+    for property in properties where property.transformerExpr != nil && !property.options.contains(.ignored) {
       if property.isOptional {
         result.append(
           CodeBlockItemSyntax(
@@ -49,7 +50,7 @@ extension NamespaceNode {
               ExprSyntax(
                 TryExprSyntax(
                   expression: FunctionCallExprSyntax(
-                    calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckEncodeTransformedIfPresent")),
+                    calledExpression: type.__ckEncodeTransformedIfPresent,
                     leftParen: .leftParenToken(),
                     rightParen: .rightParenToken()
                   ) {
@@ -63,7 +64,9 @@ extension NamespaceNode {
                       label: "explicitNil",
                       expression: ExprSyntax(
                         BooleanLiteralExprSyntax(
-                          literal: property.options.contains(.explicitNil) ? .keyword(.true) : .keyword(.false)))
+                          literal: property.options.contains(.explicitNil) ? .keyword(.true) : .keyword(.false)
+                        )
+                      )
                     )
                   }
                 )
@@ -78,7 +81,7 @@ extension NamespaceNode {
               ExprSyntax(
                 TryExprSyntax(
                   expression: FunctionCallExprSyntax(
-                    calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckEncodeTransformed")),
+                    calledExpression: type.__ckEncodeTransformed,
                     leftParen: .leftParenToken(),
                     rightParen: .rightParenToken()
                   ) {
@@ -98,7 +101,9 @@ extension NamespaceNode {
     }
 
     result.append(
-      contentsOf: properties.filter(\.isNormal).map { property in
+      contentsOf: properties.filter {
+        $0.isNormal && !$0.options.contains(.ignored)
+      }.map { property in
         CodeBlockItemSyntax(
           item: .expr(
             CodeGenCore.genContainerEncodeExpr(
@@ -115,7 +120,8 @@ extension NamespaceNode {
     // Encode lossy properties normally (lossy is decode-only). Skip when also using transcodeRawString.
     for property in properties
     where property.options.contains(.lossy)
-      && !property.options.contains(.transcodeRawString) && !property.ignored
+      && !property.options.contains(.transcodeRawString)
+      && !property.options.contains(.ignored)
     {
       result.append(
         CodeBlockItemSyntax(
@@ -133,7 +139,7 @@ extension NamespaceNode {
     }
 
     // Encode as raw JSON string (transcoding). For optionals without `.explicitNil`, omit the key when nil.
-    for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
+    for property in properties where property.options.contains(.transcodeRawString) && !property.options.contains(.ignored) {
       if property.isOptional && !property.options.contains(.explicitNil) {
         // if let <name>Unwrapped = <name> { ... encode ... }
         let unwrappedName = PatternSyntax(IdentifierPatternSyntax(identifier: .identifier("\(property.name)Unwrapped")))

@@ -72,4 +72,3 @@ extension BidirectionalCodingTransformer where Input == Output {
     transform(input)
   }
 }
-

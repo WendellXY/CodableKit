@@ -163,7 +163,8 @@ extension CodeGenCore {
       return
     }
 
-    codableTypes[id] = .from(protocols)
+    let codableType = CodableType.from(protocols)
+    codableTypes[id] = codableType
 
     try validateDeclaration(for: declaration, in: context)
 
@@ -208,6 +209,38 @@ extension CodeGenCore {
               severity: .error
             )
           }
+        }
+      }
+
+      for property in extractedProperties {
+        let attachedKeyMacros = property.attachedKeyMacros
+        // Validate the Key macro types, the CodableKey macro cannot be used with the DecodableKey and EncodableKey macro.
+        if attachedKeyMacros.contains("CodableKey")
+          && (attachedKeyMacros.contains("DecodableKey") || attachedKeyMacros.contains("EncodableKey"))
+        {
+          throw SimpleDiagnosticMessage(
+            message: "CodableKey macro cannot be used with the DecodableKey and EncodableKey macro",
+            severity: .error
+          )
+        }
+
+        // Make sure the same Key macro are not attached to the same property multiple times
+        if attachedKeyMacros.count != Set(attachedKeyMacros).count {
+          throw SimpleDiagnosticMessage(
+            message: "The same Key macro are not supported for multiple pattern bindings",
+            severity: .error
+          )
+        }
+
+        let attachedMacroType = attachedKeyMacros.reduce(into: CodableType.none) { $0.insert(CodableType.from($1)) }
+        // Ensure that the Key macro matches the Container macro.
+        // For instance, if the property is @DecodableKey, the container must be @Decodable or @Codable.
+        // Mathematically, the attachedMacroType should share elements with the codableType.
+        if attachedMacroType.intersection(codableType).isEmpty && attachedMacroType != .none {
+          throw SimpleDiagnosticMessage(
+            message: "The attached Key macro \(attachedMacroType) does not match the Container macro \(codableType)",
+            severity: .error
+          )
         }
       }
 

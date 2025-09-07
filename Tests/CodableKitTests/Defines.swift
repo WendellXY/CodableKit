@@ -17,11 +17,15 @@ import Testing
 let macros: [String: any Macro.Type] = [
   "Codable": CodableMacro.self,
   "CodableKey": CodableKeyMacro.self,
+  "DecodableKey": DecodableKeyMacro.self,
+  "EncodableKey": EncodableKeyMacro.self,
 ]
 
 let macroSpecs: [String: MacroSpec] = [
   "Codable": MacroSpec(type: CodableMacro.self, conformances: ["Codable"]),
   "CodableKey": MacroSpec(type: CodableKeyMacro.self),
+  "DecodableKey": MacroSpec(type: DecodableKeyMacro.self),
+  "EncodableKey": MacroSpec(type: EncodableKeyMacro.self),
 ]
 
 func assertMacro(

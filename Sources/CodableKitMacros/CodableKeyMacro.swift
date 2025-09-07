@@ -22,6 +22,34 @@ public struct CodableKeyMacro: PeerMacro {
   }
 }
 
+public struct EncodableKeyMacro: PeerMacro {
+  public static func expansion(
+    of node: AttributeSyntax,
+    providingPeersOf declaration: some DeclSyntaxProtocol,
+    in context: some MacroExpansionContext
+  ) throws -> [DeclSyntax] {
+    try CodeGenCore()
+      .prepareCodeGeneration(for: declaration, in: context, with: node)
+      .filter(\.shouldGenerateCustomCodingKeyVariable)
+      .compactMap(genCustomKeyVariable)
+      .map(DeclSyntax.init)
+  }
+}
+
+public struct DecodableKeyMacro: PeerMacro {
+  public static func expansion(
+    of node: AttributeSyntax,
+    providingPeersOf declaration: some DeclSyntaxProtocol,
+    in context: some MacroExpansionContext
+  ) throws -> [DeclSyntax] {
+    try CodeGenCore()
+      .prepareCodeGeneration(for: declaration, in: context, with: node)
+      .filter(\.shouldGenerateCustomCodingKeyVariable)
+      .compactMap(genCustomKeyVariable)
+      .map(DeclSyntax.init)
+  }
+}
+
 /// Generate the custom key variable for the property.
 private func genCustomKeyVariable(for property: CodableProperty) -> VariableDeclSyntax? {
   guard let customCodableKey = property.customCodableKey else { return nil }

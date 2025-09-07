@@ -13,7 +13,9 @@ extension NamespaceNode {
 
   /// Whether any property in this subtree requires raw string transcoding
   var hasTranscodeRawStringInSubtree: Bool {
-    let selfHas = properties.contains { !$0.ignored && $0.options.contains(.transcodeRawString) }
+    let selfHas = properties.contains {
+      !$0.options.contains(.ignored) && $0.options.contains(.transcodeRawString)
+    }
     return selfHas || children.values.contains { $0.hasTranscodeRawStringInSubtree }
   }
 }
@@ -23,7 +25,8 @@ extension NamespaceNode {
   var containersAssignment: [CodeBlockItemSyntax] {
     var result: [CodeBlockItemSyntax] = []
     if parent == nil {
-      result.append(CodeBlockItemSyntax(item: .decl(CodeGenCore.genDecodeContainerDecl())))
+      result.append(
+        CodeBlockItemSyntax(item: .decl(CodeGenCore.genDecodeContainerDecl(codingKeysName: enumName))))
       if hasTranscodeRawStringInSubtree {
         result.append(
           CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONDecoderVariableDecl(variableName: "__ckDecoder"))))
@@ -51,15 +54,15 @@ extension NamespaceNode {
   private var propertyAssignment: [CodeBlockItemSyntax] {
     var result: [CodeBlockItemSyntax] = []
 
-    // Transformer-based decoding (applies before normal path)
-    for property in properties where property.transformerExpr != nil && !property.ignored {
+    // Transformer-based decoding, decode-only takes precedence, then bidirectional
+    for property in properties where property.transformerExpr != nil && !property.options.contains(.ignored) {
       let useDefault = property.options.contains(.useDefaultOnFailure)
 
       if property.isOptional || property.defaultValue != nil {
         let callExpr = ExprSyntax(
           TryExprSyntax(
             expression: FunctionCallExprSyntax(
-              calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckDecodeTransformedIfPresent")),
+              calledExpression: type.__ckDecodeTransformedIfPresent,
               leftParen: .leftParenToken(),
               rightParen: .rightParenToken()
             ) {
@@ -112,7 +115,7 @@ extension NamespaceNode {
       let callExpr = ExprSyntax(
         TryExprSyntax(
           expression: FunctionCallExprSyntax(
-            calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckDecodeTransformed")),
+            calledExpression: type.__ckDecodeTransformed,
             leftParen: .leftParenToken(),
             rightParen: .rightParenToken()
           ) {
@@ -144,7 +147,9 @@ extension NamespaceNode {
     }
 
     result.append(
-      contentsOf: properties.filter(\.isNormal).map { property in
+      contentsOf: properties.filter {
+        $0.isNormal && !$0.ignored
+      }.map { property in
         CodeBlockItemSyntax(
           item: .expr(
             CodeGenCore.genContainerDecodeExpr(
@@ -162,7 +167,7 @@ extension NamespaceNode {
     )
 
     // Lossy decode for arrays, sets, and dictionaries
-    for property in properties where property.options.contains(.lossy) && !property.ignored {
+    for property in properties where property.options.contains(.lossy) && !property.options.contains(.ignored) {
       let isCollection = property.isArrayType || property.isSetType
       let isDict = property.isDictionaryType
       let elementType = property.collectionElementType
