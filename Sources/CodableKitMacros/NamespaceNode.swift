@@ -10,6 +10,7 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 final class NamespaceNode {
+  let type: CodableType
   let segment: String
   let rootBaseName: String
   var children: [String: NamespaceNode] = [:]
@@ -17,7 +18,8 @@ final class NamespaceNode {
 
   weak var parent: NamespaceNode?  // Optional parent node
 
-  init(segment: String, rootBaseName: String) {
+  init(_ type: CodableType, segment: String, rootBaseName: String) {
+    self.type = type
     self.segment = segment
     self.rootBaseName = rootBaseName
   }
@@ -32,7 +34,7 @@ final class NamespaceNode {
     let child =
       children[first]
       ?? {
-        let node = NamespaceNode(segment: first, rootBaseName: rootBaseName)
+        let node = NamespaceNode(type, segment: first, rootBaseName: rootBaseName)
         node.parent = self
         children[first] = node
         return node
@@ -41,23 +43,24 @@ final class NamespaceNode {
   }
 
   static func buildTree(
+    _ type: CodableType,
     from propertyList: [CodableProperty]
   ) -> NamespaceNode {
-    buildTree(
-      from: propertyList,
-      keyPath: { $0.customCodableKeyPath ?? [$0.name.description] },
-      rootBaseName: "CodingKeys"
-    )
-  }
+    let rootBaseName =
+    switch type {
+    case .decodable: "DecodeKeys"
+    case .encodable: "EncodeKeys"
+    default: "CodingKeys"
+    }
 
-  static func buildTree(
-    from propertyList: [CodableProperty],
-    keyPath: (CodableProperty) -> [String],
-    rootBaseName: String
-  ) -> NamespaceNode {
-    let root = NamespaceNode(segment: rootBaseName, rootBaseName: rootBaseName)
+    let root = NamespaceNode(type, segment: rootBaseName, rootBaseName: rootBaseName)
+
+    let propertyList = propertyList.map {
+      $0.generateProperty(for: type)
+    }
+
     for property in propertyList {
-      let path = keyPath(property)
+      let path = property.customCodableKeyPath ?? [property.name.description]
       root.add(property: property, path: path[...])
     }
     return root

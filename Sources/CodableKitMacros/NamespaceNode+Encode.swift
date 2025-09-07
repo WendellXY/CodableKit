@@ -42,10 +42,7 @@ extension NamespaceNode {
     var result: [CodeBlockItemSyntax] = []
 
     // Transformer-based encoding (before normal path and before transcodeRawString)
-    for property in properties
-    where property.transformerExprForEncode != nil
-      && !(property.encodeOptions.contains(.ignored) || property.options.contains(.ignored))
-    {
+    for property in properties where property.transformerExpr != nil && !property.options.contains(.ignored) {
       if property.isOptional {
         result.append(
           CodeBlockItemSyntax(
@@ -53,14 +50,11 @@ extension NamespaceNode {
               ExprSyntax(
                 TryExprSyntax(
                   expression: FunctionCallExprSyntax(
-                    calledExpression: DeclReferenceExprSyntax(
-                      baseName: .identifier(
-                        property.encodeTransformerExpr != nil
-                          ? "__ckEncodeOneWayTransformedIfPresent" : "__ckEncodeTransformedIfPresent")),
+                    calledExpression: type.__ckEncodeTransformedIfPresent,
                     leftParen: .leftParenToken(),
                     rightParen: .rightParenToken()
                   ) {
-                    LabeledExprSyntax(label: "transformer", expression: property.transformerExprForEncode!)
+                    LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
                     LabeledExprSyntax(
                       label: "value", expression: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")))
                     LabeledExprSyntax(
@@ -70,8 +64,9 @@ extension NamespaceNode {
                       label: "explicitNil",
                       expression: ExprSyntax(
                         BooleanLiteralExprSyntax(
-                          literal: (property.encodeOptions.contains(.explicitNil)
-                            || property.options.contains(.explicitNil)) ? .keyword(.true) : .keyword(.false)))
+                          literal: property.options.contains(.explicitNil) ? .keyword(.true) : .keyword(.false)
+                        )
+                      )
                     )
                   }
                 )
@@ -86,14 +81,11 @@ extension NamespaceNode {
               ExprSyntax(
                 TryExprSyntax(
                   expression: FunctionCallExprSyntax(
-                    calledExpression: DeclReferenceExprSyntax(
-                      baseName: .identifier(
-                        property.encodeTransformerExpr != nil ? "__ckEncodeOneWayTransformed" : "__ckEncodeTransformed")
-                    ),
+                    calledExpression: type.__ckEncodeTransformed,
                     leftParen: .leftParenToken(),
                     rightParen: .rightParenToken()
                   ) {
-                    LabeledExprSyntax(label: "transformer", expression: property.transformerExprForEncode!)
+                    LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
                     LabeledExprSyntax(
                       label: "value", expression: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")))
                     LabeledExprSyntax(
@@ -110,7 +102,7 @@ extension NamespaceNode {
 
     result.append(
       contentsOf: properties.filter {
-        $0.isNormalEncode && !($0.encodeOptions.contains(.ignored) || $0.options.contains(.ignored))
+        $0.isNormal && !$0.options.contains(.ignored)
       }.map { property in
         CodeBlockItemSyntax(
           item: .expr(
@@ -119,20 +111,36 @@ extension NamespaceNode {
               key: property.name,
               patternName: property.name,
               isOptional: property.isOptional,
-              explicitNil: property.encodeOptions.contains(.explicitNil) || property.options.contains(.explicitNil)
+              explicitNil: property.options.contains(.explicitNil)
             )
           )
         )
       })
 
-    // Encode as raw JSON string (transcoding). For optionals without `.explicitNil`, omit the key when nil.
+    // Encode lossy properties normally (lossy is decode-only). Skip when also using transcodeRawString.
     for property in properties
-    where (property.encodeOptions.contains(.transcodeRawString) || property.options.contains(.transcodeRawString))
-      && !(property.encodeOptions.contains(.ignored) || property.options.contains(.ignored))
+    where property.options.contains(.lossy)
+      && !property.options.contains(.transcodeRawString)
+      && !property.options.contains(.ignored)
     {
-      if property.isOptional
-        && !(property.encodeOptions.contains(.explicitNil) || property.options.contains(.explicitNil))
-      {
+      result.append(
+        CodeBlockItemSyntax(
+          item: .expr(
+            CodeGenCore.genContainerEncodeExpr(
+              containerName: containerName,
+              key: property.name,
+              patternName: property.name,
+              isOptional: property.isOptional,
+              explicitNil: property.options.contains(.explicitNil)
+            )
+          )
+        )
+      )
+    }
+
+    // Encode as raw JSON string (transcoding). For optionals without `.explicitNil`, omit the key when nil.
+    for property in properties where property.options.contains(.transcodeRawString) && !property.options.contains(.ignored) {
+      if property.isOptional && !property.options.contains(.explicitNil) {
         // if let <name>Unwrapped = <name> { ... encode ... }
         let unwrappedName = PatternSyntax(IdentifierPatternSyntax(identifier: .identifier("\(property.name)Unwrapped")))
         result.append(
@@ -205,7 +213,7 @@ extension NamespaceNode {
                 codingPath: codingKeyChain(for: property),
                 message: "Failed to transcode raw data to string",
                 isOptional: property.isOptional,
-                explicitNil: property.encodeOptions.contains(.explicitNil) || property.options.contains(.explicitNil)
+                explicitNil: property.options.contains(.explicitNil)
               )
             )
           ),

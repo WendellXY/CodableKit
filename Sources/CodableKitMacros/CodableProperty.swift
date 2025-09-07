@@ -18,7 +18,7 @@ extension CodableKeyMacro {
 /// A simple property representation of the property in a group declaration syntax.
 struct CodableProperty {
   /// The attributes of the property
-  let attributes: [AttributeSyntax]
+  private(set) var attributes: [AttributeSyntax]
   /// The declaration modifiers of the property
   let declModifiers: [DeclModifierSyntax]
   /// The name of the property
@@ -69,27 +69,46 @@ struct CodableProperty {
 }
 
 extension CodableProperty {
+  func generateProperty(for type: CodableType = .codable) -> CodableProperty {
+    let desc: String? =
+      switch type {
+      case .decodable: "DecodableKey"
+      case .encodable: "EncodableKey"
+      default: "CodableKey"
+    }
+
+    let attributes = self.attributes.filter {
+      $0.attributeName.as(IdentifierTypeSyntax.self)?.description == desc
+    }
+
+    var copy = self
+    copy.attributes = attributes
+    return copy
+  }
+
+  var containsDifferntKeyPaths: Bool {
+    let nodes =
+      attributes
+      .filter {
+        $0.attributeName.as(IdentifierTypeSyntax.self)?.description.contains("odableKey") ?? false
+      }
+      .compactMap { $0.arguments?.as(LabeledExprListSyntax.self) }
+      .compactMap(\.customCodableKeyPath)
+
+    return Set(nodes).count > 1
+  }
+}
+
+extension CodableProperty {
   /// Check if the property is optional.
   var isOptional: Bool {
     type.as(OptionalTypeSyntax.self) != nil || type.as(IdentifierTypeSyntax.self)?.name.text == "Optional"
   }
 
   private var codableKeyLabeledExprList: LabeledExprListSyntax? {
-    attributes.first(where: {
-      $0.attributeName.as(IdentifierTypeSyntax.self)?.description == "CodableKey"
-    })?.arguments?.as(LabeledExprListSyntax.self)
-  }
-
-  private var decodeKeyLabeledExprList: LabeledExprListSyntax? {
-    attributes.first(where: {
-      $0.attributeName.as(IdentifierTypeSyntax.self)?.description == "DecodeKey"
-    })?.arguments?.as(LabeledExprListSyntax.self)
-  }
-
-  private var encodeKeyLabeledExprList: LabeledExprListSyntax? {
-    attributes.first(where: {
-      $0.attributeName.as(IdentifierTypeSyntax.self)?.description == "EncodeKey"
-    })?.arguments?.as(LabeledExprListSyntax.self)
+    attributes.first {
+      $0.attributeName.as(IdentifierTypeSyntax.self)?.description.contains("odableKey") ?? false
+    }?.arguments?.as(LabeledExprListSyntax.self)
   }
 
   /// The access modifier of the property, if not found, it will default to `internal`
@@ -98,62 +117,14 @@ extension CodableProperty {
   }
 
   /// The key path for the property as specified in `@CodableKey`, split by `.`, e.g. ["data", "uid"]
-  var customCodableKeyPath: [String]? {
-    guard
-      let expr = codableKeyLabeledExprList?.first(where: {
-        $0.label == nil  // the first argument without label is the custom Codable Key
-      })?.expression,
-      expr.as(NilLiteralExprSyntax.self) == nil
-    else {
-      return nil
-    }
-
-    // the expr is something like `"customKey"`, we need to remove the quotes
-    return "\(expr)".trimmingCharacters(in: .init(charactersIn: "\"")).components(separatedBy: ".")
-  }
-
-  /// The key path from `@DecodeKey`, if provided
-  var customDecodeKeyPath: [String]? {
-    guard
-      let expr = decodeKeyLabeledExprList?.first(where: { $0.label == nil })?.expression,
-      expr.as(NilLiteralExprSyntax.self) == nil
-    else { return nil }
-    return "\(expr)".trimmingCharacters(in: .init(charactersIn: "\"")).components(separatedBy: ".")
-  }
-
-  /// The key path from `@EncodeKey`, if provided
-  var customEncodeKeyPath: [String]? {
-    guard
-      let expr = encodeKeyLabeledExprList?.first(where: { $0.label == nil })?.expression,
-      expr.as(NilLiteralExprSyntax.self) == nil
-    else { return nil }
-    return "\(expr)".trimmingCharacters(in: .init(charactersIn: "\"")).components(separatedBy: ".")
-  }
+  var customCodableKeyPath: [String]? { codableKeyLabeledExprList?.customCodableKeyPath }
 
   /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key
-  var customCodableKey: PatternSyntax? {
-    if let identifier = customCodableKeyPath?.last {
-      PatternSyntax(IdentifierPatternSyntax(identifier: .identifier(identifier)))
-    } else {
-      nil
-    }
-  }
+  var customCodableKey: PatternSyntax? { codableKeyLabeledExprList?.customCodableKey }
 
   /// Options for customizing the behavior of a `CodableKey`.
   var options: CodableKeyMacro.Options {
-    codableKeyLabeledExprList?.first(where: {
-      $0.label?.text == "options"
-    })?.parseOptions() ?? .default
-  }
-
-  /// Options for decoding, sourced from `@DecodeKey` if present, otherwise fallback to `@CodableKey`.
-  var decodeOptions: DecodeKeyMacro.Options {
-    decodeKeyLabeledExprList?.first(where: { $0.label?.text == "options" })?.parseOptions() ?? options
-  }
-
-  /// Options for encoding, sourced from `@EncodeKey` if present, otherwise fallback to `@CodableKey`.
-  var encodeOptions: EncodeKeyMacro.Options {
-    encodeKeyLabeledExprList?.first(where: { $0.label?.text == "options" })?.parseOptions() ?? options
+    codableKeyLabeledExprList?.getExpr(label: "options")?.parseOptions() ?? .default
   }
 
   /// Indicates if the property should be considered as normal property, which mean it should be
@@ -165,49 +136,15 @@ extension CodableProperty {
       && transformerExpr == nil
   }
 
-  /// Decode path: normal means no special options and no transformer for decode
-  var isNormalDecode: Bool {
-    !decodeOptions.contains(.ignored)
-      && !decodeOptions.contains(.transcodeRawString)
-      && !(decodeOptions.contains(.lossy) && (isArrayType || isSetType || isDictionaryType))
-      && transformerExprForDecode == nil
-  }
-
-  /// Encode path: normal means no special options and no transformer for encode
-  var isNormalEncode: Bool {
-    !encodeOptions.contains(.ignored)
-      && !encodeOptions.contains(.transcodeRawString)
-      // .lossy is decode-only; treat as normal for encode
-      && transformerExprForEncode == nil
-  }
-
   /// Indicates if the property should be ignored when encoding and decoding
-  var ignored: Bool {
-    options.contains(.ignored)
-  }
+  var ignored: Bool { options.contains(.ignored) }
 }
 
 extension CodableProperty {
   /// The transformer expression provided via `@CodableKey(transformer: ...)`
   var transformerExpr: ExprSyntax? {
-    codableKeyLabeledExprList?.first(where: { $0.label?.text == "transformer" })?.expression
+    codableKeyLabeledExprList?.getExpr(label: "transformer")?.expression
   }
-
-  /// The transformer expression provided via `@DecodeKey(transformer: ...)`
-  var decodeTransformerExpr: ExprSyntax? {
-    decodeKeyLabeledExprList?.first(where: { $0.label?.text == "transformer" })?.expression
-  }
-
-  /// The transformer expression provided via `@EncodeKey(transformer: ...)`
-  var encodeTransformerExpr: ExprSyntax? {
-    encodeKeyLabeledExprList?.first(where: { $0.label?.text == "transformer" })?.expression
-  }
-
-  /// Effective transformer expression for decode: prefer decode-only, otherwise bidirectional
-  var transformerExprForDecode: ExprSyntax? { decodeTransformerExpr ?? transformerExpr }
-
-  /// Effective transformer expression for encode: prefer encode-only, otherwise bidirectional
-  var transformerExprForEncode: ExprSyntax? { encodeTransformerExpr ?? transformerExpr }
 }
 
 extension CodableProperty {
@@ -452,6 +389,30 @@ extension CodableProperty {
 
     return caseDecl.elements.map { element in
       Self(attributes: attributes, declModifiers: modifiers, caseElement: element)
+    }
+  }
+}
+
+// MARK: - Helpers
+
+extension LabeledExprListSyntax {
+  /// The key path for the property as specified in `@CodableKey`, split by `.`, e.g. ["data", "uid"]
+  fileprivate var customCodableKeyPath: [String]? {
+    guard
+      let expr = getExpr(label: nil)?.expression,
+      expr.as(NilLiteralExprSyntax.self) == nil
+    else {
+      return nil
+    }
+
+    // the expr is something like `"customKey"`, we need to remove the quotes
+    return "\(expr)".trimmingCharacters(in: .init(charactersIn: "\"")).components(separatedBy: ".")
+  }
+
+  /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key
+  fileprivate var customCodableKey: PatternSyntax? {
+    customCodableKeyPath?.last.map { identifier in
+      PatternSyntax(IdentifierPatternSyntax(identifier: .identifier(identifier)))
     }
   }
 }

@@ -35,3 +35,37 @@ internal struct CodableType: OptionSet {
     return codableType
   }
 }
+
+extension CodableType {
+  var __ckDecodeTransformed: DeclReferenceExprSyntax {
+    DeclReferenceExprSyntax(
+      baseName: .identifier(
+        contains(.codable) ? "__ckDecodeTransformed" : "__ckDecodeOneWayTransformed"
+      )
+    )
+  }
+
+  var __ckDecodeTransformedIfPresent: DeclReferenceExprSyntax {
+    DeclReferenceExprSyntax(
+      baseName: .identifier(
+        contains(.codable) ? "__ckDecodeTransformedIfPresent" : "__ckDecodeOneWayTransformedIfPresent"
+      )
+    )
+  }
+
+  var __ckEncodeTransformedIfPresent: DeclReferenceExprSyntax {
+    DeclReferenceExprSyntax(
+      baseName:.identifier(
+        contains(.codable) ?  "__ckEncodeTransformedIfPresent" : "__ckEncodeOneWayTransformedIfPresent"
+      )
+    )
+  }
+
+  var __ckEncodeTransformed: DeclReferenceExprSyntax {
+    DeclReferenceExprSyntax(
+      baseName: .identifier(
+        contains(.codable) ? "__ckEncodeTransformed" : "__ckEncodeOneWayTransformed"
+      )
+    )
+  }
+}

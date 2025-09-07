@@ -32,3 +32,9 @@ extension TokenSyntax {
     accessModifiersKeywordSet.contains(text)
   }
 }
+
+extension LabeledExprListSyntax {
+  func getExpr(label: String?) -> LabeledExprSyntax? {
+    first(where: { $0.label?.text == label })
+  }
+}

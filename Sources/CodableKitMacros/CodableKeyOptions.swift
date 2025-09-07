@@ -12,12 +12,12 @@ extension CodableKeyMacro {
   package typealias Options = CodableKeyOptions
 }
 
-extension DecodeKeyMacro {
+extension DecodableKeyMacro {
   /// Options for customizing the behavior of a `DecodeKey`.
   package typealias Options = CodableKeyOptions
 }
 
-extension EncodeKeyMacro {
+extension EncodableKeyMacro {
   /// Options for customizing the behavior of an `EncodeKey`.
   package typealias Options = CodableKeyOptions
 }

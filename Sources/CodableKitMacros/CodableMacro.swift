@@ -36,27 +36,20 @@ public struct CodableMacro: ExtensionMacro {
       // If there are no properties, return an empty array.
       guard !properties.isEmpty else { return [] }
 
-      // Build three trees: shared CodingKeys (for backwards compatibility), decode-only and encode-only
-      let sharedTree = NamespaceNode.buildTree(from: properties)
-      let decodeTree = NamespaceNode.buildTree(
-        from: properties,
-        keyPath: { $0.customDecodeKeyPath ?? $0.customCodableKeyPath ?? [$0.name.description] },
-        rootBaseName: "DecodeKeys")
-      let encodeTree = NamespaceNode.buildTree(
-        from: properties,
-        keyPath: { $0.customEncodeKeyPath ?? $0.customCodableKeyPath ?? [$0.name.description] },
-        rootBaseName: "EncodeKeys")
+      let needsSeparateKeys = properties.contains(where: \.containsDifferntKeyPaths)
 
-      // Determine if separate decode/encode key enums are necessary
-      let needsSeparateDecodeKeys = properties.contains { prop in
-        let sharedPath = prop.customCodableKeyPath ?? [prop.name.description]
-        let decodePath = prop.customDecodeKeyPath ?? sharedPath
-        return decodePath != sharedPath
-      }
-      let needsSeparateEncodeKeys = properties.contains { prop in
-        let sharedPath = prop.customCodableKeyPath ?? [prop.name.description]
-        let encodePath = prop.customEncodeKeyPath ?? sharedPath
-        return encodePath != sharedPath
+      let codingKeyDecls: [EnumDeclSyntax]
+      let usingTree: NamespaceNode
+
+      if needsSeparateKeys {
+        let decodeTree = NamespaceNode.buildTree(.decodable, from: properties)
+        let encodeTree = NamespaceNode.buildTree(.encodable, from: properties)
+        usingTree = decodeTree
+        codingKeyDecls = decodeTree.allCodingKeysEnums + encodeTree.allCodingKeysEnums
+      } else {
+        let sharedTree = NamespaceNode.buildTree(.codable, from: properties)
+        usingTree = sharedTree
+        codingKeyDecls = sharedTree.allCodingKeysEnums
       }
 
       let inheritanceClause: InheritanceClauseSyntax? =
@@ -79,15 +72,7 @@ public struct CodableMacro: ExtensionMacro {
           ExtensionDeclSyntax(
             extendedType: type, inheritanceClause: inheritanceClause
           ) {
-            for namespaceDecl in sharedTree.allCodingKeysEnums {
-              namespaceDecl
-            }
-            if needsSeparateDecodeKeys {
-              for namespaceDecl in decodeTree.allCodingKeysEnums { namespaceDecl }
-            }
-            if needsSeparateEncodeKeys {
-              for namespaceDecl in encodeTree.allCodingKeysEnums { namespaceDecl }
-            }
+            for namespaceDecl in codingKeyDecls { namespaceDecl }
           }
         ]
       case .structType:
@@ -95,15 +80,7 @@ public struct CodableMacro: ExtensionMacro {
           ExtensionDeclSyntax(
             extendedType: type, inheritanceClause: inheritanceClause
           ) {
-            for namespaceDecl in sharedTree.allCodingKeysEnums {
-              namespaceDecl
-            }
-            if needsSeparateDecodeKeys {
-              for namespaceDecl in decodeTree.allCodingKeysEnums { namespaceDecl }
-            }
-            if needsSeparateEncodeKeys {
-              for namespaceDecl in encodeTree.allCodingKeysEnums { namespaceDecl }
-            }
+            for namespaceDecl in codingKeyDecls { namespaceDecl }
             if codableType.contains(.decodable) {
               DeclSyntax(
                 genInitDecoderDecl(
@@ -111,7 +88,7 @@ public struct CodableMacro: ExtensionMacro {
                   modifiers: [accessModifier],
                   codableOptions: codableOptions,
                   hasSuper: false,
-                  tree: needsSeparateDecodeKeys ? decodeTree : sharedTree
+                  tree: usingTree
                 )
               )
             }
@@ -122,15 +99,7 @@ public struct CodableMacro: ExtensionMacro {
           ExtensionDeclSyntax(
             extendedType: type, inheritanceClause: inheritanceClause
           ) {
-            for namespaceDecl in sharedTree.allCodingKeysEnums {
-              namespaceDecl
-            }
-            if needsSeparateDecodeKeys {
-              for namespaceDecl in decodeTree.allCodingKeysEnums { namespaceDecl }
-            }
-            if needsSeparateEncodeKeys {
-              for namespaceDecl in encodeTree.allCodingKeysEnums { namespaceDecl }
-            }
+            for namespaceDecl in codingKeyDecls { namespaceDecl }
           }
         ]
       }
@@ -167,26 +136,18 @@ extension CodableMacro: MemberMacro {
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
 
-    // Build three trees again for member macro path
-    let sharedTree = NamespaceNode.buildTree(from: properties)
-    let decodeTree = NamespaceNode.buildTree(
-      from: properties,
-      keyPath: { $0.customDecodeKeyPath ?? $0.customCodableKeyPath ?? [$0.name.description] },
-      rootBaseName: "DecodeKeys")
-    let encodeTree = NamespaceNode.buildTree(
-      from: properties,
-      keyPath: { $0.customEncodeKeyPath ?? $0.customCodableKeyPath ?? [$0.name.description] },
-      rootBaseName: "EncodeKeys")
+    let needsSeparateKeys = properties.contains(where: \.containsDifferntKeyPaths)
 
-    let needsSeparateDecodeKeys = properties.contains { prop in
-      let sharedPath = prop.customCodableKeyPath ?? [prop.name.description]
-      let decodePath = prop.customDecodeKeyPath ?? sharedPath
-      return decodePath != sharedPath
-    }
-    let needsSeparateEncodeKeys = properties.contains { prop in
-      let sharedPath = prop.customCodableKeyPath ?? [prop.name.description]
-      let encodePath = prop.customEncodeKeyPath ?? sharedPath
-      return encodePath != sharedPath
+    let decodeTree: NamespaceNode
+    let encodeTree: NamespaceNode
+
+    if needsSeparateKeys {
+      decodeTree = NamespaceNode.buildTree(.decodable, from: properties,)
+      encodeTree = NamespaceNode.buildTree(.encodable, from: properties,)
+    } else {
+      let sharedTree = NamespaceNode.buildTree(.codable, from: properties)
+      decodeTree = sharedTree
+      encodeTree = sharedTree
     }
 
     var decodeModifiers = [accessModifier]
@@ -221,7 +182,7 @@ extension CodableMacro: MemberMacro {
               modifiers: decodeModifiers,
               codableOptions: codableOptions,
               hasSuper: hasSuper,
-              tree: needsSeparateDecodeKeys ? decodeTree : sharedTree
+              tree: decodeTree
             )
           )
         )
@@ -236,7 +197,7 @@ extension CodableMacro: MemberMacro {
               modifiers: encodeModifiers,
               codableOptions: codableOptions,
               hasSuper: hasSuper,
-              tree: needsSeparateEncodeKeys ? encodeTree : sharedTree
+              tree: encodeTree
             )
           )
         )
