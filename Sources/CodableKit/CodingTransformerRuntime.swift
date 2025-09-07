@@ -12,27 +12,16 @@ public func __ckDecodeTransformed<T, K>(
   transformer: T,
   from container: KeyedDecodingContainer<K>,
   forKey key: K,
-  useDefaultOnFailure: Bool = false,
+  useDefaultOnFailure: Bool,
   defaultValue: T.Output? = nil
 ) throws -> T.Output where T: BidirectionalCodingTransformer, T.Input: Decodable {
-  do {
-    let input = try container.decode(T.Input.self, forKey: key)
-    let result = transformer.transform(.success(input))
-    switch result {
-    case .success(let output):
-      return output
-    case .failure(let error):
-      if useDefaultOnFailure, let defaultValue {
-        return defaultValue
-      }
-      throw error
+  try DecodeAtKey(container, for: key)
+    .chained(transformer)
+    .conditionally(condition: useDefaultOnFailure) {
+      DefaultOnFailureTransformer(defaultValue: defaultValue)
     }
-  } catch {
-    if useDefaultOnFailure, let defaultValue {
-      return defaultValue
-    }
-    throw error
-  }
+    .transform(.success(()))
+    .get()
 }
 
 @inline(__always)
@@ -40,31 +29,25 @@ public func __ckDecodeTransformedIfPresent<T, K>(
   transformer: T,
   from container: KeyedDecodingContainer<K>,
   forKey key: K,
-  useDefaultOnFailure: Bool = false,
+  useDefaultOnFailure: Bool,
   defaultValue: T.Output? = nil
 ) throws -> T.Output? where T: BidirectionalCodingTransformer, T.Input: Decodable {
-  do {
-    guard let input = try container.decodeIfPresent(T.Input.self, forKey: key) else {
-      return defaultValue
+  try DecodeAtKeyIfPresent(container, for: key)
+    .wrapped()
+    .chained(transformer)
+    .conditionally(condition: useDefaultOnFailure) {
+      DefaultOnFailureTransformer(defaultValue: defaultValue)
     }
-    let result = transformer.transform(.success(input))
-    switch result {
-    case .success(let output):
-      return output
-    case .failure:
-      if useDefaultOnFailure {
-        return defaultValue
+    .optional()
+    .transform(.success(()))
+    .flatMapError { error -> Result<T.Output?, any Error> in
+      if let error = error as? WrappedError, error == .valueNotFound {
+        .success(defaultValue)
+      } else {
+        .failure(error)
       }
-      throw DecodingError.dataCorrupted(
-        .init(codingPath: container.codingPath + [key], debugDescription: "Transformer failed")
-      )
     }
-  } catch {
-    if useDefaultOnFailure {
-      return defaultValue
-    }
-    throw error
-  }
+    .get()
 }
 
 @inline(__always)

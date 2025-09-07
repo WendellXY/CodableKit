@@ -26,6 +26,27 @@ extension CodingTransformer {
   ) -> some BidirectionalCodingTransformer<Input, Output> {
     Paired(transformer: self, reversedTransformer: reversed)
   }
+
+  public func conditionally(
+    condition: Bool,
+    transformer: @escaping () -> some CodingTransformer<Output, Output>
+  ) -> some CodingTransformer<Input, Output> {
+    self.chained(
+      Conditionally(condition: condition, transformer: transformer)
+    )
+  }
+
+  public func wrapped<T>(
+    defaultValue: T? = nil
+  ) -> some CodingTransformer<Input, T> where Self.Output == T? {
+    self.chained(
+      Wrapped(defaultValue: defaultValue)
+    )
+  }
+
+  public func optional() -> some CodingTransformer<Input, Output?> {
+    self.chained(Optional())
+  }
 }
 
 public protocol BidirectionalCodingTransformer<Input, Output>: CodingTransformer {
@@ -128,11 +149,68 @@ where
   }
 }
 
+struct Conditionally<T>: CodingTransformer
+where
+  T: CodingTransformer,
+  T.Input == T.Output
+{
+  let condition: Bool
+  let transformer: () -> T
+
+  typealias Input = T.Input
+  typealias Output = T.Output
+
+  init(condition: Bool, transformer: @escaping () -> T) {
+    self.condition = condition
+    self.transformer = transformer
+  }
+
+  func transform(_ input: Result<Input, any Error>) -> Result<Output, any Error> {
+    if condition {
+      transformer().transform(input)
+    } else {
+      input
+    }
+  }
+}
+
+enum WrappedError: Error {
+  case valueNotFound
+}
+
+struct Wrapped<T>: CodingTransformer {
+  let defaultValue: T?
+
+  init(defaultValue: T?) {
+    self.defaultValue = defaultValue
+  }
+
+  func transform(_ input: Result<T?, any Error>) -> Result<T, any Error> {
+    input.flatMap { value in
+      if let value {
+        .success(value)
+      } else if let defaultValue {
+        .success(defaultValue)
+      } else {
+        .failure(WrappedError.valueNotFound)
+      }
+    }
+  }
+}
+
+struct Optional<T>: CodingTransformer {
+  init() {}
+
+  func transform(_ input: Result<T, any Error>) -> Result<T?, any Error> {
+    input.flatMap { value in
+      .success(value)
+    }
+  }
+}
+
 // MARK: - Built-in Transformers
 
 public struct DecodeAtKey<Key: CodingKey, Value: Decodable>: CodingTransformer {
-  public typealias Output = Value
-
   let container: KeyedDecodingContainer<Key>
   let key: Key
 
@@ -141,10 +219,28 @@ public struct DecodeAtKey<Key: CodingKey, Value: Decodable>: CodingTransformer {
     self.key = key
   }
 
-  public func transform(_ input: Result<Void, any Error>) -> Result<Output, any Error> {
+  public func transform(_ input: Result<Void, any Error>) -> Result<Value, any Error> {
     input.flatMap {
       Result {
         try container.decode(Output.self, forKey: key)
+      }
+    }
+  }
+}
+
+public struct DecodeAtKeyIfPresent<Key: CodingKey, Value: Decodable>: CodingTransformer {
+  let container: KeyedDecodingContainer<Key>
+  let key: Key
+
+  public init(_ container: KeyedDecodingContainer<Key>, for key: Key) {
+    self.container = container
+    self.key = key
+  }
+
+  public func transform(_ input: Result<Void, any Error>) -> Result<Value?, any Error> {
+    input.flatMap {
+      Result {
+        try container.decodeIfPresent(Value.self, forKey: key)
       }
     }
   }
@@ -162,16 +258,21 @@ public struct IdentityTransformer<Value>: CodingTransformer {
 }
 
 public struct DefaultOnFailureTransformer<Value>: BidirectionalCodingTransformer {
-  public let defaultValue: Value
+  public let defaultValue: Value?
 
-  public init(defaultValue: Value) {
+  public init(defaultValue: Value?) {
     self.defaultValue = defaultValue
   }
 
   public func transform(_ input: Result<Value, any Error>) -> Result<Value, any Error> {
     switch input {
     case .success(let value): .success(value)
-    case .failure: .success(defaultValue)
+    case .failure(let error):
+      if let defaultValue {
+        .success(defaultValue)
+      } else {
+        .failure(error)
+      }
     }
   }
 }
