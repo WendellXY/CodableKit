@@ -573,6 +573,7 @@ public macro Encodable(
 /// - `.useDefaultOnFailure`: Use default value or `nil` if decoding fails
 /// - `.safeTranscodeRawString`: Combine `.transcodeRawString` and `.useDefaultOnFailure`
 /// - `.generateCustomKey`: Generate a computed property for the custom key
+/// - `.lossy`: Decode collections in a lossy way
 ///
 /// ## Compile-Time Safety
 ///

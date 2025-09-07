@@ -11,11 +11,11 @@ import Foundation
 ///
 /// Start a pipeline with `Result.success(())` and use this transformer to fetch
 /// the field as the first step when building manual chains.
-public struct DecodeAtKey<Key: CodingKey, Value: Decodable>: CodingTransformer {
+struct DecodeAtKey<Key: CodingKey, Value: Decodable>: CodingTransformer {
   let container: KeyedDecodingContainer<Key>
   let key: Key
 
-  public init(_ container: KeyedDecodingContainer<Key>, for key: Key) {
+  init(_ container: KeyedDecodingContainer<Key>, for key: Key) {
     self.container = container
     self.key = key
   }
@@ -32,16 +32,16 @@ public struct DecodeAtKey<Key: CodingKey, Value: Decodable>: CodingTransformer {
 /// Decodes an optional `Value` if present at a given `CodingKey`.
 ///
 /// Produces `nil` when the key is absent or explicitly `null`.
-public struct DecodeAtKeyIfPresent<Key: CodingKey, Value: Decodable>: CodingTransformer {
+struct DecodeAtKeyIfPresent<Key: CodingKey, Value: Decodable>: CodingTransformer {
   let container: KeyedDecodingContainer<Key>
   let key: Key
 
-  public init(_ container: KeyedDecodingContainer<Key>, for key: Key) {
+  init(_ container: KeyedDecodingContainer<Key>, for key: Key) {
     self.container = container
     self.key = key
   }
 
-  public func transform(_ input: Result<Void, any Error>) -> Result<Value?, any Error> {
+  func transform(_ input: Result<Void, any Error>) -> Result<Value?, any Error> {
     input.flatMap {
       Result {
         try container.decodeIfPresent(Value.self, forKey: key)
