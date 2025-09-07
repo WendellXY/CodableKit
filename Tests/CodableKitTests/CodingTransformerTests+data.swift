@@ -77,6 +77,45 @@ struct ModelDateNonOptional {
   var date: Date
 }
 
+// Transformer that fails on reverseTransform to test encode error propagation
+struct IntFromStringFailingReverse: BidirectionalCodingTransformer {
+  func transform(_ input: Result<String, any Error>) -> Result<Int, any Error> {
+    input.map { Int($0) ?? 0 }
+  }
+
+  func reverseTransform(_ input: Result<Int, any Error>) -> Result<String, any Error> {
+    input.flatMap { value in
+      if value == 13 {
+        return .failure(EncodingError.invalidValue(value, .init(codingPath: [], debugDescription: "Unlucky number")))
+      }
+      return .success(String(value))
+    }
+  }
+}
+
+struct TRoom: Codable, Equatable {
+  let id: Int
+  let name: String
+}
+
+@Codable
+struct ModelRoomRawString {
+  @CodableKey(transformer: RawStringTransformer<TRoom>())
+  var room: TRoom
+}
+
+@Codable
+struct ModelBoolAsInt {
+  @CodableKey(transformer: IntegerToBooleanTransformer<Int>())
+  var isOn: Bool
+}
+
+@Codable
+struct ModelIntFailingReverse {
+  @CodableKey(transformer: IntFromStringFailingReverse())
+  var count: Int
+}
+
 // MARK: - Tests
 
 @Suite struct CodingTransformerRuntimeTests {
@@ -154,5 +193,47 @@ struct ModelDateNonOptional {
     let data = json.data(using: .utf8)!
     let decoded = try JSONDecoder().decode(ModelDateNonOptional.self, from: data)
     #expect(decoded.date == .distantPast)
+  }
+
+  @Test func encode_rawString_transformer_emits_stringified_json() throws {
+    let room = TRoom(id: 7, name: "Seven")
+    let model = ModelRoomRawString(room: room)
+
+    let data = try JSONEncoder().encode(model)
+    let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+    let encodedRoomString = dict["room"] as? String
+
+    #expect(encodedRoomString != nil)
+    let decodedRoom = try JSONDecoder().decode(TRoom.self, from: encodedRoomString!.data(using: .utf8)!)
+    #expect(decodedRoom == room)
+  }
+
+  @Test func encode_bool_via_integer_transformer_writes_1_or_0() throws {
+    do {
+      let model = ModelBoolAsInt(isOn: true)
+      let data = try JSONEncoder().encode(model)
+      let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+      let num = dict["isOn"] as? NSNumber
+      #expect(num?.intValue == 1)
+    }
+
+    do {
+      let model = ModelBoolAsInt(isOn: false)
+      let data = try JSONEncoder().encode(model)
+      let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+      let num = dict["isOn"] as? NSNumber
+      #expect(num?.intValue == 0)
+    }
+  }
+
+  @Test func encode_reverseTransform_failure_propagates_error() throws {
+    let model = ModelIntFailingReverse(count: 13)
+    var threw = false
+    do {
+      _ = try JSONEncoder().encode(model)
+    } catch {
+      threw = true
+    }
+    #expect(threw)
   }
 }

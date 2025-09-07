@@ -142,20 +142,21 @@ public struct RawStringEncodingTransformer<Value: Encodable>: CodingTransformer 
 
 /// Bidirectional wrapper combining raw-string encode and decode transforms.
 public struct RawStringTransformer<Value: Decodable & Encodable>: BidirectionalCodingTransformer {
-  private let transformer: Paired<RawStringEncodingTransformer<Value>, RawStringDecodingTransformer<Value>>
+  // Forward (transform): String -> Value; Reverse (reverseTransform): Value -> String
+  private let transformer: Paired<RawStringDecodingTransformer<Value>, RawStringEncodingTransformer<Value>>
 
   public init(decoder: JSONDecoder = JSONDecoder(), encoder: JSONEncoder = JSONEncoder()) {
     self.transformer = Paired(
-      transformer: RawStringEncodingTransformer(encoder: encoder),
-      reversedTransformer: RawStringDecodingTransformer(decoder: decoder)
+      transformer: RawStringDecodingTransformer(decoder: decoder),
+      reversedTransformer: RawStringEncodingTransformer(encoder: encoder)
     )
   }
 
-  public func transform(_ input: Result<Value, any Error>) -> Result<String, any Error> {
+  public func transform(_ input: Result<String, any Error>) -> Result<Value, any Error> {
     transformer.transform(input)
   }
 
-  public func reverseTransform(_ input: Result<String, any Error>) -> Result<Value, any Error> {
+  public func reverseTransform(_ input: Result<Value, any Error>) -> Result<String, any Error> {
     transformer.reverseTransform(input)
   }
 }
@@ -163,6 +164,8 @@ public struct RawStringTransformer<Value: Decodable & Encodable>: BidirectionalC
 /// Maps `0/1` integers to booleans and back.
 public struct IntegerToBooleanTransformer<Input: BinaryInteger>: BidirectionalCodingTransformer {
   public typealias Output = Bool
+
+  public init() {}
 
   public func transform(_ input: Result<Input, any Error>) -> Result<Bool, any Error> {
     input.map { $0 == 1 }
