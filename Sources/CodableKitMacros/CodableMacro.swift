@@ -143,8 +143,8 @@ extension CodableMacro: MemberMacro {
     let encodeTree: NamespaceNode
 
     if needsSeparateKeys {
-      decodeTree = NamespaceNode.buildTree(.decodable, from: properties, )
-      encodeTree = NamespaceNode.buildTree(.encodable, from: properties, )
+      decodeTree = NamespaceNode.buildTree(.decodable, from: properties)
+      encodeTree = NamespaceNode.buildTree(.encodable, from: properties)
     } else {
       let sharedTree = NamespaceNode.buildTree(.codable, from: properties)
       decodeTree = sharedTree
