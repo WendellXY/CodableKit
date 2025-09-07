@@ -36,13 +36,15 @@ struct CodableProperty {
   ///   - binding: The pattern binding syntax.
   ///   - type: The default type syntax. Variable Decl might not have a type annotation like in
   ///  `let a, b: String`, so we need to pass the default type.
-  init(
+  private init(
     attributes: [AttributeSyntax],
     declModifiers: [DeclModifierSyntax],
     binding: PatternBindingSyntax,
     defaultType type: TypeSyntax
   ) {
-    self.attributes = attributes
+    self.attributes = attributes.sorted {
+      $0.macroName < $1.macroName
+    }
     self.declModifiers = declModifiers
     self.name = binding.pattern.trimmed
     self.type = binding.typeAnnotation?.type.trimmed ?? type.trimmed
@@ -55,12 +57,14 @@ struct CodableProperty {
   ///   - attributes: The attributes associated with the macro.
   ///   - declModifiers: The declaration modifiers associated of the property.
   ///   - caseElement: The element of an enum case
-  init(
+  private init(
     attributes: [AttributeSyntax],
     declModifiers: [DeclModifierSyntax],
     caseElement: EnumCaseElementSyntax
   ) {
-    self.attributes = attributes
+    self.attributes = attributes.sorted {
+      $0.macroName < $1.macroName
+    }
     self.declModifiers = declModifiers
     self.name = PatternSyntax(IdentifierPatternSyntax(identifier: caseElement.name.trimmed))
     self.type = "Never"
@@ -70,7 +74,9 @@ struct CodableProperty {
 
 extension CodableProperty {
   func generateProperty(for type: CodableType = .codable) -> CodableProperty {
-    let desc: String? =
+    guard type != .codable else { return self }
+
+    let desc: String =
       switch type {
       case .decodable: "DecodableKey"
       case .encodable: "EncodableKey"
@@ -78,7 +84,7 @@ extension CodableProperty {
       }
 
     let attributes = self.attributes.filter {
-      $0.attributeName.as(IdentifierTypeSyntax.self)?.description == desc
+      $0.macroName == desc
     }
 
     var copy = self
@@ -92,9 +98,7 @@ extension CodableProperty {
 
   private var allCodableKeyLabeledExprList: [LabeledExprListSyntax] {
     attributes
-      .filter {
-        $0.attributeName.as(IdentifierTypeSyntax.self)?.description.lowercased().contains("codableKey") ?? false
-      }
+      .filter(\.isCodableKeyMacro)
       .compactMap { $0.arguments?.as(LabeledExprListSyntax.self) }
   }
 }
@@ -105,24 +109,20 @@ extension CodableProperty {
     type.as(OptionalTypeSyntax.self) != nil || type.as(IdentifierTypeSyntax.self)?.name.text == "Optional"
   }
 
-  private var codableKeyLabeledExprList: LabeledExprListSyntax? {
-    allCodableKeyLabeledExprList.first
-  }
-
   /// The access modifier of the property, if not found, it will default to `internal`
   var accessModifier: DeclModifierSyntax {
     declModifiers.first(where: \.name.isAccessModifierKeyword) ?? DeclModifierSyntax(name: .keyword(.internal))
   }
 
   /// The key path for the property as specified in `@CodableKey`, split by `.`, e.g. ["data", "uid"]
-  var customCodableKeyPath: [String]? { codableKeyLabeledExprList?.customCodableKeyPath }
+  var customCodableKeyPath: [String]? { allCodableKeyLabeledExprList.compactMap(\.customCodableKeyPath).first }
 
   /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key
-  var customCodableKey: PatternSyntax? { codableKeyLabeledExprList?.customCodableKey }
+  var customCodableKey: PatternSyntax? { allCodableKeyLabeledExprList.compactMap(\.customCodableKey).first }
 
   /// Options for customizing the behavior of a `CodableKey`.
   var options: CodableKeyMacro.Options {
-    codableKeyLabeledExprList?.getExpr(label: "options")?.parseOptions() ?? .default
+    allCodableKeyLabeledExprList.compactMap { $0.getExpr(label: "options")?.parseOptions() }.first ?? .default
   }
 
   /// Indicates if the property should be considered as normal property, which mean it should be
@@ -141,7 +141,7 @@ extension CodableProperty {
 extension CodableProperty {
   /// The transformer expression provided via `@CodableKey(transformer: ...)`
   var transformerExpr: ExprSyntax? {
-    codableKeyLabeledExprList?.getExpr(label: "transformer")?.expression
+    allCodableKeyLabeledExprList.compactMap { $0.getExpr(label: "transformer")?.expression }.first
   }
 }
 
