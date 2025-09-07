@@ -599,3 +599,10 @@ public macro CodableKey(
   _ key: String? = nil,
   options: CodableKeyOptions = .default
 ) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro")
+
+@attached(peer, names: arbitrary)
+public macro CodableKey<T>(
+  _ key: String? = nil,
+  options: CodableKeyOptions = .default,
+  transformer: T
+) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro") where T: BidirectionalCodingTransformer
