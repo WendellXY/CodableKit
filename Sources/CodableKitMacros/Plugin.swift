@@ -13,5 +13,7 @@ struct CodableKitPlugin: CompilerPlugin {
   let providingMacros: [Macro.Type] = [
     CodableMacro.self,
     CodableKeyMacro.self,
+    DecodeKeyMacro.self,
+    EncodeKeyMacro.self,
   ]
 }

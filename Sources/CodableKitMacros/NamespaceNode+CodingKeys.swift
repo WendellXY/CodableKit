@@ -10,7 +10,9 @@ import SwiftSyntaxBuilder
 
 extension NamespaceNode {
   var enumName: String {
-    parent == nil ? "CodingKeys" : segment.capitalized + "Keys"
+    if parent == nil { return rootBaseName }
+    let suffix = (rootBaseName == "CodingKeys") ? "Keys" : rootBaseName
+    return segment.capitalized + suffix
   }
 
   var codingKeysEnum: EnumDeclSyntax? {

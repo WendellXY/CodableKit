@@ -41,7 +41,10 @@ extension NamespaceNode {
     var result: [CodeBlockItemSyntax] = []
 
     // Transformer-based encoding (before normal path and before transcodeRawString)
-    for property in properties where property.transformerExpr != nil && !property.ignored {
+    for property in properties
+    where property.transformerExprForEncode != nil
+      && !(property.encodeOptions.contains(.ignored) || property.options.contains(.ignored))
+    {
       if property.isOptional {
         result.append(
           CodeBlockItemSyntax(
@@ -49,11 +52,14 @@ extension NamespaceNode {
               ExprSyntax(
                 TryExprSyntax(
                   expression: FunctionCallExprSyntax(
-                    calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckEncodeTransformedIfPresent")),
+                    calledExpression: DeclReferenceExprSyntax(
+                      baseName: .identifier(
+                        property.encodeTransformerExpr != nil
+                          ? "__ckEncodeOneWayTransformedIfPresent" : "__ckEncodeTransformedIfPresent")),
                     leftParen: .leftParenToken(),
                     rightParen: .rightParenToken()
                   ) {
-                    LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
+                    LabeledExprSyntax(label: "transformer", expression: property.transformerExprForEncode!)
                     LabeledExprSyntax(
                       label: "value", expression: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")))
                     LabeledExprSyntax(
@@ -63,7 +69,8 @@ extension NamespaceNode {
                       label: "explicitNil",
                       expression: ExprSyntax(
                         BooleanLiteralExprSyntax(
-                          literal: property.options.contains(.explicitNil) ? .keyword(.true) : .keyword(.false)))
+                          literal: (property.encodeOptions.contains(.explicitNil)
+                            || property.options.contains(.explicitNil)) ? .keyword(.true) : .keyword(.false)))
                     )
                   }
                 )
@@ -78,11 +85,14 @@ extension NamespaceNode {
               ExprSyntax(
                 TryExprSyntax(
                   expression: FunctionCallExprSyntax(
-                    calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckEncodeTransformed")),
+                    calledExpression: DeclReferenceExprSyntax(
+                      baseName: .identifier(
+                        property.encodeTransformerExpr != nil ? "__ckEncodeOneWayTransformed" : "__ckEncodeTransformed")
+                    ),
                     leftParen: .leftParenToken(),
                     rightParen: .rightParenToken()
                   ) {
-                    LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
+                    LabeledExprSyntax(label: "transformer", expression: property.transformerExprForEncode!)
                     LabeledExprSyntax(
                       label: "value", expression: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")))
                     LabeledExprSyntax(
@@ -98,7 +108,9 @@ extension NamespaceNode {
     }
 
     result.append(
-      contentsOf: properties.filter(\.isNormal).map { property in
+      contentsOf: properties.filter {
+        $0.isNormalEncode && !($0.encodeOptions.contains(.ignored) || $0.options.contains(.ignored))
+      }.map { property in
         CodeBlockItemSyntax(
           item: .expr(
             CodeGenCore.genContainerEncodeExpr(
@@ -106,7 +118,7 @@ extension NamespaceNode {
               key: property.name,
               patternName: property.name,
               isOptional: property.isOptional,
-              explicitNil: property.options.contains(.explicitNil)
+              explicitNil: property.encodeOptions.contains(.explicitNil) || property.options.contains(.explicitNil)
             )
           )
         )
@@ -114,8 +126,9 @@ extension NamespaceNode {
 
     // Encode lossy properties normally (lossy is decode-only). Skip when also using transcodeRawString.
     for property in properties
-    where property.options.contains(.lossy)
-      && !property.options.contains(.transcodeRawString) && !property.ignored
+    where (property.options.contains(.lossy) || property.encodeOptions.contains(.lossy))
+      && !(property.options.contains(.transcodeRawString) || property.encodeOptions.contains(.transcodeRawString))
+      && !(property.encodeOptions.contains(.ignored) || property.options.contains(.ignored))
     {
       result.append(
         CodeBlockItemSyntax(
@@ -125,7 +138,7 @@ extension NamespaceNode {
               key: property.name,
               patternName: property.name,
               isOptional: property.isOptional,
-              explicitNil: property.options.contains(.explicitNil)
+              explicitNil: property.encodeOptions.contains(.explicitNil) || property.options.contains(.explicitNil)
             )
           )
         )
@@ -133,8 +146,13 @@ extension NamespaceNode {
     }
 
     // Encode as raw JSON string (transcoding). For optionals without `.explicitNil`, omit the key when nil.
-    for property in properties where property.options.contains(.transcodeRawString) && !property.ignored {
-      if property.isOptional && !property.options.contains(.explicitNil) {
+    for property in properties
+    where (property.encodeOptions.contains(.transcodeRawString) || property.options.contains(.transcodeRawString))
+      && !(property.encodeOptions.contains(.ignored) || property.options.contains(.ignored))
+    {
+      if property.isOptional
+        && !(property.encodeOptions.contains(.explicitNil) || property.options.contains(.explicitNil))
+      {
         // if let <name>Unwrapped = <name> { ... encode ... }
         let unwrappedName = PatternSyntax(IdentifierPatternSyntax(identifier: .identifier("\(property.name)Unwrapped")))
         result.append(
@@ -207,7 +225,7 @@ extension NamespaceNode {
                 codingPath: codingKeyChain(for: property),
                 message: "Failed to transcode raw data to string",
                 isOptional: property.isOptional,
-                explicitNil: property.options.contains(.explicitNil)
+                explicitNil: property.encodeOptions.contains(.explicitNil) || property.options.contains(.explicitNil)
               )
             )
           ),

@@ -13,7 +13,12 @@ extension NamespaceNode {
 
   /// Whether any property in this subtree requires raw string transcoding
   var hasTranscodeRawStringInSubtree: Bool {
-    let selfHas = properties.contains { !$0.ignored && $0.options.contains(.transcodeRawString) }
+    let selfHas = properties.contains {
+      !($0.decodeOptions.contains(.ignored) || $0.encodeOptions.contains(.ignored) || $0.options.contains(.ignored))
+        && ($0.decodeOptions.contains(.transcodeRawString)
+          || $0.encodeOptions.contains(.transcodeRawString)
+          || $0.options.contains(.transcodeRawString))
+    }
     return selfHas || children.values.contains { $0.hasTranscodeRawStringInSubtree }
   }
 }
@@ -51,19 +56,26 @@ extension NamespaceNode {
   private var propertyAssignment: [CodeBlockItemSyntax] {
     var result: [CodeBlockItemSyntax] = []
 
-    // Transformer-based decoding (applies before normal path)
-    for property in properties where property.transformerExpr != nil && !property.ignored {
-      let useDefault = property.options.contains(.useDefaultOnFailure)
+    // Transformer-based decoding, decode-only takes precedence, then bidirectional
+    for property in properties
+    where property.transformerExprForDecode != nil
+      && !(property.decodeOptions.contains(.ignored) || property.options.contains(.ignored))
+    {
+      let useDefault =
+        property.decodeOptions.contains(.useDefaultOnFailure) || property.options.contains(.useDefaultOnFailure)
 
       if property.isOptional || property.defaultValue != nil {
         let callExpr = ExprSyntax(
           TryExprSyntax(
             expression: FunctionCallExprSyntax(
-              calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckDecodeTransformedIfPresent")),
+              calledExpression: DeclReferenceExprSyntax(
+                baseName: .identifier(
+                  property.decodeTransformerExpr != nil
+                    ? "__ckDecodeOneWayTransformedIfPresent" : "__ckDecodeTransformedIfPresent")),
               leftParen: .leftParenToken(),
               rightParen: .rightParenToken()
             ) {
-              LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
+              LabeledExprSyntax(label: "transformer", expression: property.transformerExprForDecode!)
               LabeledExprSyntax(
                 label: "from", expression: DeclReferenceExprSyntax(baseName: .identifier(containerName)))
               LabeledExprSyntax(label: "forKey", expression: CodeGenCore.genChainingMembers("\(property.name)"))
@@ -112,11 +124,13 @@ extension NamespaceNode {
       let callExpr = ExprSyntax(
         TryExprSyntax(
           expression: FunctionCallExprSyntax(
-            calledExpression: DeclReferenceExprSyntax(baseName: .identifier("__ckDecodeTransformed")),
+            calledExpression: DeclReferenceExprSyntax(
+              baseName: .identifier(
+                property.decodeTransformerExpr != nil ? "__ckDecodeOneWayTransformed" : "__ckDecodeTransformed")),
             leftParen: .leftParenToken(),
             rightParen: .rightParenToken()
           ) {
-            LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
+            LabeledExprSyntax(label: "transformer", expression: property.transformerExprForDecode!)
             LabeledExprSyntax(label: "from", expression: DeclReferenceExprSyntax(baseName: .identifier(containerName)))
             LabeledExprSyntax(label: "forKey", expression: CodeGenCore.genChainingMembers("\(property.name)"))
             LabeledExprSyntax(
@@ -144,7 +158,9 @@ extension NamespaceNode {
     }
 
     result.append(
-      contentsOf: properties.filter(\.isNormal).map { property in
+      contentsOf: properties.filter {
+        $0.isNormalDecode && !($0.decodeOptions.contains(.ignored) || $0.options.contains(.ignored))
+      }.map { property in
         CodeBlockItemSyntax(
           item: .expr(
             CodeGenCore.genContainerDecodeExpr(
@@ -152,7 +168,8 @@ extension NamespaceNode {
               variableName: property.name,
               patternName: property.name,
               isOptional: property.isOptional,
-              useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
+              useDefaultOnFailure: property.decodeOptions.contains(.useDefaultOnFailure)
+                || property.options.contains(.useDefaultOnFailure),
               defaultValueExpr: property.defaultValue,
               type: property.type
             )
@@ -162,14 +179,17 @@ extension NamespaceNode {
     )
 
     // Lossy decode for arrays, sets, and dictionaries
-    for property in properties where property.options.contains(.lossy) && !property.ignored {
+    for property in properties
+    where (property.decodeOptions.contains(.lossy) || property.options.contains(.lossy))
+      && !(property.decodeOptions.contains(.ignored) || property.options.contains(.ignored))
+    {
       let isCollection = property.isArrayType || property.isSetType
       let isDict = property.isDictionaryType
       let elementType = property.collectionElementType
       let dictTypes = property.dictionaryKeyAndValueTypes
       guard (isCollection && elementType != nil) || (isDict && dictTypes != nil) else { continue }
 
-      if property.options.contains(.transcodeRawString) {
+      if property.decodeOptions.contains(.transcodeRawString) || property.options.contains(.transcodeRawString) {
         // Combined lossy + transcodeRawString: decode raw string, transcode to data, decode LossyArray<Element>, assign .elements (or Set)
         let defaultValueExpr = property.defaultValue ?? (property.isOptional ? "nil" : nil)
 
@@ -182,7 +202,8 @@ extension NamespaceNode {
                 containerName: containerName,
                 patternName: property.name,
                 isOptional: true,
-                useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
+                useDefaultOnFailure: property.decodeOptions.contains(.useDefaultOnFailure)
+                  || property.options.contains(.useDefaultOnFailure),
                 defaultValueExpr: ExprSyntax(StringLiteralExprSyntax(content: "")),
                 type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String")))
               )

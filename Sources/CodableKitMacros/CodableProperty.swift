@@ -80,6 +80,18 @@ extension CodableProperty {
     })?.arguments?.as(LabeledExprListSyntax.self)
   }
 
+  private var decodeKeyLabeledExprList: LabeledExprListSyntax? {
+    attributes.first(where: {
+      $0.attributeName.as(IdentifierTypeSyntax.self)?.description == "DecodeKey"
+    })?.arguments?.as(LabeledExprListSyntax.self)
+  }
+
+  private var encodeKeyLabeledExprList: LabeledExprListSyntax? {
+    attributes.first(where: {
+      $0.attributeName.as(IdentifierTypeSyntax.self)?.description == "EncodeKey"
+    })?.arguments?.as(LabeledExprListSyntax.self)
+  }
+
   /// The access modifier of the property, if not found, it will default to `internal`
   var accessModifier: DeclModifierSyntax {
     declModifiers.first(where: \.name.isAccessModifierKeyword) ?? DeclModifierSyntax(name: .keyword(.internal))
@@ -100,6 +112,24 @@ extension CodableProperty {
     return "\(expr)".trimmingCharacters(in: .init(charactersIn: "\"")).components(separatedBy: ".")
   }
 
+  /// The key path from `@DecodeKey`, if provided
+  var customDecodeKeyPath: [String]? {
+    guard
+      let expr = decodeKeyLabeledExprList?.first(where: { $0.label == nil })?.expression,
+      expr.as(NilLiteralExprSyntax.self) == nil
+    else { return nil }
+    return "\(expr)".trimmingCharacters(in: .init(charactersIn: "\"")).components(separatedBy: ".")
+  }
+
+  /// The key path from `@EncodeKey`, if provided
+  var customEncodeKeyPath: [String]? {
+    guard
+      let expr = encodeKeyLabeledExprList?.first(where: { $0.label == nil })?.expression,
+      expr.as(NilLiteralExprSyntax.self) == nil
+    else { return nil }
+    return "\(expr)".trimmingCharacters(in: .init(charactersIn: "\"")).components(separatedBy: ".")
+  }
+
   /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key
   var customCodableKey: PatternSyntax? {
     if let identifier = customCodableKeyPath?.last {
@@ -116,6 +146,16 @@ extension CodableProperty {
     })?.parseOptions() ?? .default
   }
 
+  /// Options for decoding, sourced from `@DecodeKey` if present, otherwise fallback to `@CodableKey`.
+  var decodeOptions: DecodeKeyMacro.Options {
+    decodeKeyLabeledExprList?.first(where: { $0.label?.text == "options" })?.parseOptions() ?? options
+  }
+
+  /// Options for encoding, sourced from `@EncodeKey` if present, otherwise fallback to `@CodableKey`.
+  var encodeOptions: EncodeKeyMacro.Options {
+    encodeKeyLabeledExprList?.first(where: { $0.label?.text == "options" })?.parseOptions() ?? options
+  }
+
   /// Indicates if the property should be considered as normal property, which mean it should be
   ///  encoded and decoded without changing any process.
   var isNormal: Bool {
@@ -123,6 +163,22 @@ extension CodableProperty {
       && !options.contains(.transcodeRawString)
       && !(options.contains(.lossy) && (isArrayType || isSetType || isDictionaryType))
       && transformerExpr == nil
+  }
+
+  /// Decode path: normal means no special options and no transformer for decode
+  var isNormalDecode: Bool {
+    !decodeOptions.contains(.ignored)
+      && !decodeOptions.contains(.transcodeRawString)
+      && !(decodeOptions.contains(.lossy) && (isArrayType || isSetType || isDictionaryType))
+      && transformerExprForDecode == nil
+  }
+
+  /// Encode path: normal means no special options and no transformer for encode
+  var isNormalEncode: Bool {
+    !encodeOptions.contains(.ignored)
+      && !encodeOptions.contains(.transcodeRawString)
+      // .lossy is decode-only; treat as normal for encode
+      && transformerExprForEncode == nil
   }
 
   /// Indicates if the property should be ignored when encoding and decoding
@@ -136,6 +192,22 @@ extension CodableProperty {
   var transformerExpr: ExprSyntax? {
     codableKeyLabeledExprList?.first(where: { $0.label?.text == "transformer" })?.expression
   }
+
+  /// The transformer expression provided via `@DecodeKey(transformer: ...)`
+  var decodeTransformerExpr: ExprSyntax? {
+    decodeKeyLabeledExprList?.first(where: { $0.label?.text == "transformer" })?.expression
+  }
+
+  /// The transformer expression provided via `@EncodeKey(transformer: ...)`
+  var encodeTransformerExpr: ExprSyntax? {
+    encodeKeyLabeledExprList?.first(where: { $0.label?.text == "transformer" })?.expression
+  }
+
+  /// Effective transformer expression for decode: prefer decode-only, otherwise bidirectional
+  var transformerExprForDecode: ExprSyntax? { decodeTransformerExpr ?? transformerExpr }
+
+  /// Effective transformer expression for encode: prefer encode-only, otherwise bidirectional
+  var transformerExprForEncode: ExprSyntax? { encodeTransformerExpr ?? transformerExpr }
 }
 
 extension CodableProperty {

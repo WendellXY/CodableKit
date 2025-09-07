@@ -11,13 +11,15 @@ import SwiftSyntaxMacros
 
 final class NamespaceNode {
   let segment: String
+  let rootBaseName: String
   var children: [String: NamespaceNode] = [:]
   var properties: [CodableProperty] = []  // Track properties at this node (usually leaf)
 
   weak var parent: NamespaceNode?  // Optional parent node
 
-  init(segment: String) {
+  init(segment: String, rootBaseName: String) {
     self.segment = segment
+    self.rootBaseName = rootBaseName
   }
 
   // Add a property to the tree based on its full key path
@@ -30,7 +32,7 @@ final class NamespaceNode {
     let child =
       children[first]
       ?? {
-        let node = NamespaceNode(segment: first)
+        let node = NamespaceNode(segment: first, rootBaseName: rootBaseName)
         node.parent = self
         children[first] = node
         return node
@@ -38,11 +40,25 @@ final class NamespaceNode {
     child.add(property: property, path: path.dropFirst())
   }
 
-  static func buildTree(from propertyList: [CodableProperty]) -> NamespaceNode {
-    let root = NamespaceNode(segment: "CodingKeys")
+  static func buildTree(
+    from propertyList: [CodableProperty]
+  ) -> NamespaceNode {
+    buildTree(
+      from: propertyList,
+      keyPath: { $0.customCodableKeyPath ?? [$0.name.description] },
+      rootBaseName: "CodingKeys"
+    )
+  }
+
+  static func buildTree(
+    from propertyList: [CodableProperty],
+    keyPath: (CodableProperty) -> [String],
+    rootBaseName: String
+  ) -> NamespaceNode {
+    let root = NamespaceNode(segment: rootBaseName, rootBaseName: rootBaseName)
     for property in propertyList {
-      let keyPath = property.customCodableKeyPath ?? [property.name.description]
-      root.add(property: property, path: keyPath[...])
+      let path = keyPath(property)
+      root.add(property: property, path: path[...])
     }
     return root
   }
