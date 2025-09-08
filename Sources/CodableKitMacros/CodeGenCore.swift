@@ -156,6 +156,10 @@ extension CodeGenCore {
   ) throws {
     let id = key(for: declaration, in: context)
 
+    func error(_ message: String) -> SimpleDiagnosticMessage {
+      SimpleDiagnosticMessage(message: message, severity: .error)
+    }
+
     guard preparedDeclarations.contains(id) == false else {
       // Since we have two macro implementations, so this method could be called twice. If in the first call, the
       // properties are not found, it means there are some errors in the first call. So, the error should be thrown
@@ -193,22 +197,14 @@ extension CodeGenCore {
       let extractedProperties = try Property.extract(from: declaration)
 
       if extractedProperties.isEmpty {
-        throw SimpleDiagnosticMessage(
-          message: "No properties found",
-          severity: .error
-        )
+        throw error("No properties found")
       }
 
       // Check if there are key conflicts
       let propertiesKeySet = Set(extractedProperties.map(\.normalizedName))
       if propertiesKeySet.count != extractedProperties.count {
-        for property in extractedProperties {
-          if propertiesKeySet.contains(property.normalizedName) {
-            throw SimpleDiagnosticMessage(
-              message: "Key conflict found: \(property.normalizedName)",
-              severity: .error
-            )
-          }
+        for property in extractedProperties where propertiesKeySet.contains(property.normalizedName) {
+          throw error("Key conflict found: \(property.normalizedName)")
         }
       }
 
@@ -218,18 +214,12 @@ extension CodeGenCore {
         if attachedKeyMacros.contains("CodableKey")
           && (attachedKeyMacros.contains("DecodableKey") || attachedKeyMacros.contains("EncodableKey"))
         {
-          throw SimpleDiagnosticMessage(
-            message: "CodableKey macro cannot be used with the DecodableKey and EncodableKey macro",
-            severity: .error
-          )
+          throw error("CodableKey macro cannot be used with the DecodableKey and EncodableKey macro")
         }
 
         // Make sure the same Key macro are not attached to the same property multiple times
         if attachedKeyMacros.count != Set(attachedKeyMacros).count {
-          throw SimpleDiagnosticMessage(
-            message: "The same Key macro are not supported for multiple pattern bindings",
-            severity: .error
-          )
+          throw error("The same Key macro are not supported for multiple pattern bindings")
         }
 
         let attachedMacroType = attachedKeyMacros.reduce(into: CodableType.none) { $0.insert(CodableType.from($1)) }
@@ -237,10 +227,7 @@ extension CodeGenCore {
         // For instance, if the property is @DecodableKey, the container must be @Decodable or @Codable.
         // Mathematically, the attachedMacroType should share elements with the codableType.
         if attachedMacroType.intersection(codableType).isEmpty && attachedMacroType != .none && codableType != .none {
-          throw SimpleDiagnosticMessage(
-            message: "The attached Key macro \(attachedMacroType) does not match the Container macro \(codableType)",
-            severity: .error
-          )
+          throw error("The attached Key macro \(attachedMacroType) does not match the Container macro \(codableType)")
         }
       }
 
@@ -266,7 +253,7 @@ extension CodeGenCore {
         } catch {
           throw SimpleDiagnosticMessage(
             message: error.localizedDescription,
-            severity: .warning
+            severity: .error
           )
         }
       } else {
