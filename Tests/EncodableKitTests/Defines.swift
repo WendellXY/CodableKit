@@ -14,7 +14,7 @@ import SwiftSyntaxMacrosGenericTestSupport
 import SwiftSyntaxMacrosTestSupport
 import Testing
 
-nonisolated(unsafe) let macros: [String: any Macro.Type] = [
+let macros: [String: any Macro.Type] = [
   "Codable": CodableMacro.self,
   "CodableKey": CodableKeyMacro.self,
   "DecodableKey": DecodableKeyMacro.self,
