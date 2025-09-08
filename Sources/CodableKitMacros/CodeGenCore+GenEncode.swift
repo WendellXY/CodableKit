@@ -19,14 +19,7 @@ extension CodeGenCore {
       expression: FunctionCallExprSyntax(
         calledExpression: MemberAccessExprSyntax(
           base: encoderVarName == nil
-            ? ExprSyntax(
-              FunctionCallExprSyntax(
-                calledExpression: DeclReferenceExprSyntax(baseName: .identifier("JSONEncoder")),
-                leftParen: .leftParenToken(),
-                rightParen: .rightParenToken(),
-                argumentsBuilder: {}
-              )
-            )
+            ? ExprSyntax("JSONEncoder()")
             : ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier(encoderVarName!))),
           declName: DeclReferenceExprSyntax(baseName: .identifier("encode"))
         ),
@@ -61,17 +54,11 @@ extension CodeGenCore {
   static func genJSONEncoderVariableDecl(
     variableName: String = "__ckEncoder"
   ) -> DeclSyntax {
-    let initializerExpr = FunctionCallExprSyntax(
-      calledExpression: DeclReferenceExprSyntax(baseName: .identifier("JSONEncoder")),
-      leftParen: .leftParenToken(),
-      rightParen: .rightParenToken(),
-      argumentsBuilder: {}
-    )
-    return DeclSyntax(
+    DeclSyntax(
       genVariableDecl(
         bindingSpecifier: .keyword(.let),
         name: variableName,
-        initializer: ExprSyntax(initializerExpr)
+        initializer: ExprSyntax("JSONEncoder()")
       )
     )
   }
@@ -86,10 +73,7 @@ extension CodeGenCore {
     codingKeysName: String = "CodingKeys"
   ) -> DeclSyntax {
     let initializerExpr = FunctionCallExprSyntax(
-      calledExpression: MemberAccessExprSyntax(
-        base: DeclReferenceExprSyntax(baseName: .identifier("encoder")),
-        declName: DeclReferenceExprSyntax(baseName: .identifier("container"))
-      ),
+      calledExpression: ExprSyntax("encoder.container"),
       leftParen: .leftParenToken(),
       rightParen: .rightParenToken()
     ) {
@@ -116,10 +100,7 @@ extension CodeGenCore {
     forKey: String
   ) -> DeclSyntax {
     let initializerExpr = FunctionCallExprSyntax(
-      calledExpression: MemberAccessExprSyntax(
-        base: DeclReferenceExprSyntax(baseName: .identifier(parentContainer)),
-        declName: DeclReferenceExprSyntax(baseName: .identifier("nestedContainer"))
-      ),
+      calledExpression: ExprSyntax("\(raw: parentContainer).nestedContainer"),
       leftParen: .leftParenToken(),
       rightParen: .rightParenToken()
     ) {
@@ -168,10 +149,7 @@ extension CodeGenCore {
     return ExprSyntax(
       TryExprSyntax(
         expression: FunctionCallExprSyntax(
-          calledExpression: MemberAccessExprSyntax(
-            base: DeclReferenceExprSyntax(baseName: .identifier(containerName)),
-            declName: DeclReferenceExprSyntax(baseName: .identifier(encodeFuncName))
-          ),
+          calledExpression: ExprSyntax("\(raw: containerName).\(raw: encodeFuncName)"),
           leftParen: .leftParenToken(),
           rightParen: .rightParenToken()
         ) {
@@ -213,25 +191,7 @@ extension CodeGenCore {
       IfExprSyntax(
         conditions: [
           ConditionElementSyntax(
-            condition: .optionalBinding(
-              OptionalBindingConditionSyntax(
-                bindingSpecifier: .keyword(.let),
-                pattern: rawStringName,
-                initializer: InitializerClauseSyntax(
-                  value: FunctionCallExprSyntax(
-                    calledExpression: DeclReferenceExprSyntax(baseName: .identifier("String")),
-                    leftParen: .leftParenToken(),
-                    rightParen: .rightParenToken()
-                  ) {
-                    LabeledExprSyntax(
-                      label: "data",
-                      expression: DeclReferenceExprSyntax(baseName: .identifier("\(rawDataName)"))
-                    )
-                    LabeledExprSyntax(label: "encoding", expression: genChainingMembers("utf8"))
-                  }
-                )
-              )
-            )
+            condition: .expression("let \(rawStringName) = String(data: \(rawDataName), encoding: .utf8)")
           )
         ],
         body: CodeBlockSyntax {
@@ -285,10 +245,7 @@ extension CodeGenCore {
     StmtSyntax(
       ThrowStmtSyntax(
         expression: FunctionCallExprSyntax(
-          calledExpression: MemberAccessExprSyntax(
-            base: DeclReferenceExprSyntax(baseName: .identifier("EncodingError")),
-            declName: DeclReferenceExprSyntax(baseName: .identifier("invalidValue"))
-          ),
+          calledExpression: ExprSyntax("EncodingError.invalidValue"),
           leftParen: .leftParenToken(trailingTrivia: .newline),
           rightParen: .rightParenToken(leadingTrivia: .newline)
         ) {
@@ -299,10 +256,7 @@ extension CodeGenCore {
           )
           LabeledExprSyntax(
             expression: FunctionCallExprSyntax(
-              calledExpression: MemberAccessExprSyntax(
-                base: DeclReferenceExprSyntax(baseName: .identifier("EncodingError")),
-                declName: DeclReferenceExprSyntax(baseName: .identifier("Context"))
-              ),
+              calledExpression: ExprSyntax("EncodingError.Context"),
               leftParen: .leftParenToken(),
               rightParen: .rightParenToken(leadingTrivia: .newline)
             ) {

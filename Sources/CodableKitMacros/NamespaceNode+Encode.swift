@@ -13,10 +13,12 @@ extension NamespaceNode {
     var result: [CodeBlockItemSyntax] = []
     if parent == nil {
       result.append(
-        CodeBlockItemSyntax(item: .decl(CodeGenCore.genEncodeContainerDecl(codingKeysName: enumName))))
+        CodeBlockItemSyntax(item: .decl(CodeGenCore.genEncodeContainerDecl(codingKeysName: enumName)))
+      )
       if hasTranscodeRawStringInSubtree {
         result.append(
-          CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONEncoderVariableDecl(variableName: "__ckEncoder"))))
+          CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONEncoderVariableDecl(variableName: "__ckEncoder")))
+        )
       }
     }
     for child in children.values.sorted(by: { $0.segment < $1.segment }) {
@@ -142,7 +144,7 @@ extension NamespaceNode {
     for property in properties where property.options.contains(.transcodeRawString) && !property.options.contains(.ignored) {
       if property.isOptional && !property.options.contains(.explicitNil) {
         // if let <name>Unwrapped = <name> { ... encode ... }
-        let unwrappedName = PatternSyntax(IdentifierPatternSyntax(identifier: .identifier("\(property.name)Unwrapped")))
+        let unwrappedName: PatternSyntax = "\(property.name)Unwrapped"
         result.append(
           CodeBlockItemSyntax(
             item: .expr(
@@ -150,15 +152,8 @@ extension NamespaceNode {
                 IfExprSyntax(
                   conditions: [
                     ConditionElementSyntax(
-                      condition: .optionalBinding(
-                        OptionalBindingConditionSyntax(
-                          bindingSpecifier: .keyword(.let),
-                          pattern: unwrappedName,
-                          initializer: InitializerClauseSyntax(
-                            value: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)"))
-                          )
-                        )
-                      )
+                      condition: .expression("let \(unwrappedName) = \(property.name)"),
+                      trailingTrivia: .spaces(1)
                     )
                   ],
                   body: CodeBlockSyntax {

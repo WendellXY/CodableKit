@@ -15,17 +15,11 @@ extension CodeGenCore {
   static func genJSONDecoderVariableDecl(
     variableName: String = "__ckDecoder"
   ) -> DeclSyntax {
-    let initializerExpr = FunctionCallExprSyntax(
-      calledExpression: DeclReferenceExprSyntax(baseName: .identifier("JSONDecoder")),
-      leftParen: .leftParenToken(),
-      rightParen: .rightParenToken(),
-      argumentsBuilder: {}
-    )
-    return DeclSyntax(
+    DeclSyntax(
       genVariableDecl(
         bindingSpecifier: .keyword(.let),
         name: variableName,
-        initializer: ExprSyntax(initializerExpr)
+        initializer: ExprSyntax("JSONDecoder()")
       )
     )
   }
@@ -40,14 +34,7 @@ extension CodeGenCore {
       expression: FunctionCallExprSyntax(
         calledExpression: MemberAccessExprSyntax(
           base: decoderVarName == nil
-            ? ExprSyntax(
-              FunctionCallExprSyntax(
-                calledExpression: DeclReferenceExprSyntax(baseName: .identifier("JSONDecoder")),
-                leftParen: .leftParenToken(),
-                rightParen: .rightParenToken(),
-                argumentsBuilder: {}
-              )
-            )
+            ? ExprSyntax("JSONDecoder()")
             : ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier(decoderVarName!))),
           declName: DeclReferenceExprSyntax(baseName: .identifier("decode"))
         ),
@@ -79,13 +66,7 @@ extension CodeGenCore {
       )
     )
 
-    let defaultExpr = ExprSyntax(
-      InfixOperatorExprSyntax(
-        leftOperand: TupleExprSyntax(elements: LabeledExprListSyntax([LabeledExprSyntax(expression: jsonDecoderExpr)])),
-        operator: BinaryOperatorExprSyntax(operator: .binaryOperator("??")),
-        rightOperand: defaultValueExpr ?? ExprSyntax(NilLiteralExprSyntax())
-      )
-    )
+    let defaultExpr: ExprSyntax = "(\(jsonDecoderExpr)) ?? \(defaultValueExpr ?? "nil")"
 
     return ExprSyntax(
       InfixOperatorExprSyntax(
@@ -105,27 +86,11 @@ extension CodeGenCore {
     patternName: String = "container",
     codingKeysName: String = "CodingKeys"
   ) -> DeclSyntax {
-    let initializerExpr = TryExprSyntax(
-      expression: FunctionCallExprSyntax(
-        calledExpression: MemberAccessExprSyntax(
-          base: DeclReferenceExprSyntax(baseName: .identifier("decoder")),
-          declName: DeclReferenceExprSyntax(baseName: .identifier("container"))
-        ),
-        leftParen: .leftParenToken(),
-        rightParen: .rightParenToken()
-      ) {
-        LabeledExprSyntax(
-          label: "keyedBy",
-          expression: genChainingMembers(codingKeysName, "self")
-        )
-      }
-    )
-
-    return DeclSyntax(
+    DeclSyntax(
       genVariableDecl(
         bindingSpecifier: bindingSpecifier,
         name: patternName,
-        initializer: ExprSyntax(initializerExpr)
+        initializer: ExprSyntax("try decoder.container(keyedBy: \(raw: codingKeysName).self)")
       )
     )
   }
@@ -139,10 +104,7 @@ extension CodeGenCore {
   ) -> DeclSyntax {
     let initializerExpr = TryExprSyntax(
       expression: FunctionCallExprSyntax(
-        calledExpression: MemberAccessExprSyntax(
-          base: DeclReferenceExprSyntax(baseName: .identifier(parentContainer)),
-          declName: DeclReferenceExprSyntax(baseName: .identifier("nestedContainer"))
-        ),
+        calledExpression: ExprSyntax("\(raw: parentContainer).nestedContainer"),
         leftParen: .leftParenToken(),
         rightParen: .rightParenToken()
       ) {
@@ -197,41 +159,16 @@ extension CodeGenCore {
       return if defaultValueExpr != nil || isOptional {
         // The default option expression, if the expression is optional or has a default value,
         // the expression will be like `... ?? defaultValue`
-        ExprSyntax(
-          TryExprSyntax(
-            expression: InfixOperatorExprSyntax(
-              leftOperand: funcCallExpr,
-              operator: BinaryOperatorExprSyntax(operator: .binaryOperator("??")),
-              rightOperand: defaultValueExpr ?? ExprSyntax(NilLiteralExprSyntax())
-            )
-          )
-        )
+        "try \(funcCallExpr) ?? \(defaultValueExpr ?? "nil")"
       } else {
-        ExprSyntax(TryExprSyntax(expression: funcCallExpr))
+        "try \(funcCallExpr)"
       }
     }
 
     return if defaultValueExpr != nil || isOptional {
-      ExprSyntax(
-        InfixOperatorExprSyntax(
-          leftOperand: TupleExprSyntax(
-            leftParen: .leftParenToken(),
-            elements: [
-              LabeledExprSyntax(
-                expression: TryExprSyntax(
-                  questionOrExclamationMark: .infixQuestionMarkToken(leadingTrivia: .spaces(0)),
-                  expression: funcCallExpr
-                )
-              )
-            ],
-            rightParen: .rightParenToken()
-          ),
-          operator: BinaryOperatorExprSyntax(operator: .binaryOperator("??")),
-          rightOperand: defaultValueExpr ?? ExprSyntax(NilLiteralExprSyntax())
-        )
-      )
+      "(try? \(funcCallExpr)) ?? \(defaultValueExpr ?? "nil")"
     } else {
-      ExprSyntax(TryExprSyntax(expression: funcCallExpr))
+      "try \(funcCallExpr)"
     }
   }
 
@@ -350,41 +287,12 @@ extension CodeGenCore {
       IfExprSyntax(
         conditions: [
           ConditionElementSyntax(
-            condition: .expression(
-              ExprSyntax(
-                PrefixOperatorExprSyntax(
-                  operator: .prefixOperator("!"),
-                  expression: MemberAccessExprSyntax(
-                    base: DeclReferenceExprSyntax(baseName: .identifier("\(rawStringName)")),
-                    declName: DeclReferenceExprSyntax(baseName: .identifier("isEmpty"))
-                  )
-                )
-              )
-            ),
+            condition: .expression("!\(rawStringName).isEmpty"),
             trailingComma: .commaToken(trailingTrivia: .spaces(1))
           ),
           ConditionElementSyntax(
-            condition: .optionalBinding(
-              OptionalBindingConditionSyntax(
-                bindingSpecifier: .keyword(.let),
-                pattern: rawDataName,
-                initializer: InitializerClauseSyntax(
-                  value: FunctionCallExprSyntax(
-                    calledExpression: MemberAccessExprSyntax(
-                      base: DeclReferenceExprSyntax(baseName: .identifier("\(rawStringName)")),
-                      declName: DeclReferenceExprSyntax(baseName: .identifier("data"))
-                    ),
-                    leftParen: .leftParenToken(),
-                    rightParen: .rightParenToken()
-                  ) {
-                    LabeledExprSyntax(
-                      label: "using",
-                      expression: genChainingMembers("utf8")
-                    )
-                  }
-                )
-              )
-            )
+            condition: .expression("let \(rawDataName) = \(rawStringName).data(using: .utf8)"),
+            trailingTrivia: .spaces(1)
           ),
         ],
         body: CodeBlockSyntax {
@@ -404,17 +312,7 @@ extension CodeGenCore {
         elseBody: .init(
           CodeBlockSyntax {
             if let defaultValueExpr {
-              CodeBlockItemSyntax(
-                item: .expr(
-                  ExprSyntax(
-                    InfixOperatorExprSyntax(
-                      leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(key)")),
-                      operator: AssignmentExprSyntax(equal: .equalToken()),
-                      rightOperand: defaultValueExpr
-                    )
-                  )
-                )
-              )
+              CodeBlockItemSyntax(item: .expr("\(key) = \(defaultValueExpr)"))
             } else {
               CodeBlockItemSyntax(
                 item: .stmt(
@@ -452,10 +350,7 @@ extension CodeGenCore {
     StmtSyntax(
       ThrowStmtSyntax(
         expression: FunctionCallExprSyntax(
-          calledExpression: MemberAccessExprSyntax(
-            base: DeclReferenceExprSyntax(baseName: .identifier("DecodingError")),
-            declName: DeclReferenceExprSyntax(baseName: .identifier("valueNotFound"))
-          ),
+          calledExpression: ExprSyntax("DecodingError.valueNotFound"),
           leftParen: .leftParenToken(trailingTrivia: .newline),
           rightParen: .rightParenToken(leadingTrivia: .newline)
         ) {
@@ -466,10 +361,7 @@ extension CodeGenCore {
           )
           LabeledExprSyntax(
             expression: FunctionCallExprSyntax(
-              calledExpression: MemberAccessExprSyntax(
-                base: DeclReferenceExprSyntax(baseName: .identifier("DecodingError")),
-                declName: DeclReferenceExprSyntax(baseName: .identifier("Context"))
-              ),
+              calledExpression: ExprSyntax("DecodingError.Context"),
               leftParen: .leftParenToken(),
               rightParen: .rightParenToken(leadingTrivia: .newline)
             ) {
