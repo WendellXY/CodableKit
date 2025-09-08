@@ -192,7 +192,7 @@ extension CodeGenCore {
         conditions: [
           ConditionElementSyntax(
             condition: .expression("let \(rawStringName) = String(data: \(rawDataName), encoding: .utf8)"),
-            trailingTrivia: .spaces(1),
+            trailingTrivia: .spaces(1)
           )
         ],
         body: CodeBlockSyntax {
