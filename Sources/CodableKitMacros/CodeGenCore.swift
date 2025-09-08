@@ -236,7 +236,7 @@ extension CodeGenCore {
         // Ensure that the Key macro matches the Container macro.
         // For instance, if the property is @DecodableKey, the container must be @Decodable or @Codable.
         // Mathematically, the attachedMacroType should share elements with the codableType.
-        if attachedMacroType.intersection(codableType).isEmpty && attachedMacroType != .none {
+        if attachedMacroType.intersection(codableType).isEmpty && attachedMacroType != .none && codableType != .none {
           throw SimpleDiagnosticMessage(
             message: "The attached Key macro \(attachedMacroType) does not match the Container macro \(codableType)",
             severity: .error
