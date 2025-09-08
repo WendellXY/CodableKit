@@ -62,6 +62,7 @@ extension NamespaceNode {
         let callExpr = ExprSyntax(
           TryExprSyntax(
             expression: FunctionCallExprSyntax(
+              leadingTrivia: .spaces(1),
               calledExpression: type.__ckDecodeTransformedIfPresent,
               leftParen: .leftParenToken(),
               rightParen: .rightParenToken()
@@ -86,35 +87,17 @@ extension NamespaceNode {
           if property.isOptional {
             callExpr
           } else {
-            ExprSyntax(
-              InfixOperatorExprSyntax(
-                leftOperand: TupleExprSyntax(
-                  elements: LabeledExprListSyntax([LabeledExprSyntax(expression: callExpr)])),
-                operator: BinaryOperatorExprSyntax(operator: .binaryOperator("??")),
-                rightOperand: property.defaultValue ?? ExprSyntax(NilLiteralExprSyntax())
-              )
-            )
+            "(\(callExpr)) ?? \(property.defaultValue ?? "nil")"
           }
 
-        result.append(
-          CodeBlockItemSyntax(
-            item: .expr(
-              ExprSyntax(
-                InfixOperatorExprSyntax(
-                  leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
-                  operator: AssignmentExprSyntax(equal: .equalToken()),
-                  rightOperand: rhs
-                )
-              )
-            )
-          )
-        )
+        result.append(CodeBlockItemSyntax(item: .expr("\(property.name) = \(rhs)")))
         continue
       }
 
       let callExpr = ExprSyntax(
         TryExprSyntax(
           expression: FunctionCallExprSyntax(
+            leadingTrivia: .spaces(1),
             calledExpression: type.__ckDecodeTransformed,
             leftParen: .leftParenToken(),
             rightParen: .rightParenToken()
@@ -125,25 +108,14 @@ extension NamespaceNode {
             LabeledExprSyntax(
               label: "useDefaultOnFailure",
               expression: ExprSyntax(
-                BooleanLiteralExprSyntax(literal: useDefault ? .keyword(.true) : .keyword(.false)))
+                BooleanLiteralExprSyntax(literal: useDefault ? .keyword(.true) : .keyword(.false))
+              )
             )
           }
         )
       )
 
-      result.append(
-        CodeBlockItemSyntax(
-          item: .expr(
-            ExprSyntax(
-              InfixOperatorExprSyntax(
-                leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
-                operator: AssignmentExprSyntax(equal: .equalToken()),
-                rightOperand: callExpr
-              )
-            )
-          )
-        )
-      )
+      result.append(CodeBlockItemSyntax(item: .expr("\(property.name) = \(callExpr)")))
     }
 
     result.append(
@@ -198,9 +170,9 @@ extension NamespaceNode {
         // if !rawString.isEmpty, let rawData = rawString.data(using: .utf8) { ... } else { throw or assign default }
         let lossyType: TypeSyntax
         if isDict, let dict = dictTypes {
-          lossyType = TypeSyntax("LossyDictionary<\(dict.key), \(dict.value)>")
+          lossyType = "LossyDictionary<\(dict.key), \(dict.value)>"
         } else if let elementType {
-          lossyType = TypeSyntax("LossyArray<\(elementType)>")
+          lossyType = "LossyArray<\(elementType)>"
         } else {
           continue
         }
@@ -212,127 +184,30 @@ extension NamespaceNode {
                 IfExprSyntax(
                   conditions: [
                     ConditionElementSyntax(
-                      condition: .expression(
-                        ExprSyntax(
-                          PrefixOperatorExprSyntax(
-                            operator: .prefixOperator("!"),
-                            expression: MemberAccessExprSyntax(
-                              base: DeclReferenceExprSyntax(baseName: .identifier("\(property.rawStringName)")),
-                              declName: DeclReferenceExprSyntax(baseName: .identifier("isEmpty"))
-                            )
-                          )
-                        )
-                      ),
+                      condition: .expression("!\(property.rawStringName).isEmpty"),
                       trailingComma: .commaToken(trailingTrivia: .spaces(1))
                     ),
                     ConditionElementSyntax(
-                      condition: .optionalBinding(
-                        OptionalBindingConditionSyntax(
-                          bindingSpecifier: .keyword(.let),
-                          pattern: property.rawDataName,
-                          initializer: InitializerClauseSyntax(
-                            value: FunctionCallExprSyntax(
-                              calledExpression: MemberAccessExprSyntax(
-                                base: DeclReferenceExprSyntax(baseName: .identifier("\(property.rawStringName)")),
-                                declName: DeclReferenceExprSyntax(baseName: .identifier("data"))
-                              ),
-                              leftParen: .leftParenToken(),
-                              rightParen: .rightParenToken()
-                            ) {
-                              LabeledExprSyntax(label: "using", expression: CodeGenCore.genChainingMembers("utf8"))
-                            }
-                          )
-                        )
-                      )
+                      condition: .expression("let \(property.rawDataName) = \(property.rawStringName).data(using: .utf8)"),
+                      trailingTrivia: .spaces(1)
                     ),
                   ],
                   body: CodeBlockSyntax {
-                    // let <name>LossyWrapper = try __ckDecoder.decode(LossyArray<Element>.self, from: <name>RawData)
-                    CodeBlockItemSyntax(
-                      item: .decl(
-                        DeclSyntax(
-                          CodeGenCore.genVariableDecl(
-                            bindingSpecifier: .keyword(.let),
-                            name: "\(property.lossyWrapperName)",
-                            initializer: TryExprSyntax(
-                              expression: FunctionCallExprSyntax(
-                                calledExpression: MemberAccessExprSyntax(
-                                  base: DeclReferenceExprSyntax(baseName: .identifier("__ckDecoder")),
-                                  declName: DeclReferenceExprSyntax(baseName: .identifier("decode"))
-                                ),
-                                leftParen: .leftParenToken(),
-                                rightParen: .rightParenToken()
-                              ) {
-                                LabeledExprSyntax(expression: ExprSyntax("\(lossyType).self"))
-                                LabeledExprSyntax(
-                                  label: "from",
-                                  expression: DeclReferenceExprSyntax(baseName: .identifier("\(property.rawDataName)"))
-                                )
-                              }
-                            )
-                          )
-                        )
-                      )
-                    )
+                    "let \(property.lossyWrapperName) = try __ckDecoder.decode(\(lossyType).self, from: \(property.rawDataName))"
 
-                    // <name> = <wrapper>.elements or Set(<wrapper>.elements)
-                    CodeBlockItemSyntax(
-                      item: .expr(
-                        ExprSyntax(
-                          InfixOperatorExprSyntax(
-                            leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
-                            operator: AssignmentExprSyntax(equal: .equalToken()),
-                            rightOperand: {
-                              let elementsAccess = ExprSyntax(
-                                MemberAccessExprSyntax(
-                                  base: DeclReferenceExprSyntax(baseName: .identifier("\(property.lossyWrapperName)")),
-                                  declName: DeclReferenceExprSyntax(baseName: .identifier("elements"))
-                                )
-                              )
-                              return property.isSetType
-                                ? ExprSyntax(
-                                  FunctionCallExprSyntax(
-                                    calledExpression: DeclReferenceExprSyntax(baseName: .identifier("Set")),
-                                    leftParen: .leftParenToken(),
-                                    rightParen: .rightParenToken()
-                                  ) {
-                                    LabeledExprSyntax(expression: elementsAccess)
-                                  }
-                                )
-                                : elementsAccess
-                            }()
-                          )
-                        )
-                      )
-                    )
+                    if property.isSetType {
+                      "\(property.name) = Set(\(property.lossyWrapperName).elements)"
+                    } else {
+                      "\(property.name) = \(property.lossyWrapperName).elements"
+                    }
                   },
                   elseKeyword: .keyword(.else),
                   elseBody: .init(
                     CodeBlockSyntax {
                       if let defaultValueExpr {
-                        CodeBlockItemSyntax(
-                          item: .expr(
-                            ExprSyntax(
-                              InfixOperatorExprSyntax(
-                                leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
-                                operator: AssignmentExprSyntax(equal: .equalToken()),
-                                rightOperand: defaultValueExpr
-                              )
-                            )
-                          )
-                        )
+                        "\(property.name) = \(defaultValueExpr)"
                       } else if property.isOptional {
-                        CodeBlockItemSyntax(
-                          item: .expr(
-                            ExprSyntax(
-                              InfixOperatorExprSyntax(
-                                leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
-                                operator: AssignmentExprSyntax(equal: .equalToken()),
-                                rightOperand: ExprSyntax(NilLiteralExprSyntax())
-                              )
-                            )
-                          )
-                        )
+                        "\(property.name) = nil"
                       } else {
                         CodeBlockItemSyntax(
                           item: .stmt(
@@ -382,32 +257,16 @@ extension NamespaceNode {
 
       // Build assignment respecting optionality and defaults
       if shouldUseDecodeIfPresent {
-        let unwrappedName = PatternSyntax(
-          IdentifierPatternSyntax(identifier: .identifier("\(property.name)LossyUnwrapped")))
+        let unwrappedName: PatternSyntax = "\(property.name)LossyUnwrapped"
 
-        let assignedRHSWhenUnwrapped: ExprSyntax = {
-          let elementsAccess = ExprSyntax(
-            MemberAccessExprSyntax(
-              base: DeclReferenceExprSyntax(baseName: .identifier("\(unwrappedName)")),
-              declName: DeclReferenceExprSyntax(baseName: .identifier("elements"))
-            )
-          )
+        let assignedRHSWhenUnwrapped: ExprSyntax =
           if property.isSetType {
-            return ExprSyntax(
-              FunctionCallExprSyntax(
-                calledExpression: DeclReferenceExprSyntax(baseName: .identifier("Set")),
-                leftParen: .leftParenToken(),
-                rightParen: .rightParenToken()
-              ) {
-                LabeledExprSyntax(expression: elementsAccess)
-              }
-            )
+            "Set(\(unwrappedName).elements)"
           } else {
-            return elementsAccess
+            "\(unwrappedName).elements"
           }
-        }()
 
-        let defaultExpr: ExprSyntax = property.defaultValue ?? ExprSyntax(NilLiteralExprSyntax())
+        let defaultExpr: ExprSyntax = property.defaultValue ?? "nil"
 
         result.append(
           CodeBlockItemSyntax(
@@ -416,44 +275,17 @@ extension NamespaceNode {
                 IfExprSyntax(
                   conditions: [
                     ConditionElementSyntax(
-                      condition: .optionalBinding(
-                        OptionalBindingConditionSyntax(
-                          bindingSpecifier: .keyword(.let),
-                          pattern: unwrappedName,
-                          initializer: InitializerClauseSyntax(
-                            value: DeclReferenceExprSyntax(baseName: .identifier("\(property.lossyWrapperName)"))
-                          )
-                        )
-                      )
+                      condition: .expression("let \(unwrappedName) = \(property.lossyWrapperName)"),
+                      trailingTrivia: .spaces(1)
                     )
                   ],
                   body: CodeBlockSyntax {
-                    CodeBlockItemSyntax(
-                      item: .expr(
-                        ExprSyntax(
-                          InfixOperatorExprSyntax(
-                            leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
-                            operator: AssignmentExprSyntax(equal: .equalToken()),
-                            rightOperand: assignedRHSWhenUnwrapped
-                          )
-                        )
-                      )
-                    )
+                    "\(property.name) = \(assignedRHSWhenUnwrapped)"
                   },
                   elseKeyword: .keyword(.else),
                   elseBody: .init(
                     CodeBlockSyntax {
-                      CodeBlockItemSyntax(
-                        item: .expr(
-                          ExprSyntax(
-                            InfixOperatorExprSyntax(
-                              leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
-                              operator: AssignmentExprSyntax(equal: .equalToken()),
-                              rightOperand: defaultExpr
-                            )
-                          )
-                        )
-                      )
+                      "\(property.name) = \(defaultExpr)"
                     }
                   )
                 )
@@ -463,38 +295,14 @@ extension NamespaceNode {
         )
       } else {
         // Non-optional decode path, wrapper is non-optional here
-        let elementsAccess = ExprSyntax(
-          MemberAccessExprSyntax(
-            base: DeclReferenceExprSyntax(baseName: .identifier("\(property.lossyWrapperName)")),
-            declName: DeclReferenceExprSyntax(baseName: .identifier("elements"))
-          )
-        )
-        let rhs =
-          property.isSetType
-          ? ExprSyntax(
-            FunctionCallExprSyntax(
-              calledExpression: DeclReferenceExprSyntax(baseName: .identifier("Set")),
-              leftParen: .leftParenToken(),
-              rightParen: .rightParenToken()
-            ) {
-              LabeledExprSyntax(expression: elementsAccess)
-            }
-          )
-          : elementsAccess
+        let rhs: ExprSyntax =
+          if property.isSetType {
+            "Set(\(property.lossyWrapperName).elements)"
+          } else {
+            "\(property.lossyWrapperName).elements"
+          }
 
-        result.append(
-          CodeBlockItemSyntax(
-            item: .expr(
-              ExprSyntax(
-                InfixOperatorExprSyntax(
-                  leftOperand: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")),
-                  operator: AssignmentExprSyntax(equal: .equalToken()),
-                  rightOperand: rhs
-                )
-              )
-            )
-          )
-        )
+        result.append(CodeBlockItemSyntax(item: .expr("\(property.name) = \(rhs)")))
       }
     }
 
