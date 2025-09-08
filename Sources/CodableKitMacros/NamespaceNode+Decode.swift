@@ -198,32 +198,9 @@ extension NamespaceNode {
         // if !rawString.isEmpty, let rawData = rawString.data(using: .utf8) { ... } else { throw or assign default }
         let lossyType: TypeSyntax
         if isDict, let dict = dictTypes {
-          lossyType = TypeSyntax(
-            IdentifierTypeSyntax(
-              name: .identifier("LossyDictionary"),
-              genericArgumentClause: GenericArgumentClauseSyntax(
-                leftAngle: .leftAngleToken(),
-                arguments: GenericArgumentListSyntax([
-                  .init(argument: dict.key, trailingComma: .commaToken(trailingTrivia: .spaces(1))),
-                  .init(argument: dict.value),
-                ]),
-                rightAngle: .rightAngleToken()
-              )
-            )
-          )
+          lossyType = TypeSyntax("LossyDictionary<\(dict.key), \(dict.value)>")
         } else if let elementType {
-          lossyType = TypeSyntax(
-            IdentifierTypeSyntax(
-              name: .identifier("LossyArray"),
-              genericArgumentClause: GenericArgumentClauseSyntax(
-                leftAngle: .leftAngleToken(),
-                arguments: GenericArgumentListSyntax([
-                  .init(argument: elementType)
-                ]),
-                rightAngle: .rightAngleToken()
-              )
-            )
-          )
+          lossyType = TypeSyntax("LossyArray<\(elementType)>")
         } else {
           continue
         }
@@ -381,32 +358,9 @@ extension NamespaceNode {
 
       let lossyType: TypeSyntax
       if isDict, let dict = dictTypes {
-        lossyType = TypeSyntax(
-          IdentifierTypeSyntax(
-            name: .identifier("LossyDictionary"),
-            genericArgumentClause: GenericArgumentClauseSyntax(
-              leftAngle: .leftAngleToken(),
-              arguments: GenericArgumentListSyntax([
-                .init(argument: dict.key, trailingComma: .commaToken(trailingTrivia: .spaces(1))),
-                .init(argument: dict.value),
-              ]),
-              rightAngle: .rightAngleToken()
-            )
-          )
-        )
+        lossyType = TypeSyntax("LossyDictionary<\(dict.key), \(dict.value)>")
       } else if let elementType {
-        lossyType = TypeSyntax(
-          IdentifierTypeSyntax(
-            name: .identifier("LossyArray"),
-            genericArgumentClause: GenericArgumentClauseSyntax(
-              leftAngle: .leftAngleToken(),
-              arguments: GenericArgumentListSyntax([
-                .init(argument: elementType)
-              ]),
-              rightAngle: .rightAngleToken()
-            )
-          )
-        )
+        lossyType = TypeSyntax("LossyArray<\(elementType)>")
       } else {
         continue
       }

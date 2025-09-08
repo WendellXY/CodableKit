@@ -219,7 +219,7 @@ extension CodableProperty {
     if let ident = type.as(IdentifierTypeSyntax.self), ident.name.text == "Optional",
       let arg = ident.genericArgumentClause?.arguments.first?.argument
     {
-      return TypeSyntax(arg.trimmed)
+      return "\(arg.trimmed)"
     }
     return type.trimmed
   }
@@ -281,7 +281,7 @@ extension CodableProperty {
     {
       let key = args[args.startIndex].argument
       let value = args[args.index(after: args.startIndex)].argument
-      return (TypeSyntax(key.trimmed), TypeSyntax(value.trimmed))
+      return ("\(key.trimmed)", "\(value.trimmed)")
     }
     return nil
   }
