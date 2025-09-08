@@ -13,6 +13,11 @@ struct SimpleDiagnosticMessage: DiagnosticMessage, Error {
   let message: String
   let diagnosticID: MessageID = Self.diagnosticID
   let severity: DiagnosticSeverity
+
+  init(message: String, severity: DiagnosticSeverity = .warning) {
+    self.message = message
+    self.severity = severity
+  }
 }
 
 extension SimpleDiagnosticMessage: FixItMessage {

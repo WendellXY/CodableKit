@@ -246,11 +246,6 @@ extension CodeGenCore {
 
       properties[id] = extractedProperties
     }
-
-    // Emit advisory (non-fatal) diagnostics to guide users
-    if emitAdvisories {
-      emitAdvisoryDiagnostics(of: node, for: declaration, in: context)
-    }
   }
 
   func prepareCodeGeneration(
@@ -303,6 +298,30 @@ extension CodeGenCore {
     if properties[id]?.isEmpty ?? true {
       let extractedProperties = try Property.extract(from: declaration)
 
+      for property in extractedProperties {
+        if property.options.contains(.useDefaultOnFailure), !property.isOptional, property.defaultValue == nil {
+          let message = "Option '.useDefaultOnFailure' has no effect for non-optional property without a default value"
+          let diag = Diagnostic(node: node, message: SimpleDiagnosticMessage(message: message))
+          context.diagnose(diag)
+        }
+
+        // Warn when `.explicitNil` is used on a non-optional property
+        if property.options.contains(.explicitNil), !property.isOptional {
+          let message = "Option '.explicitNil' has no effect on non-optional property"
+          let diag = Diagnostic(node: node, message: SimpleDiagnosticMessage(message: message))
+          context.diagnose(diag)
+        }
+
+        // Warn on `.lossy` used on unsupported type
+        if property.options.contains(.lossy)
+          && !(property.isArrayType || property.isSetType || property.isDictionaryType)
+        {
+          let message = "Option '.lossy' supports Array<T>, Set<T>, or Dictionary<K, V> properties"
+          let diag = Diagnostic(node: node, message: SimpleDiagnosticMessage(message: message))
+          context.diagnose(diag)
+        }
+      }
+
       guard !extractedProperties.isEmpty else {
         // for single variable declaration, if no property is found, which means the error should be thrown in the
         // extractProperty method. If the error is not thrown, it means the property is ignored.
@@ -313,9 +332,14 @@ extension CodeGenCore {
       // to see if it has a custom CodableKey. And if there are some CodableKey options which support multiple pattern
       // bindings in the future, the following condition guard should not forbid them.
       if extractedProperties.count > 1 && extractedProperties.first?.customCodableKey != nil {
-        throw SimpleDiagnosticMessage(
-          message: "Custom Codable key not supported for multiple pattern bindings",
-          severity: .error
+        context.diagnose(
+          Diagnostic(
+            node: node,
+            message: SimpleDiagnosticMessage(
+              message: "Custom Codable key not supported for multiple pattern bindings",
+              severity: .error
+            )
+          )
         )
       }
 
@@ -361,50 +385,6 @@ extension CodeGenCore {
 
   static func genChainingMembers(_ names: String...) -> MemberAccessExprSyntax {
     genChainingMembers(names, attachedTo: nil).as(MemberAccessExprSyntax.self)!
-  }
-}
-
-// MARK: - Advisory Diagnostics
-extension CodeGenCore {
-  /// Emit non-fatal diagnostics that help guide users toward correct usage.
-  fileprivate func emitAdvisoryDiagnostics(
-    of attribute: AttributeSyntax,
-    for declaration: some DeclGroupSyntax,
-    in context: some MacroExpansionContext
-  ) {
-    let properties = (try? self.properties(for: declaration, in: context)) ?? []
-    _ = try? accessStructureType(for: declaration, in: context)
-    _ = (try? accessCodableOptions(for: declaration, in: context)) ?? .default
-
-    // Warn when `.useDefaultOnFailure` has no effect (non-optional, no default value)
-    for property in properties {
-      if property.options.contains(.useDefaultOnFailure), !property.isOptional, property.defaultValue == nil {
-        let message = "Option '.useDefaultOnFailure' has no effect for non-optional property without a default value"
-        let diag = Diagnostic(
-          node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
-        context.diagnose(diag)
-      }
-
-      // Warn when `.explicitNil` is used on a non-optional property
-      if property.options.contains(.explicitNil), !property.isOptional {
-        let message = "Option '.explicitNil' has no effect on non-optional property"
-        let diag = Diagnostic(
-          node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
-        context.diagnose(diag)
-      }
-
-      // Warn on `.lossy` used on unsupported type
-      if property.options.contains(.lossy)
-        && !(property.isArrayType || property.isSetType || property.isDictionaryType)
-      {
-        let message = "Option '.lossy' supports Array<T>, Set<T>, or Dictionary<K, V> properties"
-        let diag = Diagnostic(
-          node: Syntax(property.name), message: SimpleDiagnosticMessage(message: message, severity: .warning))
-        context.diagnose(diag)
-      }
-
-      // Combined `.lossy` & `.transcodeRawString` is supported for Array/Set. No diagnostic.
-    }
   }
 }
 

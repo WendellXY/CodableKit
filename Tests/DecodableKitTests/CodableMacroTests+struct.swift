@@ -465,8 +465,8 @@ import Testing
       diagnostics: [
         .init(
           message: "Option '.useDefaultOnFailure' has no effect for non-optional property without a default value",
-          line: 8,
-          column: 7,
+          line: 10,
+          column: 3,
           severity: .warning
         )
       ]
