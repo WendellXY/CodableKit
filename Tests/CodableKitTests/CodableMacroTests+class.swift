@@ -707,7 +707,7 @@ import Testing
             if let roomUnwrapped = room {
               let roomRawData = try __ckEncoder.encode(roomUnwrapped)
               if let roomRawString = String(data: roomRawData, encoding: .utf8) {
-                try container.encode(roomRawString, forKey: .room)
+                try container.encodeIfPresent(roomRawString, forKey: .room)
               } else {
                 throw EncodingError.invalidValue(
                   roomRawData,

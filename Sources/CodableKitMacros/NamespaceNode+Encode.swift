@@ -78,14 +78,10 @@ extension NamespaceNode {
                     CodeBlockItemSyntax(
                       item: .expr(
                         CodeGenCore.genEncodeRawDataHandleExpr(
-                          key: property.name,
-                          rawDataName: property.rawDataName,
-                          rawStringName: property.rawStringName,
+                          property: property,
                           containerName: containerName,
                           codingPath: codingKeyChain(for: property),
-                          message: "Failed to transcode raw data to string",
-                          isOptional: false,
-                          explicitNil: false
+                          message: "Failed to transcode raw data to string"
                         )
                       )
                     )
@@ -102,14 +98,10 @@ extension NamespaceNode {
           CodeBlockItemSyntax(
             item: .expr(
               CodeGenCore.genEncodeRawDataHandleExpr(
-                key: property.name,
-                rawDataName: property.rawDataName,
-                rawStringName: property.rawStringName,
+                property: property,
                 containerName: containerName,
                 codingPath: codingKeyChain(for: property),
-                message: "Failed to transcode raw data to string",
-                isOptional: property.isOptional,
-                explicitNil: property.options.contains(.explicitNil)
+                message: "Failed to transcode raw data to string"
               )
             )
           )

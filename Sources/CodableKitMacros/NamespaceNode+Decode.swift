@@ -294,18 +294,15 @@ extension NamespaceNode {
 
     for property in properties
     where property.options.contains(.transcodeRawString) && !property.ignored && !property.options.contains(.lossy) {
-      let key = property.name
-      let rawKey = property.rawStringName
-
       let defaultValueExpr = property.defaultValue ?? (property.isOptional ? "nil" : nil)
 
       result.appendContentsOf {
         CodeBlockItemSyntax(
           item: .decl(
             CodeGenCore.genContainerDecodeVariableDecl(
-              variableName: rawKey,
+              variableName: property.rawStringName,
               containerName: containerName,
-              patternName: key,
+              patternName: property.name,
               isOptional: property.isOptional,
               useDefaultOnFailure: property.options.contains(.useDefaultOnFailure),
               defaultValueExpr: ExprSyntax(StringLiteralExprSyntax(content: "")),

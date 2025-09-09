@@ -27,16 +27,18 @@ extension CodeGenCore {
   /// }
   /// ```
   static func genEncodeRawDataHandleExpr(
-    key: PatternSyntax,
-    rawDataName: PatternSyntax,
-    rawStringName: PatternSyntax,
+    property: CodableProperty,
     containerName: String,
     codingPath: [(String, String)],
-    message: String,
-    isOptional: Bool,
-    explicitNil: Bool
+    message: String
   ) -> ExprSyntax {
-    ExprSyntax(
+    let key = property.name
+    let rawDataName = property.rawDataName
+    let rawStringName = property.rawStringName
+    let explicitNil = property.options.contains(.explicitNil)
+    let isOptional = property.isOptional
+
+    return ExprSyntax(
       IfExprSyntax(
         conditions: [
           ConditionElementSyntax(
@@ -45,7 +47,7 @@ extension CodeGenCore {
           )
         ],
         body: CodeBlockSyntax {
-          "try \(raw: containerName).\(raw: isOptional && !explicitNil ? "encodeIfPresent" : "encode")(\(raw: rawStringName), forKey: \(genChainingMembers("\(key)")))"
+          "try \(raw: containerName).\(raw: isOptional && !explicitNil ? "encodeIfPresent" : "encode")(\(rawStringName), forKey: \(genChainingMembers("\(key)")))"
         },
         elseKeyword: .keyword(.else),
         elseBody: .init(
@@ -77,7 +79,7 @@ extension CodeGenCore {
   ///   )
   /// )
   /// ```
-  static func genInvalidValueEncodingErrorThrowStmt(
+  fileprivate static func genInvalidValueEncodingErrorThrowStmt(
     data: PatternSyntax,
     codingPath: [(String, String)],
     message: String
