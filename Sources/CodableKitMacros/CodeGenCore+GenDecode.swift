@@ -12,17 +12,6 @@ import SwiftSyntaxBuilder
 // MARK: JSONDecoder
 
 extension CodeGenCore {
-  static func genJSONDecoderVariableDecl(
-    variableName: String = "__ckDecoder"
-  ) -> DeclSyntax {
-    DeclSyntax(
-      genVariableDecl(
-        bindingSpecifier: .keyword(.let),
-        name: variableName,
-        initializer: ExprSyntax("JSONDecoder()")
-      )
-    )
-  }
   fileprivate static func genJSONDecoderDecodeRightOperand(
     type: TypeSyntax,
     data: PatternSyntax,
@@ -81,53 +70,6 @@ extension CodeGenCore {
 // MARK: Container Decode
 
 extension CodeGenCore {
-  static func genDecodeContainerDecl(
-    bindingSpecifier: TokenSyntax = .keyword(.let),
-    patternName: String = "container",
-    codingKeysName: String = "CodingKeys"
-  ) -> DeclSyntax {
-    DeclSyntax(
-      genVariableDecl(
-        bindingSpecifier: bindingSpecifier,
-        name: patternName,
-        initializer: ExprSyntax("try decoder.container(keyedBy: \(raw: codingKeysName).self)")
-      )
-    )
-  }
-
-  static func genNestedDecodeContainerDecl(
-    bindingSpecifier: TokenSyntax = .keyword(.let),
-    container: String,
-    parentContainer: String,
-    keyedBy: String,
-    forKey: String
-  ) -> DeclSyntax {
-    let initializerExpr = TryExprSyntax(
-      expression: FunctionCallExprSyntax(
-        calledExpression: ExprSyntax("\(raw: parentContainer).nestedContainer"),
-        leftParen: .leftParenToken(),
-        rightParen: .rightParenToken()
-      ) {
-        LabeledExprSyntax(
-          label: "keyedBy",
-          expression: genChainingMembers(keyedBy, "self")
-        )
-        LabeledExprSyntax(
-          label: "forKey",
-          expression: genChainingMembers(forKey)
-        )
-      }
-    )
-
-    return DeclSyntax(
-      genVariableDecl(
-        bindingSpecifier: bindingSpecifier,
-        name: container,
-        initializer: ExprSyntax(initializerExpr)
-      )
-    )
-  }
-
   fileprivate static func genContainerDecodeExprRightOperand(
     containerName: String,
     patternName: PatternSyntax,

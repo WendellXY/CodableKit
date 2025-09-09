@@ -9,139 +9,56 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 extension NamespaceNode {
-  var encodeContainersAssignment: [CodeBlockItemSyntax] {
-    var result: [CodeBlockItemSyntax] = []
+  @ArrayBuilder<CodeBlockItemSyntax> var encodeContainersAssignment: [CodeBlockItemSyntax] {
     if parent == nil {
-      result.append(
-        CodeBlockItemSyntax(item: .decl(CodeGenCore.genEncodeContainerDecl(codingKeysName: enumName)))
-      )
+      "var container = encoder.container(keyedBy: \(raw: enumName).self)"
       if hasTranscodeRawStringInSubtree {
-        result.append(
-          CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONEncoderVariableDecl(variableName: "__ckEncoder")))
-        )
+        "let __ckEncoder = JSONEncoder()"
       }
     }
     for child in children.values.sorted(by: { $0.segment < $1.segment }) {
-      result.append(
-        CodeBlockItemSyntax(
-          item: .decl(
-            CodeGenCore.genNestedEncodeContainerDecl(
-              container: child.containerName,
-              parentContainer: containerName,
-              keyedBy: child.enumName,
-              forKey: child.segment
-            )
-          )
-        )
-      )
+      "var \(raw: child.containerName) = \(raw: containerName).nestedContainer(keyedBy: \(raw: child.enumName).self, forKey: .\(raw: child.segment))"
     }
-    return result
   }
 }
 
 extension NamespaceNode {
+  fileprivate func containerEncodeExpr(property: CodableProperty) -> CodeBlockItemSyntax {
+    let encodeFuncName = property.isOptional && !property.options.contains(.explicitNil) ? "encodeIfPresent" : "encode"
+    let chainingMembers = CodeGenCore.genChainingMembers("\(property.name)")
+    return "try \(raw: containerName).\(raw: encodeFuncName)(\(property.name), forKey: \(chainingMembers))"
+  }
+
   private var propertyEncodeAssignment: [CodeBlockItemSyntax] {
     var result: [CodeBlockItemSyntax] = []
 
-    // Transformer-based encoding (before normal path and before transcodeRawString)
-    for property in properties where property.transformerExpr != nil && !property.options.contains(.ignored) {
-      if property.isOptional {
-        result.append(
-          CodeBlockItemSyntax(
-            item: .expr(
-              ExprSyntax(
-                TryExprSyntax(
-                  expression: FunctionCallExprSyntax(
-                    calledExpression: type.__ckEncodeTransformedIfPresent,
-                    leftParen: .leftParenToken(),
-                    rightParen: .rightParenToken()
-                  ) {
-                    LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
-                    LabeledExprSyntax(
-                      label: "value", expression: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")))
-                    LabeledExprSyntax(
-                      label: "into", expression: DeclReferenceExprSyntax(baseName: .identifier("&\(containerName)")))
-                    LabeledExprSyntax(label: "forKey", expression: CodeGenCore.genChainingMembers("\(property.name)"))
-                    LabeledExprSyntax(
-                      label: "explicitNil",
-                      expression: ExprSyntax(
-                        BooleanLiteralExprSyntax(
-                          literal: property.options.contains(.explicitNil) ? .keyword(.true) : .keyword(.false)
-                        )
-                      )
-                    )
-                  }
-                )
-              )
-            )
-          )
-        )
-      } else {
-        result.append(
-          CodeBlockItemSyntax(
-            item: .expr(
-              ExprSyntax(
-                TryExprSyntax(
-                  expression: FunctionCallExprSyntax(
-                    calledExpression: type.__ckEncodeTransformed,
-                    leftParen: .leftParenToken(),
-                    rightParen: .rightParenToken()
-                  ) {
-                    LabeledExprSyntax(label: "transformer", expression: property.transformerExpr!)
-                    LabeledExprSyntax(
-                      label: "value", expression: DeclReferenceExprSyntax(baseName: .identifier("\(property.name)")))
-                    LabeledExprSyntax(
-                      label: "into", expression: DeclReferenceExprSyntax(baseName: .identifier("&\(containerName)")))
-                    LabeledExprSyntax(label: "forKey", expression: CodeGenCore.genChainingMembers("\(property.name)"))
-                  }
-                )
-              )
-            )
-          )
-        )
+    result.appendContentsOf {
+      // Transformer-based encoding (before normal path and before transcodeRawString)
+      for property in properties where property.transformerExpr != nil && !property.options.contains(.ignored) {
+        if property.isOptional {
+          "try \(type.__ckEncodeTransformedIfPresent)(transformer: \(property.transformerExpr!), value: \(property.name), into: &\(raw: containerName), forKey: \(CodeGenCore.genChainingMembers("\(property.name)")), explicitNil: \(raw: property.options.contains(.explicitNil) ? "true" : "false"))"
+        } else {
+          "try \(type.__ckEncodeTransformed)(transformer: \(property.transformerExpr!), value: \(property.name), into: &\(raw: containerName), forKey: \(CodeGenCore.genChainingMembers("\(property.name)")))"
+        }
+      }
+
+      for property in properties where property.isNormal && !property.options.contains(.ignored) {
+        containerEncodeExpr(property: property)
+      }
+
+      // Encode lossy properties normally (lossy is decode-only). Skip when also using transcodeRawString.
+      for property in properties
+      where property.options.contains(.lossy)
+        && !property.options.contains(.transcodeRawString)
+        && !property.options.contains(.ignored)
+      {
+        containerEncodeExpr(property: property)
       }
     }
 
-    result.append(
-      contentsOf: properties.filter {
-        $0.isNormal && !$0.options.contains(.ignored)
-      }.map { property in
-        CodeBlockItemSyntax(
-          item: .expr(
-            CodeGenCore.genContainerEncodeExpr(
-              containerName: containerName,
-              key: property.name,
-              patternName: property.name,
-              isOptional: property.isOptional,
-              explicitNil: property.options.contains(.explicitNil)
-            )
-          )
-        )
-      })
-
-    // Encode lossy properties normally (lossy is decode-only). Skip when also using transcodeRawString.
-    for property in properties
-    where property.options.contains(.lossy)
-      && !property.options.contains(.transcodeRawString)
-      && !property.options.contains(.ignored)
-    {
-      result.append(
-        CodeBlockItemSyntax(
-          item: .expr(
-            CodeGenCore.genContainerEncodeExpr(
-              containerName: containerName,
-              key: property.name,
-              patternName: property.name,
-              isOptional: property.isOptional,
-              explicitNil: property.options.contains(.explicitNil)
-            )
-          )
-        )
-      )
-    }
-
     // Encode as raw JSON string (transcoding). For optionals without `.explicitNil`, omit the key when nil.
-    for property in properties where property.options.contains(.transcodeRawString) && !property.options.contains(.ignored) {
+    for property in properties
+    where property.options.contains(.transcodeRawString) && !property.options.contains(.ignored) {
       if property.isOptional && !property.options.contains(.explicitNil) {
         // if let <name>Unwrapped = <name> { ... encode ... }
         let unwrappedName: PatternSyntax = "\(property.name)Unwrapped"
@@ -157,15 +74,7 @@ extension NamespaceNode {
                     )
                   ],
                   body: CodeBlockSyntax {
-                    CodeBlockItemSyntax(
-                      item: .decl(
-                        CodeGenCore.genJSONEncoderEncodeDecl(
-                          variableName: property.rawDataName,
-                          instance: unwrappedName,
-                          encoderVarName: hasTranscodeRawStringInSubtree ? "__ckEncoder" : nil
-                        )
-                      )
-                    )
+                    "let \(raw: property.rawDataName) = try \(raw: hasTranscodeRawStringInSubtree ? "__ckEncoder" : "JSONEncoder()").encode(\(raw: unwrappedName))"
                     CodeBlockItemSyntax(
                       item: .expr(
                         CodeGenCore.genEncodeRawDataHandleExpr(
@@ -188,16 +97,8 @@ extension NamespaceNode {
         )
       } else {
         // Non-optional or `.explicitNil` option: encode current value, allowing explicit nil as string
-        result.append(contentsOf: [
-          CodeBlockItemSyntax(
-            item: .decl(
-              CodeGenCore.genJSONEncoderEncodeDecl(
-                variableName: property.rawDataName,
-                instance: property.name,
-                encoderVarName: hasTranscodeRawStringInSubtree ? "__ckEncoder" : nil
-              )
-            )
-          ),
+        result.appendContentsOf {
+          "let \(raw: property.rawDataName) = try \(raw: hasTranscodeRawStringInSubtree ? "__ckEncoder" : "JSONEncoder()").encode(\(raw: property.name))"
           CodeBlockItemSyntax(
             item: .expr(
               CodeGenCore.genEncodeRawDataHandleExpr(
@@ -211,8 +112,8 @@ extension NamespaceNode {
                 explicitNil: property.options.contains(.explicitNil)
               )
             )
-          ),
-        ])
+          )
+        }
       }
     }
 

@@ -22,31 +22,16 @@ extension NamespaceNode {
 
 // MARK: - Decoder Generation
 extension NamespaceNode {
-  var containersAssignment: [CodeBlockItemSyntax] {
-    var result: [CodeBlockItemSyntax] = []
+  @ArrayBuilder<CodeBlockItemSyntax> var containersAssignment: [CodeBlockItemSyntax] {
     if parent == nil {
-      result.append(
-        CodeBlockItemSyntax(item: .decl(CodeGenCore.genDecodeContainerDecl(codingKeysName: enumName))))
+      "let container = try decoder.container(keyedBy: \(raw: enumName).self)"
       if hasTranscodeRawStringInSubtree {
-        result.append(
-          CodeBlockItemSyntax(item: .decl(CodeGenCore.genJSONDecoderVariableDecl(variableName: "__ckDecoder"))))
+        "let __ckDecoder = JSONDecoder()"
       }
     }
     for child in children.values.sorted(by: { $0.segment < $1.segment }) {
-      result.append(
-        CodeBlockItemSyntax(
-          item: .decl(
-            CodeGenCore.genNestedDecodeContainerDecl(
-              container: child.containerName,
-              parentContainer: containerName,
-              keyedBy: child.enumName,
-              forKey: child.segment
-            )
-          )
-        )
-      )
+      "let \(raw: child.containerName) = try \(raw: containerName).nestedContainer(keyedBy: \(raw: child.enumName).self, forKey: .\(raw: child.segment))"
     }
-    return result
   }
 }
 
@@ -90,7 +75,7 @@ extension NamespaceNode {
             "(\(callExpr)) ?? \(property.defaultValue ?? "nil")"
           }
 
-        result.append(CodeBlockItemSyntax(item: .expr("\(property.name) = \(rhs)")))
+        result.append("\(property.name) = \(rhs)")
         continue
       }
 
@@ -115,7 +100,7 @@ extension NamespaceNode {
         )
       )
 
-      result.append(CodeBlockItemSyntax(item: .expr("\(property.name) = \(callExpr)")))
+      result.append("\(property.name) = \(callExpr)")
     }
 
     result.append(
@@ -188,7 +173,8 @@ extension NamespaceNode {
                       trailingComma: .commaToken(trailingTrivia: .spaces(1))
                     ),
                     ConditionElementSyntax(
-                      condition: .expression("let \(property.rawDataName) = \(property.rawStringName).data(using: .utf8)"),
+                      condition: .expression(
+                        "let \(property.rawDataName) = \(property.rawStringName).data(using: .utf8)"),
                       trailingTrivia: .spaces(1)
                     ),
                   ],
@@ -302,7 +288,7 @@ extension NamespaceNode {
             "\(property.lossyWrapperName).elements"
           }
 
-        result.append(CodeBlockItemSyntax(item: .expr("\(property.name) = \(rhs)")))
+        result.append("\(property.name) = \(rhs)")
       }
     }
 
@@ -313,7 +299,7 @@ extension NamespaceNode {
 
       let defaultValueExpr = property.defaultValue ?? (property.isOptional ? "nil" : nil)
 
-      result.append(contentsOf: [
+      result.appendContentsOf {
         CodeBlockItemSyntax(
           item: .decl(
             CodeGenCore.genContainerDecodeVariableDecl(
@@ -326,7 +312,7 @@ extension NamespaceNode {
               type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("String")))
             )
           )
-        ),
+        )
         CodeBlockItemSyntax(
           item: .expr(
             CodeGenCore.genRawDataHandleExpr(
@@ -340,8 +326,8 @@ extension NamespaceNode {
               decoderVarName: hasTranscodeRawStringInSubtree ? "__ckDecoder" : nil
             )
           )
-        ),
-      ])
+        )
+      }
     }
 
     return result
