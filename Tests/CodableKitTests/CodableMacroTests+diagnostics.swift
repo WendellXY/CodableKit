@@ -303,7 +303,7 @@ import Testing
     )
   }
 
-  @Test func nameKeyConflict() async throws {
+  @Test func nameKeyConflictA() async throws {
     assertMacro(
       """
       @Codable
@@ -322,6 +322,44 @@ import Testing
       diagnostics: [
         .init(message: "Key conflict found: id", line: 1, column: 1)
       ]
+    )
+  }
+
+  @Test func nameKeyConflictB() async throws {
+    assertMacro(
+      """
+      @Codable
+      public struct User {
+        @CodableKey("expireTime", options: .useDefaultOnFailure) private let _expireTime: Int?
+        @CodableKey(options: .ignored) public private(set) var expireTime: Date?
+      }
+      """,
+      expandedSource:
+        """
+        public struct User {
+          private let _expireTime: Int?
+          public private(set) var expireTime: Date?
+
+          public func encode(to encoder: any Encoder) throws {
+            try willEncode(to: encoder)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(_expireTime, forKey: ._expireTime)
+            try didEncode(to: encoder)
+          }
+        }
+
+        extension User: Codable {
+          enum CodingKeys: String, CodingKey {
+            case _expireTime = "expireTime"
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            _expireTime = (try? container.decodeIfPresent(Int?.self, forKey: ._expireTime)) ?? nil
+            try didDecode(from: decoder)
+          }
+        }
+        """
     )
   }
 }

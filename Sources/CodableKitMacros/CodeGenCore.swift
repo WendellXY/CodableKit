@@ -201,10 +201,15 @@ extension CodeGenCore {
       }
 
       // Check if there are key conflicts
-      let propertiesKeySet = Set(extractedProperties.map(\.normalizedName))
-      if propertiesKeySet.count != extractedProperties.count {
-        for property in extractedProperties where propertiesKeySet.contains(property.normalizedName) {
-          throw error("Key conflict found: \(property.normalizedName)")
+      let notIgnoredProperties = extractedProperties.filter({ !$0.ignored })
+      var propertiesKeySet = Set(notIgnoredProperties.map(\.normalizedName))
+      if propertiesKeySet.count != notIgnoredProperties.count {
+        for property in notIgnoredProperties {
+          if propertiesKeySet.contains(property.normalizedName) {
+            propertiesKeySet.remove(property.normalizedName)
+          } else {
+            throw error("Key conflict found: \(property.normalizedName)")
+          }
         }
       }
 
