@@ -28,6 +28,7 @@ Modern apps consume diverse JSON. Real‑world payloads include nested key paths
 - Explicit `nil` encoding for optionals (`.explicitNil`)
 - Generated computed key properties (`.generateCustomKey`)
 - Lifecycle hooks: `didDecode`, `willEncode`, `didEncode`
+- Transformer pipelines via `@CodableKey(transformer:)` (advanced; one‑way and bidirectional), with composition
 - Macro‑based, compile‑time only — zero runtime overhead
 
 ## Quick Start
@@ -59,18 +60,19 @@ Still on Swift 5 or `swift-syntax` 510? Use the 0.x line (feature‑rich, but no
 
 ## Feature Matrix
 
-| Feature                        | Macro Syntax Example                                | Description                                     |
-| ------------------------------ | --------------------------------------------------- | ----------------------------------------------- |
-| Default values                 | `var count: Int = 0`                                | Use a fallback when data is missing             |
-| Custom coding key              | `@CodableKey("uid") let id: UUID`                   | Map property to custom JSON key                 |
-| Nested coding key path         | `@CodableKey("data.uid") let id: Int`               | Map to deeply nested JSON keys                  |
-| Ignore property                | `@CodableKey(options: .ignored) var temp: String`   | Exclude property from coding                    |
-| String ↔ Struct transcoding    | `@CodableKey(options: .transcodeRawString)`         | Decode/encode via JSON string field             |
-| Lossy collection decoding      | `@CodableKey(options: .lossy)`                      | Decode arrays/sets; drop invalid elements       |
-| Use default on failure         | `@CodableKey(options: .useDefaultOnFailure)`        | Fallback to default/nil on decoding error       |
-| Generate custom key property   | `@CodableKey("id", options: .generateCustomKey)`    | Adds computed property for custom key           |
-| Explicit nil encoding          | `@CodableKey(options: .explicitNil)`                | Encode nil as `null`, not omitted               |
-| Coding lifecycle hooks         | `func didDecode(from:)`, `func willEncode(to:)`     | Run logic during encoding/decoding              |
+| Feature                        | Macro Syntax Example                                | Description                                                  |
+| ------------------------------ | --------------------------------------------------- | ------------------------------------------------------------ |
+| Default values                 | `var count: Int = 0`                                | Use a fallback when data is missing                          |
+| Custom coding key              | `@CodableKey("uid") let id: UUID`                   | Map property to custom JSON key                              |
+| Nested coding key path         | `@CodableKey("data.uid") let id: Int`               | Map to deeply nested JSON keys                               |
+| Ignore property                | `@CodableKey(options: .ignored) var temp: String`   | Exclude property from coding                                 |
+| String ↔ Struct transcoding    | `@CodableKey(options: .transcodeRawString)`         | Decode/encode via JSON string field                          |
+| Lossy collection decoding      | `@CodableKey(options: .lossy)`                      | Decode arrays/sets; drop invalid elements                    |
+| Use default on failure         | `@CodableKey(options: .useDefaultOnFailure)`        | Fallback to default/nil on decoding error                    |
+| Generate custom key property   | `@CodableKey("id", options: .generateCustomKey)`    | Adds computed property for custom key                        |
+| Explicit nil encoding          | `@CodableKey(options: .explicitNil)`                | Encode nil as `null`, not omitted                            |
+| Coding lifecycle hooks         | `func didDecode(from:)`, `func willEncode(to:)`     | Run logic during encoding/decoding                           |
+| Transformers (advanced)        | `@CodableKey(transformer: MyTransformer())`         | Apply custom/built‑in transforms, compose with bidirectional |
 
 ## Usage Guides and Examples
 
@@ -110,17 +112,6 @@ Some APIs encode nested objects as JSON strings:
 
 ```json
 { "car": "{\"brand\":\"Tesla\",\"year\":2024}" }
-```
-
-```swift
-@Codable
-struct Car: Codable { let brand: String; let year: Int }
-
-@Codable
-struct User {
-  @CodableKey(options: .transcodeRawString)
-  var car: Car
-}
 ```
 
 ### Safe Transcoding with Fallback
@@ -265,6 +256,124 @@ CodableKit exposes two option sets:
 | ------------------ | -------------------------------------------------------------------------------------------- |
 | `.default`         | Standard behavior; will call super encode/decode when appropriate                            |
 | `.skipSuperCoding` | Skip generating `super.init(from:)` and `super.encode(to:)` if superclass is not `Codable`   |
+
+### Transformers (Advanced)
+
+CodableKit lets you attach transformer pipelines to individual properties using `@CodableKey(transformer:)`. Transformers let you adapt wire formats to model types and back.
+
+Note:
+- Transformers can replicate or subsume many existing options (e.g., raw string transcoding, defaults on failure), and are intended for advanced use cases.
+- The public API is stable, but we may add more expressive calling styles (e.g., dot‑chain helpers like `.transcode<Room>.chained(.default(…))`) over time to improve ergonomics.
+
+There are two kinds:
+
+- CodingTransformer<Input, Output>: one‑way (decode‑only or encode‑only depending on use)
+- BidirectionalCodingTransformer<Input, Output>: two‑way (required for encode paths)
+
+Built‑ins you can use immediately:
+
+- `DefaultOnFailureTransformer<Value>`: converts failures into a provided default value
+- `RawStringTransformer<Value>`: maps `String` ↔ `Value` using JSON encode/decode
+- `RawStringDecodingTransformer<Value>` / `RawStringEncodingTransformer<Value>`: one‑way variants
+- `IntegerToBooleanTransformer<Int>`: maps `0/1` ↔ `false/true`
+- `IdentityTransformer<Value>`: pass‑through
+- `KeyPathTransformer<T, U>`: project `U` from a `T` by key path when decoding
+
+Compose pipelines with `.chained` and `.paired` helpers, and reverse a bidirectional transformer with `.reversed`.
+
+#### Decode and Encode with a Bidirectional Transformer
+
+```swift
+struct IntFromString: BidirectionalCodingTransformer {
+  func transform(_ input: Result<String, any Error>) -> Result<Int, any Error> { input.map { Int($0) ?? 0 } }
+  func reverseTransform(_ input: Result<Int, any Error>) -> Result<String, any Error> { input.map(String.init) }
+}
+
+@Codable
+struct Model {
+  @CodableKey(transformer: IntFromString())
+  var count: Int
+}
+```
+
+This decodes a JSON string into an `Int` and encodes `Int` back to a JSON string.
+
+#### Optional Properties and `explicitNil`
+
+```swift
+@Codable
+struct Model {
+  @CodableKey(transformer: IntFromString())
+  var count: Int? // missing → nil; encodes omitted by default
+
+  @CodableKey(options: .explicitNil, transformer: IntFromString())
+  var exact: Int? // nil encodes as null
+}
+```
+
+#### Use Default on Failure with a Transformer
+
+```swift
+@Codable
+struct Model {
+  @CodableKey(options: .useDefaultOnFailure, transformer: IntFromString())
+  var count: Int = 42 // fallback when type mismatches or key is missing
+}
+```
+
+#### Compose Transformers
+
+```swift
+struct Increment: BidirectionalCodingTransformer {
+  func transform(_ x: Result<Int, any Error>) -> Result<Int, any Error> { x.map { $0 + 1 } }
+  func reverseTransform(_ x: Result<Int, any Error>) -> Result<Int, any Error> { x.map { $0 - 1 } }
+}
+
+@Codable
+struct Model {
+  @CodableKey(transformer: IntFromString().chained(Increment()))
+  var value: Int // "5" → 6 on decode; 6 → "5" on encode
+}
+```
+
+#### Raw JSON as String
+
+```swift
+struct Room: Codable { let id: Int; let name: String }
+
+@Codable
+struct Model {
+  @CodableKey(transformer: RawStringTransformer<Room>())
+  var room: Room // JSON has field as a string containing JSON
+}
+```
+
+#### One‑way Transformers
+
+For decode‑only projections, you can use `CodingTransformer`. Example: extract a nested field with `KeyPathTransformer`.
+
+```swift
+struct Wrap: Codable { let inner: Int }
+
+@Codable
+struct Model {
+  @CodableKey(transformer: KeyPathTransformer<Wrap, Int>(keyPath: \Wrap.inner))
+  var count: Int
+}
+```
+
+Note: In `@Decodable` containers, one‑way transformers are supported. In `@Codable` containers, encoding also uses the transformer; provide a `BidirectionalCodingTransformer` or explicitly pair one‑way transformers via `.paired(_:)`.
+
+```swift
+@Codable
+struct Car: Codable { let brand: String; let year: Int }
+
+@Codable
+struct User {
+  @CodableKey(options: .transcodeRawString)
+  var car: Car
+}
+```
 
 ## Performance and Determinism
 
