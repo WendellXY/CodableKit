@@ -99,7 +99,8 @@ extension CodableProperty {
       var encodingPath: [String] = []
 
       attributesLoop: for attribute in attributes {
-        let path = attribute.arguments?.as(LabeledExprListSyntax.self)?.customCodableKeyPath ?? [name.trimmedDescription]
+        let path =
+          attribute.arguments?.as(LabeledExprListSyntax.self)?.customCodableKeyPath ?? [name.trimmedDescription]
         switch attribute.macroName {
         case "DecodableKey":
           decodingPath = path
@@ -438,7 +439,7 @@ extension LabeledExprListSyntax {
   /// The key path for the property as specified in `@CodableKey`, split by `.`, e.g. ["data", "uid"]
   fileprivate var customCodableKeyPath: [String]? {
     guard
-      let expr = getExpr(label: nil)?.expression,
+      let expr = getExpr(label: nil)?.expression.trimmed,
       expr.as(NilLiteralExprSyntax.self) == nil
     else {
       return nil

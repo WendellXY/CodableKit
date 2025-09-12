@@ -115,6 +115,10 @@ import Testing
         let name: String
         @CodableKey("currentAge")
         var age: Int = 24
+        @CodableKey(
+          "currentLevel"
+        )
+        var level: Int = 24
       }
       """,
       expandedSource: """
@@ -122,6 +126,7 @@ import Testing
           let id: UUID
           let name: String
           var age: Int = 24
+          var level: Int = 24
 
           public func encode(to encoder: any Encoder) throws {
             try willEncode(to: encoder)
@@ -129,6 +134,7 @@ import Testing
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try container.encode(level, forKey: .level)
             try didEncode(to: encoder)
           }
         }
@@ -138,6 +144,7 @@ import Testing
             case id
             case name
             case age = "currentAge"
+            case level = "currentLevel"
           }
 
           public init(from decoder: any Decoder) throws {
@@ -145,6 +152,7 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
+            level = try container.decodeIfPresent(Int.self, forKey: .level) ?? 24
             try didDecode(from: decoder)
           }
         }
