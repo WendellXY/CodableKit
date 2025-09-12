@@ -77,5 +77,15 @@ let package = Package(
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
       ]
     ),
+    .testTarget(
+      name: "TransformerTests",
+      dependencies: [
+        "CodableKit",
+        "CodableKitShared",
+        "CodableKitMacros",
+        .product(name: "SwiftSyntax", package: "swift-syntax"),
+        .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+      ]
+    ),
   ]
 )

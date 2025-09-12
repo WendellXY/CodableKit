@@ -93,6 +93,17 @@ struct IntFromStringFailingReverse: BidirectionalCodingTransformer {
   }
 }
 
+// In-place increment transformer for composition tests
+struct IncrementTransformer: BidirectionalCodingTransformer {
+  func transform(_ input: Result<Int, any Error>) -> Result<Int, any Error> {
+    input.map { $0 + 1 }
+  }
+
+  func reverseTransform(_ input: Result<Int, any Error>) -> Result<Int, any Error> {
+    input.map { $0 - 1 }
+  }
+}
+
 struct TRoom: Codable, Equatable {
   let id: Int
   let name: String
@@ -114,6 +125,15 @@ struct ModelBoolAsInt {
 struct ModelIntFailingReverse {
   @CodableKey(transformer: IntFromStringFailingReverse())
   var count: Int
+}
+
+@Codable
+struct ModelIntWithIncrement {
+  @CodableKey(
+    transformer: IntFromString()
+      .chained(IncrementTransformer())
+  )
+  var value: Int
 }
 
 // MARK: - Tests
@@ -235,5 +255,36 @@ struct ModelIntFailingReverse {
       threw = true
     }
     #expect(threw)
+  }
+
+  @Test func decode_rawString_transformer_reads_stringified_json() throws {
+    let s = #"{\"id\":7,\"name\":\"Seven\"}"#
+    let json = #"{"room":"\#(s)"}"#
+    let data = json.data(using: .utf8)!
+    let decoded = try JSONDecoder().decode(ModelRoomRawString.self, from: data)
+    #expect(decoded.room == TRoom(id: 7, name: "Seven"))
+  }
+
+  @Test func decode_bool_via_integer_transformer_reads_1_or_0() throws {
+    do {
+      let json = #"{"isOn":1}"#
+      let data = json.data(using: .utf8)!
+      let decoded = try JSONDecoder().decode(ModelBoolAsInt.self, from: data)
+      #expect(decoded.isOn == true)
+    }
+
+    do {
+      let json = #"{"isOn":0}"#
+      let data = json.data(using: .utf8)!
+      let decoded = try JSONDecoder().decode(ModelBoolAsInt.self, from: data)
+      #expect(decoded.isOn == false)
+    }
+  }
+
+  @Test func decode_chained_transformer_with_increment() throws {
+    let json = #"{"value":"5"}"#
+    let data = json.data(using: .utf8)!
+    let decoded = try JSONDecoder().decode(ModelIntWithIncrement.self, from: data)
+    #expect(decoded.value == 6)
   }
 }
