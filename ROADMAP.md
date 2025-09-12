@@ -37,6 +37,7 @@ This roadmap outlines the major priorities and phased delivery plan for CodableK
   - [ ] Add fix-it for missing type annotation
   - [ ] Improve multi-binding with custom key error messaging
   - [ ] Enum options validation warnings
+  - [ ] CodableKey custom key path validation warnings
   - Acceptance:
     - Missing type annotation reports actionable error and fix-it
     - Multi-binding with custom key reports clear error
