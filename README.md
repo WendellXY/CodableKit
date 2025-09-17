@@ -49,13 +49,7 @@ struct Car {
 Add to your Package.swift dependencies:
 
 ```swift
-.package(url: "https://github.com/WendellXY/CodableKit.git", from: "1.4.0")
-```
-
-Still on Swift 5 or `swift-syntax` 510? Use the 0.x line (feature‑rich, but no longer developed):
-
-```swift
-.package(url: "https://github.com/WendellXY/CodableKit.git", from: "0.4.0")
+.package(url: "https://github.com/WendellXY/CodableKit.git", from: "1.7.6")
 ```
 
 ## Feature Matrix
