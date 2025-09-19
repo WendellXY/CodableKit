@@ -598,40 +598,22 @@ public macro Encodable(
 @attached(peer, names: arbitrary)
 public macro CodableKey(
   _ key: String? = nil,
-  options: CodableKeyOptions = .default
-) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro")
-
-@attached(peer, names: arbitrary)
-public macro CodableKey<T>(
-  _ key: String? = nil,
   options: CodableKeyOptions = .default,
-  transformer: T
-) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro") where T: BidirectionalCodingTransformer
+  transformer: any BidirectionalCodingTransformer = NothingToTransform()
+) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro")
 
 // MARK: - DecodeKey / EncodeKey
 
 @attached(peer, names: arbitrary)
 public macro DecodableKey(
   _ key: String? = nil,
-  options: CodableKeyOptions = .default
-) = #externalMacro(module: "CodableKitMacros", type: "DecodableKeyMacro")
-
-@attached(peer, names: arbitrary)
-public macro DecodableKey<T>(
-  _ key: String? = nil,
   options: CodableKeyOptions = .default,
-  transformer: T
-) = #externalMacro(module: "CodableKitMacros", type: "DecodableKeyMacro") where T: CodingTransformer
+  transformer: any CodingTransformer = NothingToTransform()
+) = #externalMacro(module: "CodableKitMacros", type: "DecodableKeyMacro")
 
 @attached(peer, names: arbitrary)
 public macro EncodableKey(
   _ key: String? = nil,
-  options: CodableKeyOptions = .default
-) = #externalMacro(module: "CodableKitMacros", type: "EncodableKeyMacro")
-
-@attached(peer, names: arbitrary)
-public macro EncodableKey<T>(
-  _ key: String? = nil,
   options: CodableKeyOptions = .default,
-  transformer: T
-) = #externalMacro(module: "CodableKitMacros", type: "EncodableKeyMacro") where T: CodingTransformer
+  transformer: any CodingTransformer = NothingToTransform()
+) = #externalMacro(module: "CodableKitMacros", type: "EncodableKeyMacro")

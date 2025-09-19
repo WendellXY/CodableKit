@@ -7,6 +7,14 @@
 
 import Foundation
 
+public struct NothingToTransform: BidirectionalCodingTransformer {
+  public init() {}
+
+  public func transform(_ input: Result<Void, any Error>) -> Result<Void, any Error> {
+    input
+  }
+}
+
 /// Decodes a concrete `Value` at a given `CodingKey` from a keyed container.
 ///
 /// Start a pipeline with `Result.success(())` and use this transformer to fetch
