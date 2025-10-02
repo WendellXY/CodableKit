@@ -6,8 +6,6 @@
 //  Copyright © 2024 WendellXY. All rights reserved.
 //
 
-import SwiftSyntax
-
 public struct CodableKeyOptions: OptionSet, Sendable {
   public let rawValue: Int32
 
@@ -237,48 +235,4 @@ public struct CodableKeyOptions: OptionSet, Sendable {
   /// This option is useful when you want to tolerate partially-invalid data
   /// from APIs without failing the entire decode.
   public static let lossy = Self(rawValue: 1 << 5)
-}
-
-// MARK: It will be nice to use a macro to generate this code below.
-extension CodableKeyOptions {
-  package init(from expr: MemberAccessExprSyntax) {
-    self =
-      switch expr.declName.baseName.text {
-      case "ignored": .ignored
-      case "explicitNil": .explicitNil
-      case "generateCustomKey": .generateCustomKey
-      case "transcodeRawString": .transcodeRawString
-      case "useDefaultOnFailure": .useDefaultOnFailure
-      case "safeTranscodeRawString": .safeTranscodeRawString
-      case "lossy": .lossy
-      default: .default
-      }
-  }
-}
-
-extension CodableKeyOptions {
-  /// Parse the options from 1a `LabelExprSyntax`. It support parse a single element like `.default`,
-  /// or multiple elements like `[.ignored, .explicitNil]`
-  package static func parse(from labeledExpr: LabeledExprSyntax) -> Self {
-    if let memberAccessExpr = labeledExpr.expression.as(MemberAccessExprSyntax.self) {
-      Self.init(from: memberAccessExpr)
-    } else if let arrayExpr = labeledExpr.expression.as(ArrayExprSyntax.self) {
-      arrayExpr.elements
-        .compactMap { $0.expression.as(MemberAccessExprSyntax.self) }
-        .map { Self.init(from: $0) }
-        .reduce(.default) { $0.union($1) }
-    } else {
-      .default
-    }
-  }
-}
-
-extension LabeledExprSyntax {
-  /// Parse the options from a `LabelExprSyntax`. It support parse a single element like .default,
-  /// or multiple elements like [.ignored, .explicitNil].
-  ///
-  /// This is a convenience method to use for chaining.
-  package func parseOptions() -> CodableKeyOptions {
-    CodableKeyOptions.parse(from: self)
-  }
 }

@@ -25,16 +25,9 @@ let package = Package(
     .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0"..<"603.0.0")
   ],
   targets: [
-    .target(
-      name: "CodableKitShared",
-      dependencies: [
-        .product(name: "SwiftSyntax", package: "swift-syntax")
-      ]
-    ),
     .macro(
       name: "CodableKitMacros",
       dependencies: [
-        "CodableKitShared",
         .product(name: "SwiftSyntax", package: "swift-syntax"),
         .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
         .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
@@ -43,7 +36,6 @@ let package = Package(
     .target(
       name: "CodableKit",
       dependencies: [
-        "CodableKitShared",
         "CodableKitMacros",
       ]
     ),
@@ -51,7 +43,6 @@ let package = Package(
       name: "CodableKitTests",
       dependencies: [
         "CodableKit",
-        "CodableKitShared",
         "CodableKitMacros",
         .product(name: "SwiftSyntax", package: "swift-syntax"),
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
@@ -61,7 +52,6 @@ let package = Package(
       name: "DecodableKitTests",
       dependencies: [
         "CodableKit",
-        "CodableKitShared",
         "CodableKitMacros",
         .product(name: "SwiftSyntax", package: "swift-syntax"),
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
@@ -71,7 +61,6 @@ let package = Package(
       name: "EncodableKitTests",
       dependencies: [
         "CodableKit",
-        "CodableKitShared",
         "CodableKitMacros",
         .product(name: "SwiftSyntax", package: "swift-syntax"),
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
@@ -81,7 +70,6 @@ let package = Package(
       name: "TransformerTests",
       dependencies: [
         "CodableKit",
-        "CodableKitShared",
         "CodableKitMacros",
         .product(name: "SwiftSyntax", package: "swift-syntax"),
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
