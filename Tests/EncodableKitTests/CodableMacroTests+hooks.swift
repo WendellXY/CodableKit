@@ -60,4 +60,47 @@ import Testing
         """
     )
   }
+
+  @Test func conventionalWillAndDidEncodeWithoutAnnotationsParameterless() throws {
+    assertMacro(
+      """
+      @Encodable
+      public class User {
+        let id: UUID
+        let name: String
+        let age: Int
+
+        func willEncode() throws {}
+        func didEncode() throws {}
+      }
+      """,
+      expandedSource: """
+        public class User {
+          let id: UUID
+          let name: String
+          let age: Int
+
+          func willEncode() throws {}
+          func didEncode() throws {}
+
+          public func encode(to encoder: any Encoder) throws {
+            try willEncode()
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(name, forKey: .name)
+            try container.encode(age, forKey: .age)
+            try didEncode()
+          }
+        }
+
+        extension User: Encodable {
+          enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case age
+          }
+        }
+        """
+    )
+  }
 }
