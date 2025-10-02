@@ -225,6 +225,30 @@ struct User {
 }
 ```
 
+### Why There’s No `willDecode`
+
+A pre‑decode instance hook (like `willDecode`) cannot be implemented safely in Swift because `self` is not fully
+initialized at the point where such a hook would need to run:
+
+- During `init(from:)`, stored properties must be initialized before you can use `self` (structs) and before or after
+  `super.init` depending on class initialization rules.
+- A `willDecode` hook would need to execute before properties are assigned from the decoder, which is precisely when
+  `self` cannot be used. Emitting an instance call there would cause “self used before initialization” issues.
+
+CodableKit therefore supports:
+
+- `didDecode(from:)`: Runs after decoding completes, when `self` is safe to use.
+- `willEncode(to:)`/`didEncode(to:)`: Run before/after encoding on a fully‑initialized instance.
+
+Recommended patterns instead of `willDecode`:
+
+- Use property default values to establish baseline state prior to decoding.
+- Perform normalization or derive fields in `didDecode(from:)` after the model is populated.
+- If you need to adjust decoding behavior globally, do so at the call site (e.g., prepare `JSONDecoder`, `userInfo`, or
+  preprocess raw data) before invoking `decode`.
+
+Note: Hooks are generated only when the corresponding methods are implemented on your type; there is no protocol requirement.
+
 ## Options Reference
 
 CodableKit exposes two option sets:
