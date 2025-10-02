@@ -6,7 +6,6 @@
 //  Copyright © 2024 WendellXY. All rights reserved.
 //
 
-import CodableKitShared
 import Foundation
 import SwiftDiagnostics
 import SwiftSyntax

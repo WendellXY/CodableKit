@@ -5,11 +5,6 @@
 //  Created by Wendell on 3/30/24.
 //
 
-// We should not import the plugin here, otherwise, a compile error will occur. Reference:
-// https://forums.swift.org/t/xcode-15-beta-no-such-module-error-with-swiftpm-and-macro/65486/12
-// import CodableKitMacros
-@_exported import CodableKitShared
-
 /// A macro that generates complete `Codable` conformance for structs and classes.
 ///
 /// This macro automatically generates all the boilerplate code needed for `Codable` conformance,
