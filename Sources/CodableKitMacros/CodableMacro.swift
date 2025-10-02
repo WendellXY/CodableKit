@@ -240,6 +240,9 @@ extension CodableMacro {
         effectSpecifiers: .init(throwsClause: .init(throwsSpecifier: .keyword(.throws)))
       )
     ) {
+      // Call static willDecode hooks before any property decoding
+      for name in hooks.willDecode { "try Self.\(raw: name)(from: decoder)" }
+
       for containerDecl in tree.decodeBlockItem {
         containerDecl
       }
@@ -252,9 +255,7 @@ extension CodableMacro {
         }
       }
 
-      if hooks.didDecode {
-        "try didDecode(from: decoder)"
-      }
+      for name in hooks.didDecode { "try \(raw: name)(from: decoder)" }
     }
   }
 
@@ -278,9 +279,7 @@ extension CodableMacro {
         effectSpecifiers: .init(throwsClause: .init(throwsSpecifier: .keyword(.throws)))
       )
     ) {
-      if hooks.willEncode {
-        "try willEncode(to: encoder)"
-      }
+      for name in hooks.willEncode { "try \(raw: name)(to: encoder)" }
 
       for containerDecl in tree.encodeBlockItem {
         containerDecl
@@ -290,9 +289,7 @@ extension CodableMacro {
         "try super.encode(to: encoder)"
       }
 
-      if hooks.didEncode {
-        "try didEncode(to: encoder)"
-      }
+      for name in hooks.didEncode { "try \(raw: name)(to: encoder)" }
     }
   }
 }

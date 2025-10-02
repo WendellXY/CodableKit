@@ -21,8 +21,11 @@ import Testing
         let name: String
         let age: Int
 
-        func willEncode(to encoder: any Encoder) throws {}
-        func didEncode(to encoder: any Encoder) throws {}
+        @CodableHook(.willEncode)
+        func prepare(to encoder: any Encoder) throws {}
+
+        @CodableHook(.didEncode)
+        func finish(to encoder: any Encoder) throws {}
       }
       """,
       expandedSource: """
@@ -31,16 +34,19 @@ import Testing
           let name: String
           let age: Int
 
-          func willEncode(to encoder: any Encoder) throws {}
-          func didEncode(to encoder: any Encoder) throws {}
+          @CodableHook(.willEncode)
+          func prepare(to encoder: any Encoder) throws {}
+
+          @CodableHook(.didEncode)
+          func finish(to encoder: any Encoder) throws {}
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
+            try prepare(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode(to: encoder)
+            try finish(to: encoder)
           }
         }
 
@@ -55,4 +61,3 @@ import Testing
     )
   }
 }
-

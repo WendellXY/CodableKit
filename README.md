@@ -65,7 +65,7 @@ Add to your Package.swift dependencies:
 | Use default on failure         | `@CodableKey(options: .useDefaultOnFailure)`        | Fallback to default/nil on decoding error                    |
 | Generate custom key property   | `@CodableKey("id", options: .generateCustomKey)`    | Adds computed property for custom key                        |
 | Explicit nil encoding          | `@CodableKey(options: .explicitNil)`                | Encode nil as `null`, not omitted                            |
-| Coding lifecycle hooks         | `func didDecode(from:)`, `func willEncode(to:)`     | Run logic during encoding/decoding                           |
+| Coding lifecycle hooks         | `static willDecode(from:)`, `func didDecode(from:)`, `func willEncode(to:)`, `func didEncode(to:)` | Run logic during encoding/decoding; annotate with `@CodableHook` for explicit control |
 | Transformers (advanced)        | `@CodableKey(transformer: MyTransformer())`         | Apply custom/built‑in transforms, compose with bidirectional |
 
 ## Usage Guides and Examples
@@ -216,6 +216,10 @@ struct User {
   var name: String
   var age: Int
 
+  // Runs before any properties are decoded (static-only)
+  @CodableHook(.willDecode)
+  static func pre(from decoder: any Decoder) throws { /* prepare decoder/userInfo */ }
+
   mutating func didDecode(from decoder: any Decoder) throws {
     id = "\(name)-\(age)" // recompute derived values
   }
@@ -225,29 +229,29 @@ struct User {
 }
 ```
 
-### Why There’s No `willDecode`
+### Annotated Hooks (Recommended)
 
-A pre‑decode instance hook (like `willDecode`) cannot be implemented safely in Swift because `self` is not fully
-initialized at the point where such a hook would need to run:
+- Use `@CodableHook(<stage>)` to explicitly mark lifecycle methods:
+  - `.willDecode`: static/class method, signature `from decoder: any Decoder`, runs before property decoding.
+  - `.didDecode`: instance method, signature `from decoder: any Decoder`, runs after decoding completes.
+  - `.willEncode` / `.didEncode`: instance methods, signature `to encoder: any Encoder`, run before/after encoding.
+- Multiple hooks per stage are supported and called in declaration order.
+- You can pick any method names when annotated; the macro invokes the annotated methods.
+- If no annotations are present, conventional names are still detected for compatibility.
 
-- During `init(from:)`, stored properties must be initialized before you can use `self` (structs) and before or after
-  `super.init` depending on class initialization rules.
-- A `willDecode` hook would need to execute before properties are assigned from the decoder, which is precisely when
-  `self` cannot be used. Emitting an instance call there would cause “self used before initialization” issues.
+### Why There’s No Instance `willDecode`
 
-CodableKit therefore supports:
+An instance `willDecode` is unsafe in Swift because `self` isn’t fully initialized before property decoding begins, so
+calling an instance method there would violate initialization rules. Instead, CodableKit provides:
 
-- `didDecode(from:)`: Runs after decoding completes, when `self` is safe to use.
-- `willEncode(to:)`/`didEncode(to:)`: Run before/after encoding on a fully‑initialized instance.
+- `@CodableHook(.willDecode)` static/class hook that runs before decode.
+- `didDecode(from:)` instance hook that runs after decode completes.
+- `willEncode(to:)` / `didEncode(to:)` instance hooks around encoding.
 
-Recommended patterns instead of `willDecode`:
-
-- Use property default values to establish baseline state prior to decoding.
-- Perform normalization or derive fields in `didDecode(from:)` after the model is populated.
-- If you need to adjust decoding behavior globally, do so at the call site (e.g., prepare `JSONDecoder`, `userInfo`, or
-  preprocess raw data) before invoking `decode`.
-
-Note: Hooks are generated only when the corresponding methods are implemented on your type; there is no protocol requirement.
+Tips:
+- Use property defaults for baseline state before decoding.
+- Put normalization/derivations in `didDecode(from:)`.
+- Preprocess or configure the decoder (e.g., `userInfo`) before calling `decode` when needed.
 
 ## Options Reference
 
