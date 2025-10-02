@@ -241,7 +241,14 @@ extension CodableMacro {
       )
     ) {
       // Call static willDecode hooks before any property decoding
-      for name in hooks.willDecode { "try Self.\(raw: name)(from: decoder)" }
+      for hook in hooks.willDecode {
+        switch hook.kind {
+        case .decoder:
+          "try Self.\(raw: hook.name)(from: decoder)"
+        case .encoder, .none:
+          "try Self.\(raw: hook.name)()"
+        }
+      }
 
       for containerDecl in tree.decodeBlockItem {
         containerDecl
@@ -255,7 +262,14 @@ extension CodableMacro {
         }
       }
 
-      for name in hooks.didDecode { "try \(raw: name)(from: decoder)" }
+      for hook in hooks.didDecode {
+        switch hook.kind {
+        case .decoder:
+          "try \(raw: hook.name)(from: decoder)"
+        case .encoder, .none:
+          "try \(raw: hook.name)()"
+        }
+      }
     }
   }
 
@@ -279,7 +293,14 @@ extension CodableMacro {
         effectSpecifiers: .init(throwsClause: .init(throwsSpecifier: .keyword(.throws)))
       )
     ) {
-      for name in hooks.willEncode { "try \(raw: name)(to: encoder)" }
+      for hook in hooks.willEncode {
+        switch hook.kind {
+        case .encoder:
+          "try \(raw: hook.name)(to: encoder)"
+        case .decoder, .none:
+          "try \(raw: hook.name)()"
+        }
+      }
 
       for containerDecl in tree.encodeBlockItem {
         containerDecl
@@ -289,7 +310,14 @@ extension CodableMacro {
         "try super.encode(to: encoder)"
       }
 
-      for name in hooks.didEncode { "try \(raw: name)(to: encoder)" }
+      for hook in hooks.didEncode {
+        switch hook.kind {
+        case .encoder:
+          "try \(raw: hook.name)(to: encoder)"
+        case .decoder, .none:
+          "try \(raw: hook.name)()"
+        }
+      }
     }
   }
 }

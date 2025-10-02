@@ -22,10 +22,10 @@ import Testing
         let age: Int
 
         @CodableHook(.willEncode)
-        func prepare(to encoder: any Encoder) throws {}
+        func prepare() throws {}
 
         @CodableHook(.didEncode)
-        func finish(to encoder: any Encoder) throws {}
+        func finish() throws {}
       }
       """,
       expandedSource: """
@@ -35,18 +35,18 @@ import Testing
           let age: Int
 
           @CodableHook(.willEncode)
-          func prepare(to encoder: any Encoder) throws {}
+          func prepare() throws {}
 
           @CodableHook(.didEncode)
-          func finish(to encoder: any Encoder) throws {}
+          func finish() throws {}
 
           public func encode(to encoder: any Encoder) throws {
-            try prepare(to: encoder)
+            try prepare()
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try finish(to: encoder)
+            try finish()
           }
         }
 

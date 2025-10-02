@@ -49,7 +49,7 @@ public struct CodingHookMacro: PeerMacro {
       let params = fn.signature.parameterClause.parameters
       let isStatic = fn.modifiers.contains(where: { $0.name.text == "static" || $0.name.text == "class" })
       if stageText.contains("didDecode") {
-        // Expect first parameter type mentions Decoder
+        // If parameter exists, prefer it to mention Decoder. If not, allow zero-parameter hooks.
         if let first = params.first, !first.type.description.contains("Decoder") {
           let diag = Diagnostic(
             node: node,

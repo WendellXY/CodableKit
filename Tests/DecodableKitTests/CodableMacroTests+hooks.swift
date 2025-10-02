@@ -63,7 +63,7 @@ import Testing
         var age: Int
 
         @CodableHook(.didDecode)
-        mutating func post(from decoder: any Decoder) throws { age += 1 }
+        mutating func post() throws { age += 1 }
       }
       """,
       expandedSource: """
@@ -73,7 +73,7 @@ import Testing
           var age: Int
 
           @CodableHook(.didDecode)
-          mutating func post(from decoder: any Decoder) throws { age += 1 }
+          mutating func post() throws { age += 1 }
         }
 
         extension User: Decodable {
@@ -88,7 +88,7 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
-            try post(from: decoder)
+            try post()
           }
         }
         """
