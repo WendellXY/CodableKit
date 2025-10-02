@@ -25,7 +25,7 @@ struct CodableKeyOptions: OptionSet, Sendable {
 }
 
 extension CodableKeyOptions {
-  package init(from expr: MemberAccessExprSyntax) {
+  init(from expr: MemberAccessExprSyntax) {
     self =
       switch expr.declName.baseName.text {
       case "ignored": .ignored
@@ -43,7 +43,7 @@ extension CodableKeyOptions {
 extension CodableKeyOptions {
   /// Parse the options from 1a `LabelExprSyntax`. It support parse a single element like `.default`,
   /// or multiple elements like `[.ignored, .explicitNil]`
-  package static func parse(from labeledExpr: LabeledExprSyntax) -> Self {
+  static func parse(from labeledExpr: LabeledExprSyntax) -> Self {
     if let memberAccessExpr = labeledExpr.expression.as(MemberAccessExprSyntax.self) {
       Self.init(from: memberAccessExpr)
     } else if let arrayExpr = labeledExpr.expression.as(ArrayExprSyntax.self) {
