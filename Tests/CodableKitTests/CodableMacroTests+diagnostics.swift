@@ -57,12 +57,10 @@ import Testing
           var ignored: String = "Hello World"
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode(to: encoder)
           }
         }
 
@@ -78,7 +76,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
-            try didDecode(from: decoder)
           }
         }
         """
@@ -108,12 +105,10 @@ import Testing
           static let staticProperty = "Hello World"
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode(to: encoder)
           }
         }
 
@@ -129,7 +124,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
-            try didDecode(from: decoder)
           }
         }
         """
@@ -162,12 +156,10 @@ import Testing
           }
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode(to: encoder)
           }
         }
 
@@ -183,7 +175,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
-            try didDecode(from: decoder)
           }
         }
         """,
@@ -219,12 +210,10 @@ import Testing
           }
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode(to: encoder)
           }
         }
 
@@ -240,7 +229,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
-            try didDecode(from: decoder)
           }
         }
         """,
@@ -272,12 +260,10 @@ import Testing
           static var address: String = "A"
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode(to: encoder)
           }
         }
 
@@ -293,7 +279,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
-            try didDecode(from: decoder)
           }
         }
         """,
@@ -341,10 +326,8 @@ import Testing
           public private(set) var expireTime: Date?
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encodeIfPresent(_expireTime, forKey: ._expireTime)
-            try didEncode(to: encoder)
           }
         }
 
@@ -356,7 +339,6 @@ import Testing
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             _expireTime = (try? container.decodeIfPresent(Int?.self, forKey: ._expireTime)) ?? nil
-            try didDecode(from: decoder)
           }
         }
         """

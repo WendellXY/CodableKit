@@ -36,7 +36,6 @@ struct TypeInferenceTests {
           var negativeDoubleLiteral = -123.456
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(strLiteral, forKey: .strLiteral)
             try container.encode(intLiteral, forKey: .intLiteral)
@@ -44,7 +43,6 @@ struct TypeInferenceTests {
             try container.encode(boolLiteral, forKey: .boolLiteral)
             try container.encode(negativeIntLiteral, forKey: .negativeIntLiteral)
             try container.encode(negativeDoubleLiteral, forKey: .negativeDoubleLiteral)
-            try didEncode(to: encoder)
           }
         }
 
@@ -66,7 +64,6 @@ struct TypeInferenceTests {
             boolLiteral = try container.decodeIfPresent(Bool.self, forKey: .boolLiteral) ?? true
             negativeIntLiteral = try container.decodeIfPresent(Int.self, forKey: .negativeIntLiteral) ?? -123
             negativeDoubleLiteral = try container.decodeIfPresent(Double.self, forKey: .negativeDoubleLiteral) ?? -123.456
-            try didDecode(from: decoder)
           }
         }
         """
@@ -96,14 +93,12 @@ struct TypeInferenceTests {
           var numberArrayLiteral = [1, 2.0, 3]
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(arrayLiteral, forKey: .arrayLiteral)
             try container.encode(stringArrayLiteral, forKey: .stringArrayLiteral)
             try container.encode(boolArrayLiteral, forKey: .boolArrayLiteral)
             try container.encode(doubleArrayLiteral, forKey: .doubleArrayLiteral)
             try container.encode(numberArrayLiteral, forKey: .numberArrayLiteral)
-            try didEncode(to: encoder)
           }
         }
 
@@ -123,7 +118,6 @@ struct TypeInferenceTests {
             boolArrayLiteral = try container.decodeIfPresent([Bool].self, forKey: .boolArrayLiteral) ?? [true, false]
             doubleArrayLiteral = try container.decodeIfPresent([Double].self, forKey: .doubleArrayLiteral) ?? [1.0, 2.0, 3.0]
             numberArrayLiteral = try container.decodeIfPresent([Double].self, forKey: .numberArrayLiteral) ?? [1, 2.0, 3]
-            try didDecode(from: decoder)
           }
         }
         """

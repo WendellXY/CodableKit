@@ -26,14 +26,12 @@ func testNestedCodable() throws {
         let name: String
 
         internal func encode(to encoder: any Encoder) throws {
-          try willEncode(to: encoder)
           var container = encoder.container(keyedBy: CodingKeys.self)
           var dataContainer = container.nestedContainer(keyedBy: DataKeys.self, forKey: .data)
           var profileContainer = container.nestedContainer(keyedBy: ProfileKeys.self, forKey: .profile)
           try dataContainer.encode(id, forKey: .id)
           var infoContainer = profileContainer.nestedContainer(keyedBy: InfoKeys.self, forKey: .info)
           try infoContainer.encode(name, forKey: .name)
-          try didEncode(to: encoder)
         }
       }
 
@@ -58,7 +56,6 @@ func testNestedCodable() throws {
           id = try dataContainer.decode(Int.self, forKey: .id)
           let infoContainer = try profileContainer.nestedContainer(keyedBy: InfoKeys.self, forKey: .info)
           name = try infoContainer.decode(String.self, forKey: .name)
-          try didDecode(from: decoder)
         }
       }
       """

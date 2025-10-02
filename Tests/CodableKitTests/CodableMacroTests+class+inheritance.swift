@@ -35,17 +35,14 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -84,17 +81,14 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -134,17 +128,14 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -183,17 +174,14 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encodeIfPresent(age, forKey: .age)
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -235,17 +223,14 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encodeIfPresent(age, forKey: .age)
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -288,18 +273,15 @@ import Testing
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
             explicitNil = try container.decodeIfPresent(String?.self, forKey: .explicitNil) ?? nil
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encodeIfPresent(age, forKey: .age)
             try container.encode(explicitNil, forKey: .explicitNil)
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -344,17 +326,14 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -403,17 +382,14 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -476,11 +452,9 @@ import Testing
               )
             }
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
@@ -499,7 +473,6 @@ import Testing
               )
             }
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -563,11 +536,9 @@ import Testing
               )
             }
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
@@ -586,7 +557,6 @@ import Testing
               )
             }
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -652,11 +622,9 @@ import Testing
               room = Room(id: UUID(), name: "Hello")
             }
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
@@ -675,7 +643,6 @@ import Testing
               )
             }
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -739,11 +706,9 @@ import Testing
               )
             }
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
@@ -762,7 +727,6 @@ import Testing
               )
             }
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -828,11 +792,9 @@ import Testing
               room = Room(id: UUID(), name: "Hello")
             }
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             let __ckEncoder = JSONEncoder()
             try container.encode(id, forKey: .id)
@@ -851,7 +813,6 @@ import Testing
               )
             }
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -905,18 +866,15 @@ import Testing
             age = try container.decode(Int.self, forKey: .age)
             role = (try? container.decodeIfPresent(Role.self, forKey: .role)) ?? .unknown
             try super.init(from: decoder)
-            try didDecode(from: decoder)
           }
 
           public override func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
             try container.encode(role, forKey: .role)
             try super.encode(to: encoder)
-            try didEncode(to: encoder)
           }
         }
 
@@ -956,16 +914,13 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             super.init()
-            try didDecode(from: decoder)
           }
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode(to: encoder)
           }
         }
 

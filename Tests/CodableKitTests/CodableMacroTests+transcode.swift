@@ -34,7 +34,6 @@ import Testing
           var room: Room?
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             let __ckEncoder = JSONEncoder()
             if let roomUnwrapped = room {
@@ -51,7 +50,6 @@ import Testing
                 )
               }
             }
-            try didEncode(to: encoder)
           }
         }
 
@@ -69,7 +67,6 @@ import Testing
             } else {
               room = nil
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -98,7 +95,6 @@ import Testing
           var room: Room?
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             let __ckEncoder = JSONEncoder()
             let roomRawData = try __ckEncoder.encode(room)
@@ -113,7 +109,6 @@ import Testing
                 )
               )
             }
-            try didEncode(to: encoder)
           }
         }
 
@@ -131,7 +126,6 @@ import Testing
             } else {
               room = nil
             }
-            try didDecode(from: decoder)
           }
         }
         """
