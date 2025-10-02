@@ -27,7 +27,7 @@
 /// }
 /// ```
 ///
-/// This generates:
+/// This generates (simplified):
 ///
 /// ```swift
 /// extension User: Codable {
@@ -40,16 +40,13 @@
 ///         id = try container.decode(Int.self, forKey: .id)
 ///         name = try container.decode(String.self, forKey: .name)
 ///         age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 25
-///         try didDecode(from: decoder)
 ///     }
 ///
 ///     func encode(to encoder: Encoder) throws {
-///         try willEncode(to: encoder)
 ///         var container = encoder.container(keyedBy: CodingKeys.self)
 ///         try container.encode(id, forKey: .id)
 ///         try container.encode(name, forKey: .name)
 ///         try container.encode(age, forKey: .age)
-///         try didEncode(to: encoder)
 ///     }
 /// }
 /// ```
@@ -138,7 +135,6 @@
 ///
 /// The macro automatically adds conformance to:
 /// - `Codable` (combines `Encodable` and `Decodable`)
-/// - `CodableHooks` (for lifecycle hook support)
 ///
 /// ## Compile-Time Safety
 ///
@@ -150,7 +146,7 @@
 ///
 /// - Parameters:
 ///   - options: Configuration options for the macro behavior. Defaults to `.default`.
-@attached(extension, conformances: Codable, CodableHooks, names: named(CodingKeys), named(init(from:)), arbitrary)
+@attached(extension, conformances: Codable, names: named(CodingKeys), named(init(from:)), arbitrary)
 @attached(member, conformances: Codable, names: named(init(from:)), named(encode(to:)), arbitrary)
 public macro Codable(
   options: CodableOptions = .default
@@ -178,7 +174,7 @@ public macro Codable(
 /// }
 /// ```
 ///
-/// This generates:
+/// This generates (simplified):
 ///
 /// ```swift
 /// extension User: Decodable {
@@ -191,7 +187,6 @@ public macro Codable(
 ///         id = try container.decode(Int.self, forKey: .id)
 ///         name = try container.decode(String.self, forKey: .name)
 ///         age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 25
-///         try didDecode(from: decoder)
 ///     }
 /// }
 /// ```
@@ -272,7 +267,6 @@ public macro Codable(
 ///
 /// The macro automatically adds conformance to:
 /// - `Decodable`
-/// - `DecodingHooks` (for lifecycle hook support)
 ///
 /// ## When to Use
 ///
@@ -284,7 +278,7 @@ public macro Codable(
 ///
 /// - Parameters:
 ///   - options: Configuration options for the macro behavior. Defaults to `.default`.
-@attached(extension, conformances: Decodable, DecodingHooks, names: named(CodingKeys), named(init(from:)), arbitrary)
+@attached(extension, conformances: Decodable, names: named(CodingKeys), named(init(from:)), arbitrary)
 @attached(member, conformances: Decodable, names: named(init(from:)), arbitrary)
 public macro Decodable(
   options: CodableOptions = .default
@@ -312,7 +306,7 @@ public macro Decodable(
 /// }
 /// ```
 ///
-/// This generates:
+/// This generates (simplified):
 ///
 /// ```swift
 /// extension User: Encodable {
@@ -321,12 +315,10 @@ public macro Decodable(
 ///     }
 ///
 ///     func encode(to encoder: Encoder) throws {
-///         try willEncode(to: encoder)
 ///         var container = encoder.container(keyedBy: CodingKeys.self)
 ///         try container.encode(id, forKey: .id)
 ///         try container.encode(name, forKey: .name)
 ///         try container.encode(age, forKey: .age)
-///         try didEncode(to: encoder)
 ///     }
 /// }
 /// ```
@@ -410,7 +402,6 @@ public macro Decodable(
 ///
 /// The macro automatically adds conformance to:
 /// - `Encodable`
-/// - `EncodingHooks` (for lifecycle hook support)
 ///
 /// ## When to Use
 ///
@@ -422,7 +413,7 @@ public macro Decodable(
 ///
 /// - Parameters:
 ///   - options: Configuration options for the macro behavior. Defaults to `.default`.
-@attached(extension, conformances: Encodable, EncodingHooks, names: named(CodingKeys), arbitrary)
+@attached(extension, conformances: Encodable, names: named(CodingKeys), arbitrary)
 @attached(member, conformances: Encodable, names: named(encode(to:)), arbitrary)
 public macro Encodable(
   options: CodableOptions = .default

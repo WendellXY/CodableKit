@@ -31,6 +31,7 @@ internal final class CodeGenCore: @unchecked Sendable {
   private var structureTypes: [MacroContextKey: StructureType] = [:]
   private var codableTypes: [MacroContextKey: CodableType] = [:]
   private var codableOptions: [MacroContextKey: CodableOptions] = [:]
+  private var hooksPresence: [MacroContextKey: HooksPresence] = [:]
 
   func key(for declaration: some SyntaxProtocol, in context: some MacroExpansionContext) -> MacroContextKey {
     let location = context.location(of: declaration)
@@ -42,6 +43,13 @@ internal final class CodeGenCore: @unchecked Sendable {
       return "\(syntaxIdentifier)"
     }
   }
+}
+
+// MARK: - Hooks Presence Model
+internal struct HooksPresence: Sendable {
+  let didDecode: Bool
+  let willEncode: Bool
+  let didEncode: Bool
 }
 
 extension CodeGenCore {
@@ -104,6 +112,20 @@ extension CodeGenCore {
 
     throw SimpleDiagnosticMessage(
       message: "Codable options for declaration not found",
+      severity: .error
+    )
+  }
+
+  func accessHooksPresence(
+    for declaration: some SyntaxProtocol,
+    in context: some MacroExpansionContext
+  ) throws -> HooksPresence {
+    if let hooks = hooksPresence[key(for: declaration, in: context)] {
+      return hooks
+    }
+
+    throw SimpleDiagnosticMessage(
+      message: "Hooks presence for declaration not found",
       severity: .error
     )
   }
@@ -236,6 +258,10 @@ extension CodeGenCore {
       }
 
       properties[id] = extractedProperties
+    }
+    // Detect lifecycle hook methods on the declaration (only once per declaration)
+    if hooksPresence[id] == nil {
+      hooksPresence[id] = Self.detectHooks(in: declaration)
     }
   }
 
@@ -398,5 +424,38 @@ extension CodeGenCore {
         initializer: initializerClause
       )
     }
+  }
+}
+
+// MARK: - Hook Detection
+extension CodeGenCore {
+  /// Detect lifecycle hook methods defined in the declaration.
+  fileprivate static func detectHooks(in declaration: some DeclGroupSyntax) -> HooksPresence {
+    var hasDidDecode = false
+    var hasWillEncode = false
+    var hasDidEncode = false
+
+    func typeContains(_ param: FunctionParameterSyntax, token: String) -> Bool {
+      param.type.description.contains(token)
+    }
+
+    for member in declaration.memberBlock.members {
+      guard let funcDecl = member.decl.as(FunctionDeclSyntax.self) else { continue }
+      let name = funcDecl.name.text
+      let params = funcDecl.signature.parameterClause.parameters
+      let first = params.first
+      switch name {
+      case "didDecode":
+        if let first, typeContains(first, token: "Decoder") { hasDidDecode = true }
+      case "willEncode":
+        if let first, typeContains(first, token: "Encoder") { hasWillEncode = true }
+      case "didEncode":
+        if let first, typeContains(first, token: "Encoder") { hasDidEncode = true }
+      default:
+        continue
+      }
+    }
+
+    return HooksPresence(didDecode: hasDidDecode, willEncode: hasWillEncode, didEncode: hasDidEncode)
   }
 }
