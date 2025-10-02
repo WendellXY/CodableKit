@@ -32,10 +32,8 @@ import Testing
           var count: Int
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try __ckEncodeTransformed(transformer: IntFromString(), value: count, into: &container, forKey: .count)
-            try didEncode(to: encoder)
           }
         }
 
@@ -70,10 +68,8 @@ import Testing
           var count: Int?
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try __ckEncodeTransformedIfPresent(transformer: IntFromString(), value: count, into: &container, forKey: .count, explicitNil: false)
-            try didEncode(to: encoder)
           }
         }
 
@@ -108,10 +104,8 @@ import Testing
           var count: Int?
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try __ckEncodeTransformedIfPresent(transformer: IntFromString(), value: count, into: &container, forKey: .count, explicitNil: true)
-            try didEncode(to: encoder)
           }
         }
 

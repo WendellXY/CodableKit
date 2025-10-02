@@ -31,6 +31,7 @@ internal final class CodeGenCore: @unchecked Sendable {
   private var structureTypes: [MacroContextKey: StructureType] = [:]
   private var codableTypes: [MacroContextKey: CodableType] = [:]
   private var codableOptions: [MacroContextKey: CodableOptions] = [:]
+  private var hooksPresence: [MacroContextKey: HooksPresence] = [:]
 
   func key(for declaration: some SyntaxProtocol, in context: some MacroExpansionContext) -> MacroContextKey {
     let location = context.location(of: declaration)
@@ -42,6 +43,23 @@ internal final class CodeGenCore: @unchecked Sendable {
       return "\(syntaxIdentifier)"
     }
   }
+}
+
+// MARK: - Hooks Presence Model
+internal enum HookArgKind: Sendable { case none, decoder, encoder }
+
+internal struct Hook: Sendable {
+  let name: String
+  let kind: HookArgKind
+  let isStatic: Bool
+}
+
+internal struct HooksPresence: Sendable {
+  let willDecode: [Hook]
+  let didDecode: [Hook]
+  let willEncode: [Hook]
+  let didEncode: [Hook]
+  var hasAny: Bool { !willDecode.isEmpty || !didDecode.isEmpty || !willEncode.isEmpty || !didEncode.isEmpty }
 }
 
 extension CodeGenCore {
@@ -104,6 +122,20 @@ extension CodeGenCore {
 
     throw SimpleDiagnosticMessage(
       message: "Codable options for declaration not found",
+      severity: .error
+    )
+  }
+
+  func accessHooksPresence(
+    for declaration: some SyntaxProtocol,
+    in context: some MacroExpansionContext
+  ) throws -> HooksPresence {
+    if let hooks = hooksPresence[key(for: declaration, in: context)] {
+      return hooks
+    }
+
+    throw SimpleDiagnosticMessage(
+      message: "Hooks presence for declaration not found",
       severity: .error
     )
   }
@@ -236,6 +268,10 @@ extension CodeGenCore {
       }
 
       properties[id] = extractedProperties
+    }
+    // Detect lifecycle hook methods on the declaration (only once per declaration)
+    if hooksPresence[id] == nil {
+      hooksPresence[id] = Self.detectHooks(in: declaration)
     }
   }
 
@@ -398,5 +434,90 @@ extension CodeGenCore {
         initializer: initializerClause
       )
     }
+  }
+}
+
+// MARK: - Hook Detection
+extension CodeGenCore {
+  /// Detect lifecycle hook methods defined in the declaration.
+  /// Preference order: annotated hooks (@CodableHook) → name-based compatibility.
+  fileprivate static func detectHooks(in declaration: some DeclGroupSyntax) -> HooksPresence {
+    var willDecode: [Hook] = []
+    var didDecode: [Hook] = []
+    var willEncode: [Hook] = []
+    var didEncode: [Hook] = []
+
+    func typeContains(_ param: FunctionParameterSyntax, token: String) -> Bool { param.type.description.contains(token) }
+
+    // First pass: annotated hooks
+    for member in declaration.memberBlock.members {
+      guard let funcDecl = member.decl.as(FunctionDeclSyntax.self) else { continue }
+      let attributes = funcDecl.attributes
+      guard attributes.isEmpty == false else { continue }
+      for attr in attributes {
+        guard let attr = AttributeSyntax(attr), attr.attributeName.as(IdentifierTypeSyntax.self)?.name.text == "CodableHook" else { continue }
+        guard let arg = attr.arguments?.as(LabeledExprListSyntax.self)?.first?.expression else { continue }
+        let stage = arg.description
+        switch true {
+        case stage.contains("willDecode"):
+          // Must be static/class & accept Decoder
+          let isStatic = funcDecl.modifiers.contains(where: { $0.name.text == "static" || $0.name.text == "class" })
+          if isStatic {
+            let params = funcDecl.signature.parameterClause.parameters
+            let kind: HookArgKind = if let first = params.first, typeContains(first, token: "Decoder") { .decoder } else { .none }
+            willDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: true))
+          }
+        case stage.contains("didDecode"):
+          let params = funcDecl.signature.parameterClause.parameters
+          let kind: HookArgKind = if let first = params.first, typeContains(first, token: "Decoder") { .decoder } else { .none }
+          didDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false))
+        case stage.contains("willEncode"):
+          let params = funcDecl.signature.parameterClause.parameters
+          let kind: HookArgKind = if let first = params.first, typeContains(first, token: "Encoder") { .encoder } else { .none }
+          willEncode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false))
+        case stage.contains("didEncode"):
+          let params = funcDecl.signature.parameterClause.parameters
+          let kind: HookArgKind = if let first = params.first, typeContains(first, token: "Encoder") { .encoder } else { .none }
+          didEncode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false))
+        default: break
+        }
+      }
+    }
+
+    // Second pass: fallback to conventional names if no annotations collected for that stage
+    for member in declaration.memberBlock.members {
+      guard let funcDecl = member.decl.as(FunctionDeclSyntax.self) else { continue }
+      let name = funcDecl.name.text
+      let params = funcDecl.signature.parameterClause.parameters
+      let first = params.first
+      switch name {
+      case "willDecode":
+        // fallback only if not annotated for that stage
+        let isStatic = funcDecl.modifiers.contains(where: { $0.name.text == "static" || $0.name.text == "class" })
+        if willDecode.isEmpty, isStatic {
+          let kind: HookArgKind = if let first, typeContains(first, token: "Decoder") { .decoder } else { .none }
+          willDecode.append(.init(name: name, kind: kind, isStatic: true))
+        }
+      case "didDecode":
+        if didDecode.isEmpty {
+          let kind: HookArgKind = if let first, typeContains(first, token: "Decoder") { .decoder } else { .none }
+          didDecode.append(.init(name: name, kind: kind, isStatic: false))
+        }
+      case "willEncode":
+        if willEncode.isEmpty {
+          let kind: HookArgKind = if let first, typeContains(first, token: "Encoder") { .encoder } else { .none }
+          willEncode.append(.init(name: name, kind: kind, isStatic: false))
+        }
+      case "didEncode":
+        if didEncode.isEmpty {
+          let kind: HookArgKind = if let first, typeContains(first, token: "Encoder") { .encoder } else { .none }
+          didEncode.append(.init(name: name, kind: kind, isStatic: false))
+        }
+      default:
+        continue
+      }
+    }
+
+    return HooksPresence(willDecode: willDecode, didDecode: didDecode, willEncode: willEncode, didEncode: didEncode)
   }
 }

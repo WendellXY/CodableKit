@@ -41,7 +41,6 @@ import Testing
             values = valuesLossyWrapper.elements
             let values2LossyWrapper = try container.decode(LossyArray<String>.self, forKey: .values2)
             values2 = values2LossyWrapper.elements
-            try didDecode(from: decoder)
           }
         }
         """
@@ -75,7 +74,6 @@ import Testing
             } else {
               values = nil
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -109,7 +107,6 @@ import Testing
             } else {
               values = [1, 2]
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -143,7 +140,6 @@ import Testing
             } else {
               ids = nil
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -185,7 +181,6 @@ import Testing
                 )
               )
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -221,7 +216,6 @@ import Testing
             } else {
               values = [1, 2]
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -257,7 +251,6 @@ import Testing
             map = mapLossyWrapper.elements
             let otherLossyWrapper = try container.decode(LossyDictionary<String, Int>.self, forKey: .other)
             other = otherLossyWrapper.elements
-            try didDecode(from: decoder)
           }
         }
         """
@@ -291,7 +284,6 @@ import Testing
             } else {
               map = nil
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -325,7 +317,6 @@ import Testing
             } else {
               map = ["a": 1]
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -367,7 +358,6 @@ import Testing
                 )
               )
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -403,7 +393,6 @@ import Testing
             } else {
               map = [:]
             }
-            try didDecode(from: decoder)
           }
         }
         """

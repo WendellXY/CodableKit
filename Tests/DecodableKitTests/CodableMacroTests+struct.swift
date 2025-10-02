@@ -42,7 +42,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
-            try didDecode(from: decoder)
           }
         }
         """
@@ -80,7 +79,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
-            try didDecode(from: decoder)
           }
         }
         """
@@ -119,7 +117,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int.self, forKey: .age) ?? 24
-            try didDecode(from: decoder)
           }
         }
         """
@@ -157,7 +154,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
-            try didDecode(from: decoder)
           }
         }
         """
@@ -198,7 +194,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
-            try didDecode(from: decoder)
           }
         }
         """
@@ -241,7 +236,6 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decodeIfPresent(Int?.self, forKey: .age) ?? 24
             explicitNil = try container.decodeIfPresent(String?.self, forKey: .explicitNil) ?? nil
-            try didDecode(from: decoder)
           }
         }
         """
@@ -284,7 +278,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
-            try didDecode(from: decoder)
           }
         }
         """
@@ -332,7 +325,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
-            try didDecode(from: decoder)
           }
         }
         """
@@ -395,7 +387,6 @@ import Testing
                 )
               )
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -458,7 +449,6 @@ import Testing
                 )
               )
             }
-            try didDecode(from: decoder)
           }
         }
         """,
@@ -523,7 +513,6 @@ import Testing
             } else {
               room = Room(id: UUID(), name: "Hello")
             }
-            try didDecode(from: decoder)
           }
         }
         """
@@ -576,7 +565,6 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             role = (try? container.decodeIfPresent(Role.self, forKey: .role)) ?? .unknown
-            try didDecode(from: decoder)
           }
         }
         """

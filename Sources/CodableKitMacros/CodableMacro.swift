@@ -31,6 +31,7 @@ public struct CodableMacro: ExtensionMacro {
       let structureType = try core.accessStructureType(for: declaration, in: context)
       let codableType = try core.accessCodableType(for: declaration, in: context)
       let codableOptions = try core.accessCodableOptions(for: declaration, in: context)
+      let hooks = try core.accessHooksPresence(for: declaration, in: context)
 
       // If there are no properties, return an empty array.
       guard !properties.isEmpty else { return [] }
@@ -87,7 +88,8 @@ public struct CodableMacro: ExtensionMacro {
                   modifiers: [accessModifier],
                   codableOptions: codableOptions,
                   hasSuper: false,
-                  tree: usingTree
+                  tree: usingTree,
+                  hooks: hooks
                 )
               )
             }
@@ -132,6 +134,7 @@ extension CodableMacro: MemberMacro {
     let structureType = try core.accessStructureType(for: declaration, in: context)
     let codableType = try core.accessCodableType(for: declaration, in: context)
     let codableOptions = try core.accessCodableOptions(for: declaration, in: context)
+    let hooks = try core.accessHooksPresence(for: declaration, in: context)
 
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
@@ -182,7 +185,8 @@ extension CodableMacro: MemberMacro {
               modifiers: decodeModifiers,
               codableOptions: codableOptions,
               hasSuper: hasSuper,
-              tree: decodeTree
+              tree: decodeTree,
+              hooks: hooks
             )
           )
         )
@@ -197,7 +201,8 @@ extension CodableMacro: MemberMacro {
               modifiers: encodeModifiers,
               codableOptions: codableOptions,
               hasSuper: hasSuper,
-              tree: encodeTree
+              tree: encodeTree,
+              hooks: hooks
             )
           )
         )
@@ -220,7 +225,8 @@ extension CodableMacro {
     modifiers: [DeclModifierSyntax],
     codableOptions: CodableOptions,
     hasSuper: Bool,
-    tree: NamespaceNode
+    tree: NamespaceNode,
+    hooks: HooksPresence
   ) -> InitializerDeclSyntax {
     InitializerDeclSyntax(
       leadingTrivia: .newline,
@@ -234,6 +240,16 @@ extension CodableMacro {
         effectSpecifiers: .init(throwsClause: .init(throwsSpecifier: .keyword(.throws)))
       )
     ) {
+      // Call static willDecode hooks before any property decoding
+      for hook in hooks.willDecode {
+        switch hook.kind {
+        case .decoder:
+          "try Self.\(raw: hook.name)(from: decoder)"
+        case .encoder, .none:
+          "try Self.\(raw: hook.name)()"
+        }
+      }
+
       for containerDecl in tree.decodeBlockItem {
         containerDecl
       }
@@ -246,7 +262,14 @@ extension CodableMacro {
         }
       }
 
-      "try didDecode(from: decoder)"
+      for hook in hooks.didDecode {
+        switch hook.kind {
+        case .decoder:
+          "try \(raw: hook.name)(from: decoder)"
+        case .encoder, .none:
+          "try \(raw: hook.name)()"
+        }
+      }
     }
   }
 
@@ -256,7 +279,8 @@ extension CodableMacro {
     modifiers: [DeclModifierSyntax],
     codableOptions: CodableOptions,
     hasSuper: Bool,
-    tree: NamespaceNode
+    tree: NamespaceNode,
+    hooks: HooksPresence
   ) -> FunctionDeclSyntax {
     FunctionDeclSyntax(
       leadingTrivia: .newline,
@@ -269,7 +293,14 @@ extension CodableMacro {
         effectSpecifiers: .init(throwsClause: .init(throwsSpecifier: .keyword(.throws)))
       )
     ) {
-      "try willEncode(to: encoder)"
+      for hook in hooks.willEncode {
+        switch hook.kind {
+        case .encoder:
+          "try \(raw: hook.name)(to: encoder)"
+        case .decoder, .none:
+          "try \(raw: hook.name)()"
+        }
+      }
 
       for containerDecl in tree.encodeBlockItem {
         containerDecl
@@ -279,7 +310,14 @@ extension CodableMacro {
         "try super.encode(to: encoder)"
       }
 
-      "try didEncode(to: encoder)"
+      for hook in hooks.didEncode {
+        switch hook.kind {
+        case .encoder:
+          "try \(raw: hook.name)(to: encoder)"
+        case .decoder, .none:
+          "try \(raw: hook.name)()"
+        }
+      }
     }
   }
 }

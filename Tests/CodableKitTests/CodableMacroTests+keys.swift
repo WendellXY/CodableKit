@@ -31,12 +31,10 @@ import Testing
           let age: Int
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: EncodeKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode(to: encoder)
           }
         }
 
@@ -57,7 +55,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
-            try didDecode(from: decoder)
           }
         }
         """
@@ -83,12 +80,10 @@ import Testing
           let age: Int
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode(to: encoder)
           }
         }
 
@@ -104,7 +99,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
-            try didDecode(from: decoder)
           }
         }
         """
@@ -129,12 +123,10 @@ import Testing
           let age: Int
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: EncodeKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode(to: encoder)
           }
         }
 
@@ -155,7 +147,6 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
-            try didDecode(from: decoder)
           }
         }
         """
@@ -170,7 +161,7 @@ import Testing
           @Codable public struct ColorValue: Sendable {
               @CodableKey("light") private let lightHex: String
               @CodableKey("dark") private let darkHex: String
-      
+
               public subscript(_ scheme: ColorScheme) -> String {
                   switch scheme {
                   case .light: lightHex
@@ -194,7 +185,7 @@ import Testing
             public struct ColorValue: Sendable {
                 private let lightHex: String
                 private let darkHex: String
-        
+
                 public subscript(_ scheme: ColorScheme) -> String {
                     switch scheme {
                     case .light: lightHex
@@ -209,20 +200,16 @@ import Testing
                 }
 
               public func encode(to encoder: any Encoder) throws {
-                try willEncode(to: encoder)
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(lightHex, forKey: .lightHex)
                 try container.encode(darkHex, forKey: .darkHex)
-                try didEncode(to: encoder)
               }
             }
             public let name: String
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(name, forKey: .name)
-            try didEncode(to: encoder)
           }
         }
 
@@ -235,7 +222,6 @@ import Testing
             let container = try decoder.container(keyedBy: CodingKeys.self)
             lightHex = try container.decode(String.self, forKey: .lightHex)
             darkHex = try container.decode(String.self, forKey: .darkHex)
-            try didDecode(from: decoder)
           }
         }
 
@@ -246,7 +232,6 @@ import Testing
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             name = try container.decode(String.self, forKey: .name)
-            try didDecode(from: decoder)
           }
         }
         """)

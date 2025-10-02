@@ -34,10 +34,8 @@ import Testing
           var count: Int
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try __ckEncodeTransformed(transformer: IntFromString(), value: count, into: &container, forKey: .count)
-            try didEncode(to: encoder)
           }
         }
 
@@ -49,7 +47,6 @@ import Testing
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             count = try __ckDecodeTransformed(transformer: IntFromString(), from: container, forKey: .count, useDefaultOnFailure: false)
-            try didDecode(from: decoder)
           }
         }
         """
@@ -78,10 +75,8 @@ import Testing
           var count: Int?
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try __ckEncodeTransformedIfPresent(transformer: IntFromString(), value: count, into: &container, forKey: .count, explicitNil: false)
-            try didEncode(to: encoder)
           }
         }
 
@@ -93,7 +88,6 @@ import Testing
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             count = try __ckDecodeTransformedIfPresent(transformer: IntFromString(), from: container, forKey: .count, useDefaultOnFailure: false)
-            try didDecode(from: decoder)
           }
         }
         """
@@ -122,10 +116,8 @@ import Testing
           var count: Int = 42
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try __ckEncodeTransformed(transformer: IntFromString(), value: count, into: &container, forKey: .count)
-            try didEncode(to: encoder)
           }
         }
 
@@ -137,7 +129,6 @@ import Testing
           public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             count = (try __ckDecodeTransformedIfPresent(transformer: IntFromString(), from: container, forKey: .count, useDefaultOnFailure: true, defaultValue: 42)) ?? 42
-            try didDecode(from: decoder)
           }
         }
         """

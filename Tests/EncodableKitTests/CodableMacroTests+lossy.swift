@@ -29,11 +29,9 @@ import Testing
           let values2: Array<String>
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(values, forKey: .values)
             try container.encode(values2, forKey: .values2)
-            try didEncode(to: encoder)
           }
         }
 
@@ -61,10 +59,8 @@ import Testing
           let values: [String]?
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encodeIfPresent(values, forKey: .values)
-            try didEncode(to: encoder)
           }
         }
 
@@ -91,10 +87,8 @@ import Testing
           var values: [Int] = [1, 2]
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(values, forKey: .values)
-            try didEncode(to: encoder)
           }
         }
 
@@ -121,10 +115,8 @@ import Testing
           let ids: Set<Int>?
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encodeIfPresent(ids, forKey: .ids)
-            try didEncode(to: encoder)
           }
         }
 
@@ -151,7 +143,6 @@ import Testing
           let values: [Int]
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             let __ckEncoder = JSONEncoder()
             let valuesRawData = try __ckEncoder.encode(values)
@@ -166,7 +157,6 @@ import Testing
                 )
               )
             }
-            try didEncode(to: encoder)
           }
         }
 
@@ -193,7 +183,6 @@ import Testing
           var values: [Int] = [1, 2]
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             let __ckEncoder = JSONEncoder()
             let valuesRawData = try __ckEncoder.encode(values)
@@ -208,7 +197,6 @@ import Testing
                 )
               )
             }
-            try didEncode(to: encoder)
           }
         }
 
