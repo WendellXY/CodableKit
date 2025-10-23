@@ -5,8 +5,6 @@
 //  Created by Assistant on 2025/9/6.
 //
 
-import Foundation
-
 @inline(__always)
 public func __ckDecodeTransformed<T, K>(
   transformer: T,
