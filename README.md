@@ -445,3 +445,7 @@ extension HashableUser: Hashable { }
 ## Contributing
 
 Please feel free to contribute to `CodableKit`! Any input and suggestions are always appreciated.
+
+## Migration
+
+If you are upgrading from v1 to v2, see `MIGRATION.md` for hook-related breaking changes and how to update your code.
