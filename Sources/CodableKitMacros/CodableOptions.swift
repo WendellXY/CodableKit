@@ -5,19 +5,8 @@
 //  Created by Wendell Wang on 2025/10/2.
 //
 
+import CodableKitCore
 import SwiftSyntax
-
-struct CodableOptions: OptionSet, Sendable {
-  let rawValue: Int32
-
-  init(rawValue: Int32) {
-    self.rawValue = rawValue
-  }
-
-  static let `default`: Self = []
-  static let skipSuperCoding = Self(rawValue: 1 << 0)
-  static let skipProtocolConformance = Self(rawValue: 1 << 1)
-}
 
 extension CodableOptions {
   init(from expr: MemberAccessExprSyntax) {

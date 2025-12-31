@@ -5,6 +5,7 @@
 //  Created by Wendell on 3/30/24.
 //
 
+import CodableKitCore
 import Foundation
 import SwiftDiagnostics
 import SwiftSyntax

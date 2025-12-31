@@ -5,24 +5,8 @@
 //  Created by Wendell on 4/3/24.
 //
 
+import CodableKitCore
 import SwiftSyntax
-
-struct CodableKeyOptions: OptionSet, Sendable {
-  let rawValue: Int32
-
-  init(rawValue: Int32) {
-    self.rawValue = rawValue
-  }
-
-  static let `default`: Self = []
-  static let safeTranscodeRawString: Self = [.transcodeRawString, .useDefaultOnFailure]
-  static let ignored = Self(rawValue: 1 << 0)
-  static let explicitNil = Self(rawValue: 1 << 1)
-  static let generateCustomKey = Self(rawValue: 1 << 2)
-  static let transcodeRawString = Self(rawValue: 1 << 3)
-  static let useDefaultOnFailure = Self(rawValue: 1 << 4)
-  static let lossy = Self(rawValue: 1 << 5)
-}
 
 extension CodableKeyOptions {
   init(from expr: MemberAccessExprSyntax) {

@@ -25,9 +25,13 @@ let package = Package(
     .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0"..<"603.0.0")
   ],
   targets: [
+    .target(
+      name: "CodableKitCore"
+    ),
     .macro(
       name: "CodableKitMacros",
       dependencies: [
+        "CodableKitCore",
         .product(name: "SwiftSyntax", package: "swift-syntax"),
         .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
         .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
@@ -36,7 +40,8 @@ let package = Package(
     .target(
       name: "CodableKit",
       dependencies: [
-        "CodableKitMacros"
+        "CodableKitCore",
+        "CodableKitMacros",
       ]
     ),
     .testTarget(
