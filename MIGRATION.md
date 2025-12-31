@@ -16,7 +16,7 @@ In v2, hooks are **explicit**:
 
 - Only methods annotated with `@CodableHook(<stage>)` are invoked.
 - Conventional method names are **not** invoked unless you annotate them.
-- The macro will emit a warning when it sees conventional hook methods without `@CodableHook`.
+- The macro will emit a **compile-time error** when it sees conventional hook methods without `@CodableHook`.
 
 ### What changed (summary)
 

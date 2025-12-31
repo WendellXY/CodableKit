@@ -179,7 +179,7 @@ import Testing
           message: "Hook method 'didDecode' will not be invoked unless annotated with @CodableHook(.didDecode)",
           line: 1,
           column: 1,
-          severity: .warning
+          severity: .error
         )
       ]
     )

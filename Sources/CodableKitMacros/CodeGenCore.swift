@@ -395,7 +395,7 @@ extension CodeGenCore {
             node: node,
             message: SimpleDiagnosticMessage(
               message: "Hook method '\(name)' will not be invoked unless annotated with @CodableHook(.\(stage))",
-              severity: .warning
+              severity: .error
             )
           )
         )
