@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CodableKitCore
 import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder

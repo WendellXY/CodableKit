@@ -5,6 +5,8 @@
 //  Created by Wendell on 3/30/24.
 //
 
+import CodableKitCore
+
 /// A macro that generates complete `Codable` conformance for structs and classes.
 ///
 /// This macro automatically generates all the boilerplate code needed for `Codable` conformance,
