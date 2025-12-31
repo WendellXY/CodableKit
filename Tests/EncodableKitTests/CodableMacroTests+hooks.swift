@@ -84,12 +84,10 @@ import Testing
           func didEncode() throws {}
 
           public func encode(to encoder: any Encoder) throws {
-            try willEncode()
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
-            try didEncode()
           }
         }
 
@@ -101,6 +99,21 @@ import Testing
           }
         }
         """
+      ,
+      diagnostics: [
+        .init(
+          message: "Hook method 'willEncode' will not be invoked unless annotated with @CodableHook(.willEncode)",
+          line: 1,
+          column: 1,
+          severity: .error
+        ),
+        .init(
+          message: "Hook method 'didEncode' will not be invoked unless annotated with @CodableHook(.didEncode)",
+          line: 1,
+          column: 1,
+          severity: .error
+        ),
+      ]
     )
   }
 }

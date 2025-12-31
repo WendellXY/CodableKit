@@ -156,6 +156,27 @@ import Testing
           }
         }
         """
+      ,
+      diagnostics: [
+        .init(
+          message: "Hook method 'willEncode' will not be invoked unless annotated with @CodableHook(.willEncode)",
+          line: 1,
+          column: 1,
+          severity: .error
+        ),
+        .init(
+          message: "Hook method 'didEncode' will not be invoked unless annotated with @CodableHook(.didEncode)",
+          line: 1,
+          column: 1,
+          severity: .error
+        ),
+        .init(
+          message: "Hook method 'didDecode' will not be invoked unless annotated with @CodableHook(.didDecode)",
+          line: 1,
+          column: 1,
+          severity: .error
+        ),
+      ]
     )
   }
 }

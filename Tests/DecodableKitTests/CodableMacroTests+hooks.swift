@@ -170,10 +170,18 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
-            try didDecode()
           }
         }
         """
+      ,
+      diagnostics: [
+        .init(
+          message: "Hook method 'didDecode' will not be invoked unless annotated with @CodableHook(.didDecode)",
+          line: 1,
+          column: 1,
+          severity: .error
+        )
+      ]
     )
   }
 }
