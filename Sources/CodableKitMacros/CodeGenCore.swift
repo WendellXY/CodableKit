@@ -45,6 +45,31 @@ internal final class CodeGenCore: @unchecked Sendable {
   }
 }
 
+// MARK: - Type/Conformance Helpers
+
+extension CodeGenCore {
+  fileprivate static func lastIdentifierName(of type: some TypeSyntaxProtocol) -> String? {
+    if let id = type.as(IdentifierTypeSyntax.self) {
+      return id.name.trimmed.text
+    }
+    if let member = type.as(MemberTypeSyntax.self) {
+      return member.name.trimmed.text
+    }
+    if let attributed = type.as(AttributedTypeSyntax.self) {
+      return lastIdentifierName(of: attributed.baseType)
+    }
+    return nil
+  }
+
+  fileprivate static func directInheritedTypeNames(in declaration: some DeclGroupSyntax) -> Set<String> {
+    Set(
+      declaration.inheritanceClause?.inheritedTypes.compactMap { inherited in
+        lastIdentifierName(of: inherited.type)
+      } ?? []
+    )
+  }
+}
+
 // MARK: - Hooks Presence Model
 internal enum HookArgKind: Sendable { case none, decoder, encoder }
 
@@ -207,11 +232,47 @@ extension CodeGenCore {
       preparedDeclarations.insert(id)
     }
 
-    codableOptions[id] =
+    let options: CodableOptions =
       node.arguments?
       .as(LabeledExprListSyntax.self)?
       .first(where: { $0.label?.text == "options" })?
       .parseCodableOptions() ?? .default
+    codableOptions[id] = options
+
+    // By default, warn when the developer manually declares the same conformance that the macro provides.
+    // This is advisory only; the extension macro may still omit attaching redundant conformances.
+    if emitAdvisories, !options.contains(.skipProtocolConformance) {
+      let inherited = Self.directInheritedTypeNames(in: declaration)
+
+      func warn(_ message: String) {
+        context.diagnose(
+          Diagnostic(
+            node: node,
+            message: SimpleDiagnosticMessage(message: message, severity: .warning)
+          )
+        )
+      }
+
+      if codableType.contains(.codable) {
+        if inherited.contains("Codable") {
+          warn("Conformance 'Codable' is redundant when using @Codable")
+        }
+        if inherited.contains("Encodable") {
+          warn("Conformance 'Encodable' is redundant when using @Codable")
+        }
+        if inherited.contains("Decodable") {
+          warn("Conformance 'Decodable' is redundant when using @Codable")
+        }
+      } else if codableType.contains(.decodable) {
+        if inherited.contains("Decodable") {
+          warn("Conformance 'Decodable' is redundant when using @Decodable")
+        }
+      } else if codableType.contains(.encodable) {
+        if inherited.contains("Encodable") {
+          warn("Conformance 'Encodable' is redundant when using @Encodable")
+        }
+      }
+    }
 
     // Check if properties and access modifier are already prepared
 
@@ -447,7 +508,9 @@ extension CodeGenCore {
     var willEncode: [Hook] = []
     var didEncode: [Hook] = []
 
-    func typeContains(_ param: FunctionParameterSyntax, token: String) -> Bool { param.type.description.contains(token) }
+    func typeContains(_ param: FunctionParameterSyntax, token: String) -> Bool {
+      param.type.description.contains(token)
+    }
 
     // First pass: annotated hooks
     for member in declaration.memberBlock.members {
@@ -455,7 +518,9 @@ extension CodeGenCore {
       let attributes = funcDecl.attributes
       guard attributes.isEmpty == false else { continue }
       for attr in attributes {
-        guard let attr = AttributeSyntax(attr), attr.attributeName.as(IdentifierTypeSyntax.self)?.name.text == "CodableHook" else { continue }
+        guard let attr = AttributeSyntax(attr),
+          attr.attributeName.as(IdentifierTypeSyntax.self)?.name.text == "CodableHook"
+        else { continue }
         guard let arg = attr.arguments?.as(LabeledExprListSyntax.self)?.first?.expression else { continue }
         let stage = arg.description
         switch true {
@@ -464,20 +529,24 @@ extension CodeGenCore {
           let isStatic = funcDecl.modifiers.contains(where: { $0.name.text == "static" || $0.name.text == "class" })
           if isStatic {
             let params = funcDecl.signature.parameterClause.parameters
-            let kind: HookArgKind = if let first = params.first, typeContains(first, token: "Decoder") { .decoder } else { .none }
+            let kind: HookArgKind =
+              if let first = params.first, typeContains(first, token: "Decoder") { .decoder } else { .none }
             willDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: true))
           }
         case stage.contains("didDecode"):
           let params = funcDecl.signature.parameterClause.parameters
-          let kind: HookArgKind = if let first = params.first, typeContains(first, token: "Decoder") { .decoder } else { .none }
+          let kind: HookArgKind =
+            if let first = params.first, typeContains(first, token: "Decoder") { .decoder } else { .none }
           didDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false))
         case stage.contains("willEncode"):
           let params = funcDecl.signature.parameterClause.parameters
-          let kind: HookArgKind = if let first = params.first, typeContains(first, token: "Encoder") { .encoder } else { .none }
+          let kind: HookArgKind =
+            if let first = params.first, typeContains(first, token: "Encoder") { .encoder } else { .none }
           willEncode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false))
         case stage.contains("didEncode"):
           let params = funcDecl.signature.parameterClause.parameters
-          let kind: HookArgKind = if let first = params.first, typeContains(first, token: "Encoder") { .encoder } else { .none }
+          let kind: HookArgKind =
+            if let first = params.first, typeContains(first, token: "Encoder") { .encoder } else { .none }
           didEncode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false))
         default: break
         }

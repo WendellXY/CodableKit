@@ -12,6 +12,38 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 public struct CodableMacro: ExtensionMacro {
+  fileprivate static func lastIdentifierName(of type: some TypeSyntaxProtocol) -> String? {
+    if let id = type.as(IdentifierTypeSyntax.self) {
+      return id.name.trimmed.text
+    }
+    if let member = type.as(MemberTypeSyntax.self) {
+      return member.name.trimmed.text
+    }
+    if let attributed = type.as(AttributedTypeSyntax.self) {
+      return lastIdentifierName(of: attributed.baseType)
+    }
+    return nil
+  }
+
+  fileprivate static func declaredOrSatisfiedConformances(of declaration: some DeclGroupSyntax) -> Set<String> {
+    let direct: Set<String> = Set(
+      declaration.inheritanceClause?.inheritedTypes.compactMap { inherited in
+        lastIdentifierName(of: inherited.type)
+      } ?? []
+    )
+
+    // Swift stdlib: `Codable` is a typealias for `Decodable & Encodable`, so declaring one
+    // implies conformance to the others (and repeating any of them is redundant).
+    var satisfied = direct
+    if direct.contains("Codable") {
+      satisfied.formUnion(["Decodable", "Encodable"])
+    }
+    if direct.contains("Decodable") && direct.contains("Encodable") {
+      satisfied.insert("Codable")
+    }
+    return satisfied
+  }
+
   // MARK: - ExtensionMacro
   public static func expansion(
     of node: AttributeSyntax,
@@ -52,15 +84,25 @@ public struct CodableMacro: ExtensionMacro {
         codingKeyDecls = sharedTree.allCodingKeysEnums
       }
 
+      let alreadyConformsTo = declaredOrSatisfiedConformances(of: declaration)
+      let protocolsToAttach = protocols.filter { proto in
+        guard let name = lastIdentifierName(of: proto) else { return true }
+        return !alreadyConformsTo.contains(name)
+      }
+
       let inheritanceClause: InheritanceClauseSyntax? =
-        if case .classType(let hasSuperclass) = structureType,
+        if codableOptions.contains(.skipProtocolConformance) {
+          nil
+        } else if case .classType(let hasSuperclass) = structureType,
           hasSuperclass,
           !codableOptions.contains(.skipSuperCoding)
         {
           nil
+        } else if protocolsToAttach.isEmpty {
+          nil
         } else {
           InheritanceClauseSyntax {
-            for `protocol` in protocols {
+            for `protocol` in protocolsToAttach {
               InheritedTypeSyntax(type: `protocol`)
             }
           }
@@ -161,7 +203,7 @@ extension CodableMacro: MemberMacro {
     var hasSuper = false
 
     switch structureType {
-    case let .classType(hasSuperclass):
+    case .classType(let hasSuperclass):
       decodeModifiers.append(.init(name: .keyword(.required)))
       if hasSuperclass {
         if !codableOptions.contains(.skipSuperCoding) {

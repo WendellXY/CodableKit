@@ -16,6 +16,7 @@ struct CodableOptions: OptionSet, Sendable {
 
   static let `default`: Self = []
   static let skipSuperCoding = Self(rawValue: 1 << 0)
+  static let skipProtocolConformance = Self(rawValue: 1 << 1)
 }
 
 extension CodableOptions {
@@ -24,6 +25,8 @@ extension CodableOptions {
     switch variableName {
     case "skipSuperCoding":
       self = .skipSuperCoding
+    case "skipProtocolConformance":
+      self = .skipProtocolConformance
     default:
       self = .default
     }

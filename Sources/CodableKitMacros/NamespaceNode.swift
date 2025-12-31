@@ -47,11 +47,11 @@ final class NamespaceNode {
     from propertyList: [CodableProperty]
   ) -> NamespaceNode {
     let rootBaseName =
-    switch type {
-    case .decodable: "DecodeKeys"
-    case .encodable: "EncodeKeys"
-    default: "CodingKeys"
-    }
+      switch type {
+      case .decodable: "DecodeKeys"
+      case .encodable: "EncodeKeys"
+      default: "CodingKeys"
+      }
 
     let root = NamespaceNode(type, segment: rootBaseName, rootBaseName: rootBaseName)
 

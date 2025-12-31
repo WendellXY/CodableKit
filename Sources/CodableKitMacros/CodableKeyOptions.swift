@@ -67,7 +67,6 @@ extension LabeledExprSyntax {
   }
 }
 
-
 extension CodableKeyMacro {
   /// Options for customizing the behavior of a `CodableKey`.
   typealias Options = CodableKeyOptions

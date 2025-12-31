@@ -55,6 +55,79 @@ import Testing
 
   }
 
+  @Test func doesNotAttachCodableIfAlreadyDeclared() throws {
+    assertMacro(
+      """
+      @Codable
+      public struct TestData: Sendable, Codable {
+        let id: UUID
+      }
+      """,
+      expandedSource: """
+        public struct TestData: Sendable, Codable {
+          let id: UUID
+
+          public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+          }
+        }
+
+        extension TestData {
+          enum CodingKeys: String, CodingKey {
+            case id
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+          }
+        }
+        """
+      ,
+      diagnostics: [
+        .init(
+          message: "Conformance 'Codable' is redundant when using @Codable",
+          line: 1,
+          column: 1,
+          severity: .warning
+        )
+      ]
+    )
+  }
+
+  @Test func optionSkipProtocolConformanceDoesNotAttachConformance() throws {
+    assertMacro(
+      """
+      @Codable(options: .skipProtocolConformance)
+      public struct User {
+        let id: UUID
+      }
+      """,
+      expandedSource: """
+        public struct User {
+          let id: UUID
+
+          public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+          }
+        }
+
+        extension User {
+          enum CodingKeys: String, CodingKey {
+            case id
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+          }
+        }
+        """
+    )
+  }
+
   @Test func macroWithDefaultValue() throws {
 
     assertMacro(

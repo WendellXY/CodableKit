@@ -23,4 +23,14 @@ public struct CodableOptions: OptionSet, Sendable {
   /// - Replaces `super.init(from: decoder)` with `super.init()`
   /// - Removes `super.encode(to: encoder)` call entirely
   public static let skipSuperCoding = Self(rawValue: 1 << 0)
+
+  /// Skips adding protocol conformances (`Codable`/`Decodable`/`Encodable`) to the generated extension.
+  ///
+  /// Use this option when you want to explicitly declare the conformance on the type yourself, e.g.:
+  ///
+  /// ```swift
+  /// @Codable(options: .skipProtocolConformance)
+  /// struct User: Codable { ... }
+  /// ```
+  public static let skipProtocolConformance = Self(rawValue: 1 << 1)
 }

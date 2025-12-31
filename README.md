@@ -274,10 +274,24 @@ CodableKit exposes two option sets:
 
 ### CodableOptions (Macro‑Level)
 
-| Option             | Description                                                                                  |
-| ------------------ | -------------------------------------------------------------------------------------------- |
-| `.default`         | Standard behavior; will call super encode/decode when appropriate                            |
-| `.skipSuperCoding` | Skip generating `super.init(from:)` and `super.encode(to:)` if superclass is not `Codable`   |
+| Option                    | Description                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| `.default`                | Standard behavior; will call super encode/decode when appropriate                            |
+| `.skipSuperCoding`        | Skip generating `super.init(from:)` and `super.encode(to:)` if superclass is not `Codable`   |
+| `.skipProtocolConformance`| Do not attach `Codable` / `Decodable` / `Encodable` conformances in the generated extension  |
+
+#### Protocol Conformance Control
+
+By default, `@Codable`, `@Decodable`, and `@Encodable` will add protocol conformance via a generated extension. If you also manually add the same conformance on the type (e.g. `@Codable struct User: Codable { ... }`), CodableKit will still work, but will emit a **warning** to keep your declarations clean.
+
+If you want to **fully control conformance yourself**, use `.skipProtocolConformance`:
+
+```swift
+@Codable(options: .skipProtocolConformance)
+struct User: Codable {
+  let id: Int
+}
+```
 
 ### Transformers (Advanced)
 

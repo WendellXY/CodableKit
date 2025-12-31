@@ -49,6 +49,69 @@ import Testing
 
   }
 
+  @Test func doesNotAttachDecodableIfAlreadyDeclared() throws {
+    assertMacro(
+      """
+      @Decodable
+      public struct TestData: Sendable, Decodable {
+        let id: UUID
+      }
+      """,
+      expandedSource: """
+        public struct TestData: Sendable, Decodable {
+          let id: UUID
+        }
+
+        extension TestData {
+          enum CodingKeys: String, CodingKey {
+            case id
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+          }
+        }
+        """
+      ,
+      diagnostics: [
+        .init(
+          message: "Conformance 'Decodable' is redundant when using @Decodable",
+          line: 1,
+          column: 1,
+          severity: .warning
+        )
+      ]
+    )
+  }
+
+  @Test func optionSkipProtocolConformanceDoesNotAttachConformance() throws {
+    assertMacro(
+      """
+      @Decodable(options: .skipProtocolConformance)
+      public struct User {
+        let id: UUID
+      }
+      """,
+      expandedSource: """
+        public struct User {
+          let id: UUID
+        }
+
+        extension User {
+          enum CodingKeys: String, CodingKey {
+            case id
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+          }
+        }
+        """
+    )
+  }
+
   @Test func macroWithDefaultValue() throws {
 
     assertMacro(
