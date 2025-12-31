@@ -237,7 +237,7 @@ struct User {
   - `.willEncode` / `.didEncode`: instance methods, signature `to encoder: any Encoder`, run before/after encoding.
 - Multiple hooks per stage are supported and called in declaration order.
 - You can pick any method names when annotated; the macro invokes the annotated methods.
-- If no annotations are present, conventional names are still detected for compatibility.
+- In v2, hooks are **explicit**: only `@CodableHook`-annotated methods are invoked.
 
 ### Why There’s No Instance `willDecode`
 
