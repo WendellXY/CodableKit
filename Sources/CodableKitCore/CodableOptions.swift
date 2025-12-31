@@ -34,5 +34,3 @@ public struct CodableOptions: OptionSet, Sendable {
   /// ```
   public static let skipProtocolConformance = Self(rawValue: 1 << 1)
 }
-
-

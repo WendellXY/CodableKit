@@ -46,5 +46,3 @@ public struct CodableKeyOptions: OptionSet, Sendable {
   ///   converted from JSON string keys) are dropped.
   public static let lossy = Self(rawValue: 1 << 5)
 }
-
-

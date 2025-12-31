@@ -41,7 +41,7 @@ let package = Package(
       name: "CodableKit",
       dependencies: [
         "CodableKitCore",
-        "CodableKitMacros"
+        "CodableKitMacros",
       ]
     ),
     .testTarget(
