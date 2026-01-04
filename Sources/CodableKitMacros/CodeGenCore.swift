@@ -224,7 +224,7 @@ extension CodeGenCore {
       return
     }
 
-    let codableType = CodableType.from(protocols)
+    let codableType = CodableType.from(protocols + [node.attributeName])
     codableTypes[id] = codableType
 
     try validateDeclaration(for: declaration, in: context)
