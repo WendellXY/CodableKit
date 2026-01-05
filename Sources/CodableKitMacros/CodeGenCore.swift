@@ -78,6 +78,7 @@ internal struct Hook: Sendable {
   let name: String
   let kind: HookArgKind
   let isStatic: Bool
+  let isThrowing: Bool
 }
 
 internal struct HooksPresence: Sendable {
@@ -338,15 +339,16 @@ extension CodeGenCore {
 
     // v2 explicit hooks: warn when conventional hook method names exist without @CodableHook.
     if emitAdvisories {
-      let relevantNames: Set<String> = if codableType.contains(.codable) {
-        ["willDecode", "didDecode", "willEncode", "didEncode"]
-      } else if codableType.contains(.decodable) {
-        ["willDecode", "didDecode"]
-      } else if codableType.contains(.encodable) {
-        ["willEncode", "didEncode"]
-      } else {
-        []
-      }
+      let relevantNames: Set<String> =
+        if codableType.contains(.codable) {
+          ["willDecode", "didDecode", "willEncode", "didEncode"]
+        } else if codableType.contains(.decodable) {
+          ["willDecode", "didDecode"]
+        } else if codableType.contains(.encodable) {
+          ["willEncode", "didEncode"]
+        } else {
+          []
+        }
 
       func hasCodableHookAttribute(_ funcDecl: FunctionDeclSyntax) -> Bool {
         for attr in funcDecl.attributes {
@@ -583,6 +585,7 @@ extension CodeGenCore {
     // First pass: annotated hooks
     for member in declaration.memberBlock.members {
       guard let funcDecl = member.decl.as(FunctionDeclSyntax.self) else { continue }
+      let isThrowing = funcDecl.signature.effectSpecifiers?.throwsClause != nil
       let attributes = funcDecl.attributes
       guard attributes.isEmpty == false else { continue }
       for attr in attributes {
@@ -599,23 +602,23 @@ extension CodeGenCore {
             let params = funcDecl.signature.parameterClause.parameters
             let kind: HookArgKind =
               if let first = params.first, typeContains(first, token: "Decoder") { .decoder } else { .none }
-            willDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: true))
+            willDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: true, isThrowing: isThrowing))
           }
         case stage.contains("didDecode"):
           let params = funcDecl.signature.parameterClause.parameters
           let kind: HookArgKind =
             if let first = params.first, typeContains(first, token: "Decoder") { .decoder } else { .none }
-          didDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false))
+          didDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false, isThrowing: isThrowing))
         case stage.contains("willEncode"):
           let params = funcDecl.signature.parameterClause.parameters
           let kind: HookArgKind =
             if let first = params.first, typeContains(first, token: "Encoder") { .encoder } else { .none }
-          willEncode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false))
+          willEncode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false, isThrowing: isThrowing))
         case stage.contains("didEncode"):
           let params = funcDecl.signature.parameterClause.parameters
           let kind: HookArgKind =
             if let first = params.first, typeContains(first, token: "Encoder") { .encoder } else { .none }
-          didEncode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false))
+          didEncode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false, isThrowing: isThrowing))
         default: break
         }
       }

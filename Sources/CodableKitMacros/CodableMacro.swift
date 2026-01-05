@@ -287,9 +287,9 @@ extension CodableMacro {
       for hook in hooks.willDecode {
         switch hook.kind {
         case .decoder:
-          "try Self.\(raw: hook.name)(from: decoder)"
+          "\(raw: hook.isThrowing ? "try " : "")Self.\(raw: hook.name)(from: decoder)"
         case .encoder, .none:
-          "try Self.\(raw: hook.name)()"
+          "\(raw: hook.isThrowing ? "try " : "")Self.\(raw: hook.name)()"
         }
       }
 
@@ -308,9 +308,9 @@ extension CodableMacro {
       for hook in hooks.didDecode {
         switch hook.kind {
         case .decoder:
-          "try \(raw: hook.name)(from: decoder)"
+          "\(raw: hook.isThrowing ? "try " : "")\(raw: hook.name)(from: decoder)"
         case .encoder, .none:
-          "try \(raw: hook.name)()"
+          "\(raw: hook.isThrowing ? "try " : "")\(raw: hook.name)()"
         }
       }
     }
@@ -339,9 +339,9 @@ extension CodableMacro {
       for hook in hooks.willEncode {
         switch hook.kind {
         case .encoder:
-          "try \(raw: hook.name)(to: encoder)"
+          "\(raw: hook.isThrowing ? "try " : "")\(raw: hook.name)(to: encoder)"
         case .decoder, .none:
-          "try \(raw: hook.name)()"
+          "\(raw: hook.isThrowing ? "try " : "")\(raw: hook.name)()"
         }
       }
 
@@ -356,9 +356,9 @@ extension CodableMacro {
       for hook in hooks.didEncode {
         switch hook.kind {
         case .encoder:
-          "try \(raw: hook.name)(to: encoder)"
+          "\(raw: hook.isThrowing ? "try " : "")\(raw: hook.name)(to: encoder)"
         case .decoder, .none:
-          "try \(raw: hook.name)()"
+          "\(raw: hook.isThrowing ? "try " : "")\(raw: hook.name)()"
         }
       }
     }
