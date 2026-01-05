@@ -49,7 +49,7 @@ struct Car {
 Add to your Package.swift dependencies:
 
 ```swift
-.package(url: "https://github.com/WendellXY/CodableKit.git", from: "1.7.6")
+.package(url: "https://github.com/WendellXY/CodableKit.git", from: "2.0.0")
 ```
 
 ## Feature Matrix
