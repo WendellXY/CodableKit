@@ -225,21 +225,23 @@ extension CodeGenCore {
       return
     }
 
-    let codableType = CodableType.from(protocols + [node.attributeName])
-    codableTypes[id] = codableType
+    // The codable type of the macro, for example, for @Codable, the codable type is .codable
+    let macroCodableType = CodableType.from([node.attributeName])
+    let codableType = CodableType.from(protocols)
+    let options: CodableOptions =
+      node.arguments?
+      .as(LabeledExprListSyntax.self)?
+      .first(where: { $0.label?.text == "options" })?
+      .parseCodableOptions() ?? .default
+
+    codableTypes[id] = options.contains(.skipProtocolConformance) ? codableType.union(macroCodableType) : codableType
+    codableOptions[id] = options
 
     try validateDeclaration(for: declaration, in: context)
 
     defer {
       preparedDeclarations.insert(id)
     }
-
-    let options: CodableOptions =
-      node.arguments?
-      .as(LabeledExprListSyntax.self)?
-      .first(where: { $0.label?.text == "options" })?
-      .parseCodableOptions() ?? .default
-    codableOptions[id] = options
 
     // By default, warn when the developer manually declares the same conformance that the macro provides.
     // This is advisory only; the extension macro may still omit attaching redundant conformances.
