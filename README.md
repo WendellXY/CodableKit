@@ -65,7 +65,7 @@ Add to your Package.swift dependencies:
 | Use default on failure         | `@CodableKey(options: .useDefaultOnFailure)`        | Fallback to default/nil on decoding error                    |
 | Generate custom key property   | `@CodableKey("id", options: .generateCustomKey)`    | Adds computed property for custom key                        |
 | Explicit nil encoding          | `@CodableKey(options: .explicitNil)`                | Encode nil as `null`, not omitted                            |
-| Coding lifecycle hooks         | `static willDecode(from:)`, `func didDecode(from:)`, `func willEncode(to:)`, `func didEncode(to:)` | Run logic during encoding/decoding; annotate with `@CodableHook` for explicit control |
+| Coding lifecycle hooks         | `@CodableHook(.willDecode)`, `@CodableHook(.didDecode)`, `@CodableHook(.willEncode)`, `@CodableHook(.didEncode)` | Run logic during encoding/decoding; **requires** `@CodableHook` annotation in v2 |
 | Transformers (advanced)        | `@CodableKey(transformer: MyTransformer())`         | Apply custom/built‑in transforms, compose with bidirectional |
 
 ## Usage Guides and Examples
@@ -209,6 +209,8 @@ struct User {
 
 Run custom logic before or after encoding/decoding, e.g. validation or derived values.
 
+In v2, lifecycle hooks **must** be explicitly annotated with `@CodableHook`. The macro will emit a compile-time error if it finds conventional hook method names (like `didDecode`, `willEncode`, etc.) without the annotation.
+
 ```swift
 @Codable
 struct User {
@@ -218,26 +220,38 @@ struct User {
 
   // Runs before any properties are decoded (static-only)
   @CodableHook(.willDecode)
-  static func pre(from decoder: any Decoder) throws { /* prepare decoder/userInfo */ }
+  static func pre(from decoder: any Decoder) throws { 
+    // prepare decoder/userInfo, validate configuration, etc.
+  }
 
+  @CodableHook(.didDecode)
   mutating func didDecode(from decoder: any Decoder) throws {
     id = "\(name)-\(age)" // recompute derived values
   }
 
+  @CodableHook(.willEncode)
   func willEncode(to encoder: any Encoder) throws { /* prep */ }
+  
+  @CodableHook(.didEncode)
   func didEncode(to encoder: any Encoder) throws { /* cleanup */ }
 }
 ```
 
-### Annotated Hooks (Recommended)
+### Hook Stages
 
-- Use `@CodableHook(<stage>)` to explicitly mark lifecycle methods:
-  - `.willDecode`: static/class method, signature `from decoder: any Decoder`, runs before property decoding.
-  - `.didDecode`: instance method, signature `from decoder: any Decoder`, runs after decoding completes.
-  - `.willEncode` / `.didEncode`: instance methods, signature `to encoder: any Encoder`, run before/after encoding.
+Use `@CodableHook(<stage>)` to explicitly mark lifecycle methods:
+
+- **`.willDecode`**: static/class method, signature `from decoder: any Decoder`, runs before property decoding begins.
+- **`.didDecode`**: instance method, signature `from decoder: any Decoder`, runs after decoding completes.
+- **`.willEncode`**: instance method, signature `to encoder: any Encoder`, runs before encoding starts.
+- **`.didEncode`**: instance method, signature `to encoder: any Encoder`, runs after encoding completes.
+
+Additional notes:
+
 - Multiple hooks per stage are supported and called in declaration order.
-- You can pick any method names when annotated; the macro invokes the annotated methods.
-- In v2, hooks are **explicit**: only `@CodableHook`-annotated methods are invoked.
+- You can use any method name when annotated; the macro invokes methods based on the `@CodableHook` annotation.
+- Parameterless variants are also supported (e.g., `@CodableHook(.didDecode) mutating func didDecode() throws { }`).
+- **v2 Breaking Change**: Hooks are now explicit. Only methods annotated with `@CodableHook` are invoked. See `MIGRATION.md` for details on migrating from v1.
 
 ### Why There’s No Instance `willDecode`
 
