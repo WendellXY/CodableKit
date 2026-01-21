@@ -76,19 +76,18 @@ extension CodableProperty {
   func generateProperty(for type: CodableType = .codable) -> CodableProperty {
     guard type != .codable else { return self }
 
-    let desc: String =
+    let typeMacro: String =
       switch type {
       case .decodable: "DecodableKey"
       case .encodable: "EncodableKey"
       default: "CodableKey"
       }
 
-    let attributes = self.attributes.filter {
-      $0.macroName == desc
-    }
+    let typeAttributes = attributes.filter { $0.macroName == typeMacro }
+    let codableAttributes = attributes.filter { $0.macroName == "CodableKey" }
 
     var copy = self
-    copy.attributes = attributes
+    copy.attributes = typeAttributes + codableAttributes
     return copy
   }
 
