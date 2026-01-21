@@ -114,6 +114,8 @@ import Testing
         @DecodableKey("name_de")
         let name: String
         let age: Int
+        @CodableKey(options: .useDefaultOnFailure)
+        let avatar: URL?
       }
       """,
       expandedSource: """
@@ -121,12 +123,14 @@ import Testing
           let id: UUID
           let name: String
           let age: Int
+          let avatar: URL?
 
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: EncodeKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
+            try container.encodeIfPresent(avatar, forKey: .avatar)
           }
         }
 
@@ -135,11 +139,13 @@ import Testing
             case id
             case name = "name_de"
             case age
+            case avatar
           }
           enum EncodeKeys: String, CodingKey {
             case id
             case name
             case age
+            case avatar
           }
 
           public init(from decoder: any Decoder) throws {
@@ -147,6 +153,7 @@ import Testing
             id = try container.decode(UUID.self, forKey: .id)
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
+            avatar = (try? container.decodeIfPresent(URL?.self, forKey: .avatar)) ?? nil
           }
         }
         """

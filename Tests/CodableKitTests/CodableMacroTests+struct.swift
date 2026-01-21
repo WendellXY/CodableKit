@@ -953,6 +953,8 @@ import Testing
         let age: Int
         @CodableKey(options: .useDefaultOnFailure)
         var role: Role = .unknown
+        @CodableKey(options: .useDefaultOnFailure)
+        var avatar: URL?
       }
       """,
       expandedSource: """
@@ -966,6 +968,7 @@ import Testing
           let name: String
           let age: Int
           var role: Role = .unknown
+          var avatar: URL?
 
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
@@ -973,6 +976,7 @@ import Testing
             try container.encode(name, forKey: .name)
             try container.encode(age, forKey: .age)
             try container.encode(role, forKey: .role)
+            try container.encodeIfPresent(avatar, forKey: .avatar)
           }
         }
 
@@ -982,6 +986,7 @@ import Testing
             case name
             case age
             case role
+            case avatar
           }
 
           public init(from decoder: any Decoder) throws {
@@ -990,6 +995,7 @@ import Testing
             name = try container.decode(String.self, forKey: .name)
             age = try container.decode(Int.self, forKey: .age)
             role = (try? container.decodeIfPresent(Role.self, forKey: .role)) ?? .unknown
+            avatar = (try? container.decodeIfPresent(URL?.self, forKey: .avatar)) ?? nil
           }
         }
         """
