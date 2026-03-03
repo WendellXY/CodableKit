@@ -1,4 +1,4 @@
-# AGENT.md
+# AGENTS.md
 
 This document is for AI agents and contributors working on `CodableKit`. It explains the project structure, how to build and test locally, coding standards, and common workflows. Keep it concise and high-signal.
 
