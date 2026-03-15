@@ -263,6 +263,11 @@ extension CodeGenCore {
 
 // MARK: - Code Generation Preparation
 extension CodeGenCore {
+  fileprivate static func shouldWarnAboutSuperCoding(for declaration: some DeclGroupSyntax) -> Bool {
+    let inherited = directInheritedTypeNames(in: declaration)
+    return inherited.contains("NSObject")
+  }
+
   /// Validate that the macro is being applied to a struct declaration
   fileprivate func validateDeclaration(
     for declaration: some DeclGroupSyntax,
@@ -335,6 +340,7 @@ extension CodeGenCore {
     if emitAdvisories,
       case .classType(let hasSuperclass) = structureTypes[id],
       hasSuperclass,
+      Self.shouldWarnAboutSuperCoding(for: declaration),
       !options.contains(.skipSuperCoding)
     {
       let message = "If the inherited type is not Codable, add '.skipSuperCoding' to avoid generating super encode/decode calls"
