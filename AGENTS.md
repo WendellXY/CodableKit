@@ -2,6 +2,10 @@
 
 This document is for AI agents and contributors working on `CodableKit`. It explains the project structure, how to build and test locally, coding standards, and common workflows. Keep it concise and high-signal.
 
+## Philosophy
+
+Agents must reason from first principles. Do not rely on conventions, copied patterns, or assumptions without verification. Every task should begin by identifying the fundamental facts, constraints, and invariants of the system (e.g., API contracts, type rules, data models, performance limits). Decompose problems until they reach irreducible components, then derive solutions logically from those facts. Prefer the simplest design that satisfies all constraints, and explicitly verify assumptions using available evidence (code, documentation, tests, or tools). Avoid guesswork, pattern imitation, or speculative implementations. Solutions should be the result of facts → constraints → reasoning → implementation.
+
 ## Overview
 
 CodableKit is a Swift macro package that generates Codable/Encodable/Decodable conformances with powerful customization:
