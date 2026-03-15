@@ -144,6 +144,20 @@ extension CodableProperty {
   /// The key path for the property as specified in `@CodableKey`, split by `.`, e.g. ["data", "uid"]
   var customCodableKeyPath: [String]? { allCodableKeyLabeledExprList.compactMap(\.customCodableKeyPath).first }
 
+  var customCodableKeyPathValidationMessage: String? {
+    guard let rawKeyPath = allCodableKeyLabeledExprList.compactMap(\.rawCustomCodableKeyText).first else { return nil }
+    if rawKeyPath.isEmpty {
+      return "Custom Codable key path must not be empty"
+    }
+
+    let segments = rawKeyPath.split(separator: ".", omittingEmptySubsequences: false)
+    if segments.contains(where: \.isEmpty) {
+      return "Custom Codable key path '\(rawKeyPath)' is invalid; empty path segments are not allowed"
+    }
+
+    return nil
+  }
+
   /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key
   var customCodableKey: PatternSyntax? { allCodableKeyLabeledExprList.compactMap(\.customCodableKey).first }
 
@@ -157,7 +171,7 @@ extension CodableProperty {
   var isNormal: Bool {
     !options.contains(.ignored)
       && !options.contains(.transcodeRawString)
-      && !(options.contains(.lossy) && (isArrayType || isSetType || isDictionaryType))
+      && !options.contains(.lossy)
       && transformerExpr == nil
   }
 
@@ -435,17 +449,33 @@ extension CodableProperty {
 // MARK: - Helpers
 
 extension LabeledExprListSyntax {
-  /// The key path for the property as specified in `@CodableKey`, split by `.`, e.g. ["data", "uid"]
-  fileprivate var customCodableKeyPath: [String]? {
-    guard
-      let expr = getExpr(label: nil)?.expression.trimmed,
-      expr.as(NilLiteralExprSyntax.self) == nil
-    else {
+  fileprivate var rawCustomCodableKeyText: String? {
+    guard let expr = getExpr(label: nil)?.expression.trimmed else {
       return nil
     }
+    if expr.as(NilLiteralExprSyntax.self) != nil {
+      return nil
+    }
+    if let stringLiteral = expr.as(StringLiteralExprSyntax.self),
+      stringLiteral.segments.count == 1,
+      let segment = stringLiteral.segments.first?.as(StringSegmentSyntax.self)
+    {
+      return segment.content.text
+    }
 
-    // the expr is something like `"customKey"`, we need to remove the quotes
-    return "\(expr)".trimmingCharacters(in: .init(charactersIn: "\"")).components(separatedBy: ".")
+    return "\(expr)".trimmingCharacters(in: .init(charactersIn: "\""))
+  }
+
+  /// The key path for the property as specified in `@CodableKey`, split by `.`, e.g. ["data", "uid"]
+  fileprivate var customCodableKeyPath: [String]? {
+    guard let rawCustomCodableKeyText else { return nil }
+    let segments = rawCustomCodableKeyText
+      .split(separator: ".", omittingEmptySubsequences: false)
+      .compactMap { segment in
+        let text = String(segment)
+        return text.isEmpty ? nil : text
+      }
+    return segments.isEmpty ? nil : segments
   }
 
   /// The `CodableKey` attribute of the property, if this value is nil, the property name will be used as the key

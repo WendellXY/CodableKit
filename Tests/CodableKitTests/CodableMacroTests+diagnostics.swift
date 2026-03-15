@@ -44,27 +44,26 @@ import Testing
         let id: UUID
       }
       """,
-      expandedSource: """
-        public struct User: Encodable {
-          let id: UUID
-
-          public func encode(to encoder: any Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(id, forKey: .id)
-          }
-        }
-
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-          }
-
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(UUID.self, forKey: .id)
-          }
-        }
-        """,
+      expandedSource:
+        "public struct User: Encodable {\n"
+        + "  let id: UUID\n"
+        + "\n"
+        + "  public func encode(to encoder: any Encoder) throws {\n"
+        + "    var container = encoder.container(keyedBy: CodingKeys.self)\n"
+        + "    try container.encode(id, forKey: .id)\n"
+        + "  }\n"
+        + "}\n"
+        + "\n"
+        + "extension User: Codable {\n"
+        + "  enum CodingKeys: String, CodingKey {\n"
+        + "    case id\n"
+        + "  }\n"
+        + "\n"
+        + "  public init(from decoder: any Decoder) throws {\n"
+        + "    let container = try decoder.container(keyedBy: CodingKeys.self)\n"
+        + "    id = try container.decode(UUID.self, forKey: .id)\n"
+        + "  }\n"
+        + "}\n",
       diagnostics: [
         .init(
           message: "Conformance 'Encodable' is redundant when using @Codable",
@@ -121,6 +120,140 @@ import Testing
         """
     )
 
+  }
+
+  @Test func macroWarnsWhenLossyUsedOnUnsupportedType() throws {
+    assertMacro(
+      """
+      @Codable
+      public struct User {
+        @CodableKey(options: .lossy)
+        let id: Int
+      }
+      """,
+      expandedSource:
+        "public struct User {\n"
+        + "  let id: Int\n"
+        + "\n"
+        + "  public func encode(to encoder: any Encoder) throws {\n"
+        + "    var container = encoder.container(keyedBy: CodingKeys.self)\n"
+        + "    try container.encode(id, forKey: .id)\n"
+        + "  }\n"
+        + "}\n"
+        + "\n"
+        + "extension User: Codable {\n"
+        + "  enum CodingKeys: String, CodingKey {\n"
+        + "    case id\n"
+        + "  }\n"
+        + "\n"
+        + "  public init(from decoder: any Decoder) throws {\n"
+        + "    let container = try decoder.container(keyedBy: CodingKeys.self)\n"
+        + "  }\n"
+        + "}\n",
+      diagnostics: [
+        .init(
+          message: "Option '.lossy' supports only Array<T>, Set<T>, or Dictionary<K, V> properties",
+          line: 3,
+          column: 3,
+          severity: .warning
+        )
+      ]
+    )
+  }
+
+  @Test func macroWarnsOnInvalidCustomKeyPath() throws {
+    assertMacro(
+      """
+      @Codable
+      public struct User {
+        @CodableKey("data..id")
+        let id: Int
+      }
+      """,
+      expandedSource:
+        "public struct User {\n"
+        + "  let id: Int\n"
+        + "\n"
+        + "  public func encode(to encoder: any Encoder) throws {\n"
+        + "    var container = encoder.container(keyedBy: CodingKeys.self)\n"
+        + "    var dataContainer = container.nestedContainer(keyedBy: DataKeys.self, forKey: .data)\n"
+        + "    try dataContainer.encode(id, forKey: .id)\n"
+        + "  }\n"
+        + "}\n"
+        + "\n"
+        + "extension User: Codable {\n"
+        + "  enum CodingKeys: String, CodingKey {\n"
+        + "    case data\n"
+        + "  }\n"
+        + "  enum DataKeys: String, CodingKey {\n"
+        + "    case id\n"
+        + "  }\n"
+        + "\n"
+        + "  public init(from decoder: any Decoder) throws {\n"
+        + "    let container = try decoder.container(keyedBy: CodingKeys.self)\n"
+        + "    let dataContainer = try container.nestedContainer(keyedBy: DataKeys.self, forKey: .data)\n"
+        + "    id = try dataContainer.decode(Int.self, forKey: .id)\n"
+        + "  }\n"
+        + "}\n",
+      diagnostics: [
+        .init(
+          message: "Custom Codable key path 'data..id' is invalid; empty path segments are not allowed",
+          line: 3,
+          column: 3,
+          severity: .warning
+        )
+      ]
+    )
+  }
+
+  @Test func macroSuggestsSkipSuperCodingForInheritedTypes() throws {
+    assertMacro(
+      """
+      @Codable
+      public class User: NSObject {
+        let id: UUID
+      }
+      """,
+      expandedSource: """
+        public class User: NSObject {
+          let id: UUID
+
+          public required init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            try super.init(from: decoder)
+          }
+
+          public override func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try super.encode(to: encoder)
+          }
+        }
+
+        extension User {
+          enum CodingKeys: String, CodingKey {
+            case id
+          }
+        }
+        """,
+      diagnostics: [
+        .init(
+          message: "If the inherited type is not Codable, add '.skipSuperCoding' to avoid generating super encode/decode calls",
+          line: 1,
+          column: 1,
+          severity: .warning,
+          fixIts: [.init(message: "Add .skipSuperCoding to macro options")]
+        )
+      ],
+      applyFixIts: ["Add .skipSuperCoding to macro options"],
+      fixedSource: """
+        @Codable(options: .skipSuperCoding)
+        public class User: NSObject {
+          let id: UUID
+        }
+        """
+    )
   }
 
   @Test func macroWithStaticTypeAnnotation() throws {

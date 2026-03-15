@@ -31,7 +31,7 @@ public struct CodingHookMacro: PeerMacro {
     }
 
     // Validate the stage argument exists
-    if node.arguments?.as(LabeledExprListSyntax.self)?.first == nil {
+    guard let arg = node.arguments?.as(LabeledExprListSyntax.self)?.first?.expression else {
       let diag = Diagnostic(
         node: node,
         message: SimpleDiagnosticMessage(
@@ -43,55 +43,51 @@ public struct CodingHookMacro: PeerMacro {
       return []
     }
 
-    // Soft validation of signature based on stage token presence
-    if let arg = node.arguments?.as(LabeledExprListSyntax.self)?.first?.expression {
-      let stageText = arg.description
-      let params = fn.signature.parameterClause.parameters
-      let isStatic = fn.modifiers.contains(where: { $0.name.text == "static" || $0.name.text == "class" })
-      if stageText.contains("didDecode") {
-        // If parameter exists, prefer it to mention Decoder. If not, allow zero-parameter hooks.
-        if let first = params.first, !first.type.description.contains("Decoder") {
-          let diag = Diagnostic(
-            node: node,
-            message: SimpleDiagnosticMessage(
-              message: "didDecode hooks should take a Decoder parameter",
-              severity: .warning
-            )
+    let stageText = arg.description
+    let params = fn.signature.parameterClause.parameters
+    let isStatic = fn.modifiers.contains(where: { $0.name.text == "static" || $0.name.text == "class" })
+    let isMutating = fn.modifiers.contains(where: { $0.name.text == "mutating" })
+
+    func diagnose(_ message: String) {
+      context.diagnose(
+        Diagnostic(
+          node: node,
+          message: SimpleDiagnosticMessage(
+            message: message,
+            severity: .error
           )
-          context.diagnose(diag)
-        }
-      } else if stageText.contains("willEncode") || stageText.contains("didEncode") {
-        if let first = params.first, !first.type.description.contains("Encoder") {
-          let diag = Diagnostic(
-            node: node,
-            message: SimpleDiagnosticMessage(
-              message: "encode hooks should take an Encoder parameter",
-              severity: .warning
-            )
-          )
-          context.diagnose(diag)
-        }
-      } else if stageText.contains("willDecode") {
-        if !isStatic {
-          let diag = Diagnostic(
-            node: node,
-            message: SimpleDiagnosticMessage(
-              message: "willDecode hooks must be static or class methods",
-              severity: .warning
-            )
-          )
-          context.diagnose(diag)
-        }
-        if let first = params.first, !first.type.description.contains("Decoder") {
-          let diag = Diagnostic(
-            node: node,
-            message: SimpleDiagnosticMessage(
-              message: "willDecode hooks should take a Decoder parameter",
-              severity: .warning
-            )
-          )
-          context.diagnose(diag)
-        }
+        )
+      )
+    }
+
+    if params.count > 1 {
+      diagnose("@CodableHook methods may declare at most one parameter")
+      return []
+    }
+
+    if stageText.contains("willDecode") {
+      if !isStatic {
+        diagnose("willDecode hooks must be static or class methods")
+      }
+      if let first = params.first, !first.type.description.contains("Decoder") {
+        diagnose("willDecode hooks must take a Decoder parameter when a parameter is present")
+      }
+    } else if stageText.contains("didDecode") {
+      if isStatic {
+        diagnose("didDecode hooks must be instance methods")
+      }
+      if let first = params.first, !first.type.description.contains("Decoder") {
+        diagnose("didDecode hooks must take a Decoder parameter when a parameter is present")
+      }
+    } else if stageText.contains("willEncode") || stageText.contains("didEncode") {
+      if isStatic {
+        diagnose("encode hooks must be instance methods")
+      }
+      if isMutating {
+        diagnose("encode hooks must be nonmutating")
+      }
+      if let first = params.first, !first.type.description.contains("Encoder") {
+        diagnose("encode hooks must take an Encoder parameter when a parameter is present")
       }
     }
 

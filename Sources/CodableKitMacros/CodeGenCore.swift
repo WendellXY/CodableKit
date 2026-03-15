@@ -69,6 +69,99 @@ extension CodeGenCore {
       } ?? []
     )
   }
+
+  fileprivate static func functionWithInsertedCodableHook(
+    _ functionDecl: FunctionDeclSyntax,
+    stage: String
+  ) -> FunctionDeclSyntax {
+    func indentationTrivia(of trivia: Trivia) -> Trivia {
+      var pieces: [TriviaPiece] = []
+      for piece in trivia.reversed() {
+        switch piece {
+        case .spaces, .tabs:
+          pieces.insert(piece, at: 0)
+        default:
+          return Trivia(pieces: pieces)
+        }
+      }
+      return Trivia(pieces: pieces)
+    }
+
+    let indentation = indentationTrivia(of: functionDecl.leadingTrivia)
+    let hookAttribute = AttributeSyntax("@CodableHook(.\(raw: stage))")
+      .with(\.leadingTrivia, functionDecl.leadingTrivia)
+      .with(\.trailingTrivia, .newline)
+    var newAttributes = AttributeListSyntax {
+      hookAttribute
+    }
+    let functionDecl = functionDecl.with(\.leadingTrivia, indentation)
+    if !functionDecl.attributes.isEmpty {
+      newAttributes.trailingTrivia = newAttributes.trailingTrivia + functionDecl.attributes.trailingTrivia
+      newAttributes.insert(contentsOf: functionDecl.attributes.with(\.trailingTrivia, []), at: newAttributes.startIndex)
+    }
+    return functionDecl.with(\.attributes, newAttributes)
+  }
+
+  fileprivate static func codableHookFixIt(
+    for functionDecl: FunctionDeclSyntax,
+    stage: String
+  ) -> FixIt {
+    makeFixIt(
+      message: "Insert @CodableHook(.\(stage))",
+      changes: [
+        .replace(
+          oldNode: Syntax(functionDecl),
+          newNode: Syntax(functionWithInsertedCodableHook(functionDecl, stage: stage))
+        )
+      ]
+    )
+  }
+
+  fileprivate static func attributeAddingSkipSuperCoding(to node: AttributeSyntax) -> AttributeSyntax? {
+    let attributeName = node.attributeName.trimmedDescription
+
+    guard let arguments = node.arguments?.as(LabeledExprListSyntax.self) else {
+      return AttributeSyntax("@\(raw: attributeName)(options: .skipSuperCoding)")
+    }
+
+    guard arguments.count == 1,
+      let optionsExpr = arguments.first,
+      optionsExpr.label?.text == "options"
+    else {
+      return nil
+    }
+
+    if optionsExpr.parseCodableOptions().contains(.skipSuperCoding) {
+      return nil
+    }
+
+    let updatedOptions: String
+    if let member = optionsExpr.expression.as(MemberAccessExprSyntax.self) {
+      if member.declName.baseName.text == "default" {
+        updatedOptions = ".skipSuperCoding"
+      } else {
+        updatedOptions = "[\(optionsExpr.expression.trimmedDescription), .skipSuperCoding]"
+      }
+    } else if let array = optionsExpr.expression.as(ArrayExprSyntax.self) {
+      let existing = array.elements.map { $0.expression.trimmedDescription }
+      updatedOptions = "[\((existing + [".skipSuperCoding"]).joined(separator: ", "))]"
+    } else {
+      return nil
+    }
+
+    return AttributeSyntax("@\(raw: attributeName)(options: \(raw: updatedOptions))")
+  }
+
+  fileprivate static func skipSuperCodingFixIt(for node: AttributeSyntax) -> FixIt? {
+    guard let updatedAttribute = attributeAddingSkipSuperCoding(to: node) else {
+      return nil
+    }
+
+    return makeFixIt(
+      message: "Add .skipSuperCoding to macro options",
+      changes: [.replace(oldNode: Syntax(node), newNode: Syntax(updatedAttribute))]
+    )
+  }
 }
 
 // MARK: - Hooks Presence Model
@@ -239,6 +332,16 @@ extension CodeGenCore {
 
     try validateDeclaration(for: declaration, in: context)
 
+    if emitAdvisories,
+      case .classType(let hasSuperclass) = structureTypes[id],
+      hasSuperclass,
+      !options.contains(.skipSuperCoding)
+    {
+      let message = "If the inherited type is not Codable, add '.skipSuperCoding' to avoid generating super encode/decode calls"
+      let fixIts = Self.skipSuperCodingFixIt(for: node).map { [$0] } ?? []
+      context.diagnose(makeDiagnostic(node: node, message: message, fixIts: fixIts))
+    }
+
     defer {
       preparedDeclarations.insert(id)
     }
@@ -396,12 +499,11 @@ extension CodeGenCore {
         guard let stage = stageToken(for: name) else { continue }
 
         context.diagnose(
-          Diagnostic(
-            node: node,
-            message: SimpleDiagnosticMessage(
-              message: "Hook method '\(name)' will not be invoked unless annotated with @CodableHook(.\(stage))",
-              severity: .error
-            )
+          makeDiagnostic(
+            node: funcDecl,
+            message: "Hook method '\(name)' will not be invoked unless annotated with @CodableHook(.\(stage))",
+            severity: .error,
+            fixIts: [Self.codableHookFixIt(for: funcDecl, stage: stage)]
           )
         )
       }
@@ -461,24 +563,25 @@ extension CodeGenCore {
       for property in extractedProperties {
         if property.options.contains(.useDefaultOnFailure), !property.isOptional, property.defaultValue == nil {
           let message = "Option '.useDefaultOnFailure' has no effect for non-optional property without a default value"
-          let diag = Diagnostic(node: node, message: SimpleDiagnosticMessage(message: message))
-          context.diagnose(diag)
+          context.diagnose(makeDiagnostic(node: node, message: message))
         }
 
         // Warn when `.explicitNil` is used on a non-optional property
         if property.options.contains(.explicitNil), !property.isOptional {
           let message = "Option '.explicitNil' has no effect on non-optional property"
-          let diag = Diagnostic(node: node, message: SimpleDiagnosticMessage(message: message))
-          context.diagnose(diag)
+          context.diagnose(makeDiagnostic(node: node, message: message))
         }
 
         // Warn on `.lossy` used on unsupported type
         if property.options.contains(.lossy)
           && !(property.isArrayType || property.isSetType || property.isDictionaryType)
         {
-          let message = "Option '.lossy' supports Array<T>, Set<T>, or Dictionary<K, V> properties"
-          let diag = Diagnostic(node: node, message: SimpleDiagnosticMessage(message: message))
-          context.diagnose(diag)
+          let message = "Option '.lossy' supports only Array<T>, Set<T>, or Dictionary<K, V> properties"
+          context.diagnose(makeDiagnostic(node: node, message: message))
+        }
+
+        if let message = property.customCodableKeyPathValidationMessage {
+          context.diagnose(makeDiagnostic(node: node, message: message))
         }
       }
 
@@ -496,7 +599,7 @@ extension CodeGenCore {
           Diagnostic(
             node: node,
             message: SimpleDiagnosticMessage(
-              message: "Custom Codable key not supported for multiple pattern bindings",
+              message: "Custom Codable keys and per-property options are not supported for multiple pattern bindings; split the declaration into separate properties",
               severity: .error
             )
           )
@@ -588,6 +691,9 @@ extension CodeGenCore {
     for member in declaration.memberBlock.members {
       guard let funcDecl = member.decl.as(FunctionDeclSyntax.self) else { continue }
       let isThrowing = funcDecl.signature.effectSpecifiers?.throwsClause != nil
+      let params = funcDecl.signature.parameterClause.parameters
+      let isStatic = funcDecl.modifiers.contains(where: { $0.name.text == "static" || $0.name.text == "class" })
+      let isMutating = funcDecl.modifiers.contains(where: { $0.name.text == "mutating" })
       let attributes = funcDecl.attributes
       guard attributes.isEmpty == false else { continue }
       for attr in attributes {
@@ -596,30 +702,27 @@ extension CodeGenCore {
         else { continue }
         guard let arg = attr.arguments?.as(LabeledExprListSyntax.self)?.first?.expression else { continue }
         let stage = arg.description
+        if params.count > 1 { continue }
         switch true {
         case stage.contains("willDecode"):
-          // Must be static/class & accept Decoder
-          let isStatic = funcDecl.modifiers.contains(where: { $0.name.text == "static" || $0.name.text == "class" })
-          if isStatic {
-            let params = funcDecl.signature.parameterClause.parameters
-            let kind: HookArgKind =
-              if let first = params.first, typeContains(first, token: "Decoder") { .decoder } else { .none }
-            willDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: true, isThrowing: isThrowing))
-          }
+          guard isStatic else { continue }
+          guard params.isEmpty || (params.count == 1 && typeContains(params.first!, token: "Decoder")) else { continue }
+          let kind: HookArgKind = params.isEmpty ? .none : .decoder
+          willDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: true, isThrowing: isThrowing))
         case stage.contains("didDecode"):
-          let params = funcDecl.signature.parameterClause.parameters
-          let kind: HookArgKind =
-            if let first = params.first, typeContains(first, token: "Decoder") { .decoder } else { .none }
+          guard !isStatic else { continue }
+          guard params.isEmpty || (params.count == 1 && typeContains(params.first!, token: "Decoder")) else { continue }
+          let kind: HookArgKind = params.isEmpty ? .none : .decoder
           didDecode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false, isThrowing: isThrowing))
         case stage.contains("willEncode"):
-          let params = funcDecl.signature.parameterClause.parameters
-          let kind: HookArgKind =
-            if let first = params.first, typeContains(first, token: "Encoder") { .encoder } else { .none }
+          guard !isStatic, !isMutating else { continue }
+          guard params.isEmpty || (params.count == 1 && typeContains(params.first!, token: "Encoder")) else { continue }
+          let kind: HookArgKind = params.isEmpty ? .none : .encoder
           willEncode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false, isThrowing: isThrowing))
         case stage.contains("didEncode"):
-          let params = funcDecl.signature.parameterClause.parameters
-          let kind: HookArgKind =
-            if let first = params.first, typeContains(first, token: "Encoder") { .encoder } else { .none }
+          guard !isStatic, !isMutating else { continue }
+          guard params.isEmpty || (params.count == 1 && typeContains(params.first!, token: "Encoder")) else { continue }
+          let kind: HookArgKind = params.isEmpty ? .none : .encoder
           didEncode.append(.init(name: funcDecl.name.text, kind: kind, isStatic: false, isThrowing: isThrowing))
         default: break
         }

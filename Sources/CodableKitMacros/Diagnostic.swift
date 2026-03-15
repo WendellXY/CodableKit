@@ -24,6 +24,16 @@ extension SimpleDiagnosticMessage: FixItMessage {
   var fixItID: MessageID { diagnosticID }
 }
 
+struct SimpleFixItMessage: FixItMessage {
+  let message: String
+  let fixItID: MessageID
+
+  init(message: String, fixItID: MessageID = MessageID(domain: "CodableKit", id: "CodableMacroFixIt")) {
+    self.message = message
+    self.fixItID = fixItID
+  }
+}
+
 enum CustomError: Error, CustomStringConvertible {
   case message(String)
 
@@ -33,4 +43,21 @@ enum CustomError: Error, CustomStringConvertible {
       return text
     }
   }
+}
+
+func makeDiagnostic(
+  node: some SyntaxProtocol,
+  message: String,
+  severity: DiagnosticSeverity = .warning,
+  fixIts: [FixIt] = []
+) -> Diagnostic {
+  Diagnostic(
+    node: node,
+    message: SimpleDiagnosticMessage(message: message, severity: severity),
+    fixIts: fixIts
+  )
+}
+
+func makeFixIt(message: String, changes: [FixIt.Change]) -> FixIt {
+  FixIt(message: SimpleFixItMessage(message: message), changes: changes)
 }

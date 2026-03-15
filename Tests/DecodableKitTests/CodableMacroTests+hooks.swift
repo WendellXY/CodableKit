@@ -30,8 +30,6 @@ import Testing
           let id: UUID
           let name: String
           let age: Int
-
-          @CodableHook(.willDecode)
           static func pre(from decoder: any Decoder) throws {}
         }
 
@@ -71,8 +69,6 @@ import Testing
           let id: UUID
           let name: String
           var age: Int
-
-          @CodableHook(.didDecode)
           mutating func post() throws { age += 1 }
         }
 
@@ -113,8 +109,6 @@ import Testing
           let id: UUID
           let name: String
           let age: Int
-
-          @CodableHook(.willDecode)
           static func pre() throws {}
         }
 
@@ -177,9 +171,60 @@ import Testing
       diagnostics: [
         .init(
           message: "Hook method 'didDecode' will not be invoked unless annotated with @CodableHook(.didDecode)",
-          line: 1,
-          column: 1,
-          severity: .error
+          line: 7,
+          column: 3,
+          severity: .error,
+          fixIts: [.init(message: "Insert @CodableHook(.didDecode)")]
+        )
+      ],
+      applyFixIts: ["Insert @CodableHook(.didDecode)"],
+      fixedSource: """
+        @Decodable
+        public struct User {
+          let id: UUID
+          let name: String
+          let age: Int
+
+          @CodableHook(.didDecode)
+          mutating func didDecode() throws {}
+        }
+        """
+    )
+  }
+
+  @Test func invalidAnnotatedWillDecodeHookMustBeStatic() throws {
+    assertMacro(
+      """
+      @Decodable
+      public struct User {
+        let id: UUID
+
+        @CodableHook(.willDecode)
+        func pre(from decoder: any Decoder) throws {}
+      }
+      """,
+      expandedSource: """
+        public struct User {
+          let id: UUID
+          func pre(from decoder: any Decoder) throws {}
+        }
+
+        extension User: Decodable {
+          enum CodingKeys: String, CodingKey {
+            case id
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+          }
+        }
+        """,
+      diagnostics: [
+        .init(
+          message: "willDecode hooks must be static or class methods",
+          line: 5,
+          column: 3
         )
       ]
     )

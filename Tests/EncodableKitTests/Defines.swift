@@ -16,6 +16,7 @@ import Testing
 
 let macros: [String: any Macro.Type] = [
   "Codable": CodableMacro.self,
+  "CodableHook": CodingHookMacro.self,
   "CodableKey": CodableKeyMacro.self,
   "DecodableKey": DecodableKeyMacro.self,
   "EncodableKey": EncodableKeyMacro.self,
@@ -23,6 +24,7 @@ let macros: [String: any Macro.Type] = [
 
 let macroSpecs: [String: MacroSpec] = [
   "Encodable": MacroSpec(type: CodableMacro.self, conformances: ["Encodable"]),
+  "CodableHook": MacroSpec(type: CodingHookMacro.self),
   "CodableKey": MacroSpec(type: CodableKeyMacro.self),
   "DecodableKey": MacroSpec(type: DecodableKeyMacro.self),
   "EncodableKey": MacroSpec(type: EncodableKeyMacro.self),
