@@ -1,35 +1,29 @@
+<p align="center">
+  <br>
+  <br>
+  <img src="./assets/codablekit-icon.svg" alt="CodableKit logo" height="140">
+  <br>
+  <br>
+</p>
+<p align="center">
+  <a href="https://swiftpackageindex.com/WendellXY/CodableKit"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FWendellXY%2FCodableKit%2Fbadge%3Ftype%3Dswift-versions" alt="swift versions"></a>
+  <a href="https://swiftpackageindex.com/WendellXY/CodableKit"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FWendellXY%2FCodableKit%2Fbadge%3Ftype%3Dplatforms" alt="platform support"></a>
+  <a href="https://github.com/WendellXY/CodableKit/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/WendellXY/CodableKit/ci.yml?branch=main" alt="build status"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/WendellXY/CodableKit" alt="license"></a>
+</p>
+
 # CodableKit
 
-[![Swift Version](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FWendellXY%2FCodableKit%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/WendellXY/CodableKit)
-[![Platform](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FWendellXY%2FCodableKit%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/WendellXY/CodableKit)
-![CI](https://img.shields.io/github/actions/workflow/status/WendellXY/CodableKit/ci.yml)
+> Compile-time Codable macros for resilient Swift models.
 
-CodableKit is a Swift macro package that generates high‑quality `Codable`, `Encodable`, and `Decodable` implementations. It eliminates boilerplate, hardens your JSON parsing, and keeps your code fast and predictable.
+- One-line `@Codable`, `@Encodable`, and `@Decodable` synthesis
+- Default-aware decoding, nested keys, and graceful fallbacks
+- Raw-string transcoding, lossy collections, and transformer pipelines
+- Explicit lifecycle hooks with deterministic generated code
 
-It brings first‑class support for default values, nested custom keys, raw string transcoding, lossy decoding for collections, property‑level options, and lifecycle hooks — all via compile‑time macros, with no runtime cost.
+CodableKit is a Swift macro package built for the JSON you actually receive: nested payloads, string-encoded objects, partially invalid arrays, and schemas that drift over time. It keeps configuration close to each property, surfaces mistakes with compile-time diagnostics, and avoids runtime reflection or hidden magic.
 
-## Why CodableKit?
-
-Modern apps consume diverse JSON. Real‑world payloads include nested key paths, string‑encoded objects, partially invalid arrays, and evolving schemas. Hand‑written `Codable` tends to be verbose and brittle. CodableKit:
-
-- Generates clean, deterministic `Codable` code at compile time (Swift macros) — no reflection, no magic at runtime
-- Adds resilient patterns like defaults, lossy arrays/sets, and safe string‑to‑struct transcoding
-- Keeps intent in your models via expressive annotations like `@CodableKey("data.uid")` and per‑property options
-- Improves DX with clear diagnostics and predictable expansions
-
-## Features
-
-- One‑line `Codable` synthesis with `@Codable`, `@Encodable`, `@Decodable`
-- Default values as automatic decode fallbacks
-- Custom coding keys and nested key paths (`@CodableKey("data.uid")`)
-- Graceful decoding failures with `.useDefaultOnFailure`
-- String ↔ Struct transcoding for string‑encoded JSON (`.transcodeRawString`, `.safeTranscodeRawString`)
-- Lossy collection decoding for collection types (`.lossy`) — drop invalid elements/entries
-- Explicit `nil` encoding for optionals (`.explicitNil`)
-- Generated computed key properties (`.generateCustomKey`)
-- Lifecycle hooks: `didDecode`, `willEncode`, `didEncode`
-- Transformer pipelines via `@CodableKey(transformer:)` (advanced; one‑way and bidirectional), with composition
-- Macro‑based, compile‑time only — zero runtime overhead
+[Quick Start](#quick-start) · [Feature Highlights](#feature-highlights) · [Targets](#targets) · [Installation](#installation) · [Migration Guide](./MIGRATION.md) · [Roadmap](./ROADMAP.md)
 
 ## Quick Start
 
@@ -37,429 +31,123 @@ Modern apps consume diverse JSON. Real‑world payloads include nested key paths
 import CodableKit
 
 @Codable
-struct Car {
-  let brand: String
-  let model: String
-  var year: Int = 2024 // Uses 2024 if missing
+struct User {
+  @CodableKey("data.uid")
+  let id: Int
+
+  var name: String
+  var age: Int = 24
+
+  @CodableHook(.didDecode)
+  mutating func normalize() {
+    name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
 }
 ```
 
+That single model gets generated `CodingKeys`, `init(from:)`, and `encode(to:)` implementations with nested key support, default fallback behavior, and an explicit post-decode hook.
+
+## Feature Highlights
+
+| Capability | Example | What you get |
+| --- | --- | --- |
+| Generated conformance | `@Codable`, `@Encodable`, `@Decodable` | Compile-time synthesis with predictable output |
+| Default values | `var retries: Int = 3` | Missing keys can fall back without hand-written decode code |
+| Nested coding keys | `@CodableKey("profile.info.name")` | Deep key-path mapping without manual containers |
+| Graceful failure | `@CodableKey(options: .useDefaultOnFailure)` | Recover from bad payloads by falling back to defaults or `nil` |
+| Raw-string transcoding | `@CodableKey(options: .safeTranscodeRawString)` | Decode string-encoded JSON into strongly typed models |
+| Lossy collections | `@CodableKey(options: .lossy)` | Drop invalid array, set, or dictionary entries during decode |
+| Explicit hooks | `@CodableHook(.didDecode)` | Run validation, normalization, or derived-value logic at clear lifecycle stages |
+| Transformer pipelines | `@CodableKey(transformer: MyTransformer())` | Compose reusable decode and encode transformations |
+
+## Targets
+
+| Target | Purpose |
+| --- | --- |
+| `CodableKit` | Public facade that exports macros, hooks, transformers, lossy wrappers, and compatibility shims |
+| `CodableKitCore` | Canonical shared option definitions consumed by both runtime and macro targets |
+| `CodableKitMacros` | SwiftSyntax-based code generation, diagnostics, and compiler plugin entry points |
+
 ## Installation
 
-Add to your Package.swift dependencies:
+Add CodableKit to your Swift Package Manager dependencies:
 
 ```swift
 .package(url: "https://github.com/WendellXY/CodableKit.git", from: "2.0.0")
 ```
 
-## Feature Matrix
+Then import it where you declare your models:
 
-| Feature                        | Macro Syntax Example                                | Description                                                  |
-| ------------------------------ | --------------------------------------------------- | ------------------------------------------------------------ |
-| Default values                 | `var count: Int = 0`                                | Use a fallback when data is missing                          |
-| Custom coding key              | `@CodableKey("uid") let id: UUID`                   | Map property to custom JSON key                              |
-| Nested coding key path         | `@CodableKey("data.uid") let id: Int`               | Map to deeply nested JSON keys                               |
-| Ignore property                | `@CodableKey(options: .ignored) var temp: String`   | Exclude property from coding                                 |
-| String ↔ Struct transcoding    | `@CodableKey(options: .transcodeRawString)`         | Decode/encode via JSON string field                          |
-| Lossy collection decoding      | `@CodableKey(options: .lossy)`                      | Decode arrays/sets; drop invalid elements                    |
-| Use default on failure         | `@CodableKey(options: .useDefaultOnFailure)`        | Fallback to default/nil on decoding error                    |
-| Generate custom key property   | `@CodableKey("id", options: .generateCustomKey)`    | Adds computed property for custom key                        |
-| Explicit nil encoding          | `@CodableKey(options: .explicitNil)`                | Encode nil as `null`, not omitted                            |
-| Coding lifecycle hooks         | `@CodableHook(.willDecode)`, `@CodableHook(.didDecode)`, `@CodableHook(.willEncode)`, `@CodableHook(.didEncode)` | Run logic during encoding/decoding; **requires** `@CodableHook` annotation in v2 |
-| Transformers (advanced)        | `@CodableKey(transformer: MyTransformer())`         | Apply custom/built‑in transforms, compose with bidirectional |
+```swift
+import CodableKit
+```
 
-## Usage Guides and Examples
+### Requirements
 
-### Default Values (Resilient Decoding)
+- Swift tools 6.0
+- Xcode 16+ or a Swift 6.0-compatible Apple toolchain
+- `swift-syntax` 600.x
+- macOS 10.15+, iOS 13+, tvOS 13+, watchOS 6+, Mac Catalyst 13+, visionOS 1+
+
+If you need the legacy Swift 5 line that targets `swift-syntax` 510.x, use `from: "0.4.0"` instead.
+
+## Examples
+
+### Nested keys and defaults
 
 ```swift
 @Codable
-struct User {
-  let id: Int
+struct Session {
+  @CodableKey("meta.version")
+  var version: Int = 1
+
+  @CodableKey("user.profile.name")
   let name: String
-  var age: Int = 24 // Uses 24 if missing
 }
 ```
 
-### Nested Coding Keys (Dot‑Path)
-
-```swift
-@Codable
-struct User {
-  @CodableKey("data.uid") let id: Int
-  @CodableKey("profile.info.name") let name: String
-}
-```
-
-Decodes/encodes JSON like:
-
-```json
-{
-  "data": { "uid": 123 },
-  "profile": { "info": { "name": "Alice" } }
-}
-```
-
-### Transcoding JSON Strings
-
-Some APIs encode nested objects as JSON strings:
-
-```json
-{ "car": "{\"brand\":\"Tesla\",\"year\":2024}" }
-```
-
-### Safe Transcoding with Fallback
-
-```swift
-@Codable
-struct User {
-  @CodableKey(options: .safeTranscodeRawString)
-  var car: Car = Car(brand: "Default", year: 2024) // Fallback if invalid/missing
-}
-```
-
-### Lossy Decoding for Arrays/Sets (Drop Invalid Elements)
+### Lossy collections and raw-string payloads
 
 ```swift
 @Codable
 struct Feed {
-  // Keeps only valid integers; malformed items are ignored
-  @CodableKey(options: .lossy)
-  var ids: [Int]
-
-  // Optional Set; when key absent → nil
-  @CodableKey(options: .lossy)
-  var tags: Set<String>?
-}
-```
-
-Combine lossy with transcoding (array payload is a JSON string):
-
-```swift
-@Codable
-struct Payload {
-  // Raw string → Data → decode LossyArray<Int> → use .elements
-  @CodableKey(options: [.lossy, .transcodeRawString])
-  var values: [Int]
-}
-```
-
-Safe variant with default when string is missing/invalid:
-
-```swift
-@Codable
-struct SafePayload {
   @CodableKey(options: [.lossy, .safeTranscodeRawString])
-  var values: [Int] = [1, 2]
+  var items: [Item] = []
 }
 ```
 
-### Lossy Decoding for Dictionaries
-
-Decode dictionaries while dropping invalid entries (or keys that can’t be converted from JSON string keys).
+### Explicit lifecycle hooks
 
 ```swift
-@Codable
-struct MapModel {
-  // Keeps only entries with valid Int values
-  @CodableKey(options: .lossy)
-  var counts: [String: Int]
-
-  // Optional dictionary; when key missing → nil
-  @CodableKey(options: .lossy)
-  var scores: [Int: Double]?
-}
-```
-
-Combine with transcoding when the dictionary is encoded as a JSON string:
-
-```swift
-@Codable
-struct DictPayload {
-  // Raw string → Data → decode LossyDictionary<K, V> → use .elements
-  @CodableKey(options: [.lossy, .transcodeRawString])
-  var metrics: [String: Double]
-}
-
-@Codable
-struct SafeDictPayload {
-  // Falls back to default when the raw string is invalid/missing
-  @CodableKey(options: [.lossy, .safeTranscodeRawString])
-  var metrics: [Int: Double] = [:]
-}
-```
-
-Notes:
-- Dictionary keys must be `LosslessStringConvertible` (e.g., `String`, `Int`) so they can be constructed from JSON object keys, which are strings.
-- Lossy behavior is decode‑only. Encoding dictionaries proceeds normally.
-
-### Enum Fallbacks (Graceful Decoding)
-
-```swift
-enum Status: String, Codable { case active, inactive, unknown }
-
-@Codable
-struct User {
-  @CodableKey(options: .useDefaultOnFailure)
-  var status: Status = .unknown
-}
-```
-
-## Lifecycle Hooks
-
-Run custom logic before or after encoding/decoding, e.g. validation or derived values.
-
-In v2, lifecycle hooks **must** be explicitly annotated with `@CodableHook`. The macro will emit a compile-time error if it finds conventional hook method names (like `didDecode`, `willEncode`, etc.) without the annotation.
-
-```swift
-@Codable
-struct User {
-  var id: String = ""
-  var name: String
-  var age: Int
-
-  // Runs before any properties are decoded (static-only)
-  @CodableHook(.willDecode)
-  static func pre(from decoder: any Decoder) throws { 
-    // prepare decoder/userInfo, validate configuration, etc.
-  }
-
-  @CodableHook(.didDecode)
-  mutating func didDecode(from decoder: any Decoder) throws {
-    id = "\(name)-\(age)" // recompute derived values
-  }
+@Encodable
+struct AuditEvent {
+  var createdAt: Date
 
   @CodableHook(.willEncode)
-  func willEncode(to encoder: any Encoder) throws { /* prep */ }
-  
-  @CodableHook(.didEncode)
-  func didEncode(to encoder: any Encoder) throws { /* cleanup */ }
+  func validate() throws {
+    // validate or normalize before encoding
+  }
 }
 ```
 
-### Hook Stages
+In v2, hooks are explicit. Conventional method names alone are not invoked anymore. See [MIGRATION.md](./MIGRATION.md) for the upgrade path.
 
-Use `@CodableHook(<stage>)` to explicitly mark lifecycle methods:
+## Development
 
-- **`.willDecode`**: static/class method, signature `from decoder: any Decoder`, runs before property decoding begins.
-- **`.didDecode`**: instance method, signature `from decoder: any Decoder`, runs after decoding completes.
-- **`.willEncode`**: instance method, signature `to encoder: any Encoder`, runs before encoding starts.
-- **`.didEncode`**: instance method, signature `to encoder: any Encoder`, runs after encoding completes.
-
-Additional notes:
-
-- Multiple hooks per stage are supported and called in declaration order.
-- You can use any method name when annotated; the macro invokes methods based on the `@CodableHook` annotation.
-- Parameterless variants are also supported (e.g., `@CodableHook(.didDecode) mutating func didDecode() throws { }`).
-- **v2 Breaking Change**: Hooks are now explicit. Only methods annotated with `@CodableHook` are invoked. See `MIGRATION.md` for details on migrating from v1.
-
-### Why There’s No Instance `willDecode`
-
-An instance `willDecode` is unsafe in Swift because `self` isn’t fully initialized before property decoding begins, so
-calling an instance method there would violate initialization rules. Instead, CodableKit provides:
-
-- `@CodableHook(.willDecode)` static/class hook that runs before decode.
-- `didDecode(from:)` instance hook that runs after decode completes.
-- `willEncode(to:)` / `didEncode(to:)` instance hooks around encoding.
-
-Tips:
-- Use property defaults for baseline state before decoding.
-- Put normalization/derivations in `didDecode(from:)`.
-- Preprocess or configure the decoder (e.g., `userInfo`) before calling `decode` when needed.
-
-## Options Reference
-
-CodableKit exposes two option sets:
-
-- `CodableKeyOptions`: per‑property controls via `@CodableKey`
-- `CodableOptions`: macro‑level controls for `@Codable`, `@Decodable`, `@Encodable`
-
-### CodableKeyOptions (Property‑Level)
-
-| Option                    | Description                                                                   |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| `.ignored`                | Exclude property from (en|de)coding                                           |
-| `.explicitNil`            | Encode optional `nil` as `null` (not omitted)                                 |
-| `.generateCustomKey`      | Generate a computed property for the custom key                               |
-| `.transcodeRawString`     | Transcode value via JSON string (nested model as string field)                |
-| `.useDefaultOnFailure`    | Use default or `nil` if (en|de)coding fails                                   |
-| `.safeTranscodeRawString` | Combine `.transcodeRawString` and `.useDefaultOnFailure`                      |
-| `.lossy`                  | Lossy decode collections; drop invalid elements                               |
-
-### CodableOptions (Macro‑Level)
-
-| Option                    | Description                                                                                  |
-| ------------------------- | -------------------------------------------------------------------------------------------- |
-| `.default`                | Standard behavior; will call super encode/decode when appropriate                            |
-| `.skipSuperCoding`        | Skip generating `super.init(from:)` and `super.encode(to:)` if superclass is not `Codable`   |
-| `.skipProtocolConformance`| Do not attach `Codable` / `Decodable` / `Encodable` conformances in the generated extension  |
-
-#### Protocol Conformance Control
-
-By default, `@Codable`, `@Decodable`, and `@Encodable` will add protocol conformance via a generated extension. If you also manually add the same conformance on the type (e.g. `@Codable struct User: Codable { ... }`), CodableKit will still work, but will emit a **warning** to keep your declarations clean.
-
-If you want to **fully control conformance yourself**, use `.skipProtocolConformance`:
-
-```swift
-@Codable(options: .skipProtocolConformance)
-struct User: Codable {
-  let id: Int
-}
+```bash
+swift build -v
+swift test -v
 ```
 
-### Transformers (Advanced)
+Tests cover macro expansion, diagnostics, hooks, inheritance, lossy coding, nested keys, and transformer behavior.
 
-CodableKit lets you attach transformer pipelines to individual properties using `@CodableKey(transformer:)`. Transformers let you adapt wire formats to model types and back.
+## Docs
 
-Note:
-- Transformers can replicate or subsume many existing options (e.g., raw string transcoding, defaults on failure), and are intended for advanced use cases.
-- The public API is stable, but we may add more expressive calling styles (e.g., dot‑chain helpers like `.transcode<Room>.chained(.default(…))`) over time to improve ergonomics.
+- [Migration Guide](./MIGRATION.md): breaking changes and upgrade notes for v2
+- [Roadmap](./ROADMAP.md): current priorities and planned work
+- [Swift Package Index](https://swiftpackageindex.com/WendellXY/CodableKit): compatibility, metadata, and package discovery
+- [Tests](./Tests): real examples for structs, classes, enums, hooks, diagnostics, and transformers
 
-There are two kinds:
+## License
 
-- CodingTransformer<Input, Output>: one‑way (decode‑only or encode‑only depending on use)
-- BidirectionalCodingTransformer<Input, Output>: two‑way (required for encode paths)
-
-Built‑ins you can use immediately:
-
-- `DefaultOnFailureTransformer<Value>`: converts failures into a provided default value
-- `RawStringTransformer<Value>`: maps `String` ↔ `Value` using JSON encode/decode
-- `RawStringDecodingTransformer<Value>` / `RawStringEncodingTransformer<Value>`: one‑way variants
-- `IntegerToBooleanTransformer<Int>`: maps `0/1` ↔ `false/true`
-- `IdentityTransformer<Value>`: pass‑through
-- `KeyPathTransformer<T, U>`: project `U` from a `T` by key path when decoding
-
-Compose pipelines with `.chained` and `.paired` helpers, and reverse a bidirectional transformer with `.reversed`.
-
-#### Decode and Encode with a Bidirectional Transformer
-
-```swift
-struct IntFromString: BidirectionalCodingTransformer {
-  func transform(_ input: Result<String, any Error>) -> Result<Int, any Error> { input.map { Int($0) ?? 0 } }
-  func reverseTransform(_ input: Result<Int, any Error>) -> Result<String, any Error> { input.map(String.init) }
-}
-
-@Codable
-struct Model {
-  @CodableKey(transformer: IntFromString())
-  var count: Int
-}
-```
-
-This decodes a JSON string into an `Int` and encodes `Int` back to a JSON string.
-
-#### Optional Properties and `explicitNil`
-
-```swift
-@Codable
-struct Model {
-  @CodableKey(transformer: IntFromString())
-  var count: Int? // missing → nil; encodes omitted by default
-
-  @CodableKey(options: .explicitNil, transformer: IntFromString())
-  var exact: Int? // nil encodes as null
-}
-```
-
-#### Use Default on Failure with a Transformer
-
-```swift
-@Codable
-struct Model {
-  @CodableKey(options: .useDefaultOnFailure, transformer: IntFromString())
-  var count: Int = 42 // fallback when type mismatches or key is missing
-}
-```
-
-#### Compose Transformers
-
-```swift
-struct Increment: BidirectionalCodingTransformer {
-  func transform(_ x: Result<Int, any Error>) -> Result<Int, any Error> { x.map { $0 + 1 } }
-  func reverseTransform(_ x: Result<Int, any Error>) -> Result<Int, any Error> { x.map { $0 - 1 } }
-}
-
-@Codable
-struct Model {
-  @CodableKey(transformer: IntFromString().chained(Increment()))
-  var value: Int // "5" → 6 on decode; 6 → "5" on encode
-}
-```
-
-#### Raw JSON as String
-
-```swift
-struct Room: Codable { let id: Int; let name: String }
-
-@Codable
-struct Model {
-  @CodableKey(transformer: RawStringTransformer<Room>())
-  var room: Room // JSON has field as a string containing JSON
-}
-```
-
-#### One‑way Transformers
-
-For decode‑only projections, you can use `CodingTransformer`. Example: extract a nested field with `KeyPathTransformer`.
-
-```swift
-struct Wrap: Codable { let inner: Int }
-
-@Codable
-struct Model {
-  @CodableKey(transformer: KeyPathTransformer<Wrap, Int>(keyPath: \Wrap.inner))
-  var count: Int
-}
-```
-
-Note: In `@Decodable` containers, one‑way transformers are supported. In `@Codable` containers, encoding also uses the transformer; provide a `BidirectionalCodingTransformer` or explicitly pair one‑way transformers via `.paired(_:)`.
-
-```swift
-@Codable
-struct Car: Codable { let brand: String; let year: Int }
-
-@Codable
-struct User {
-  @CodableKey(options: .transcodeRawString)
-  var car: Car
-}
-```
-
-## Performance and Determinism
-
-- Pure compile‑time code generation (Swift macros), no reflection or runtime penalties
-- Deterministic, minimal expansions for stable diffs and predictable behavior
-- Shared encoder/decoder reuse within generated functions to reduce churn
-
-
-
-## Limitations
-
-When applying this macro to a base class, in the class definition header, you should not add any inheritance to the
-class. Otherwise, this class will be considered as a class with a superclass, because the macro cannot identify whether
-the inheritance is a class or a protocol during macro expansion.
-
-```swift
-// Codable will consider the BaseUser as a base class since it does not have any inheritance
-@Codable
-class BaseUser { }
-
-// Codable will consider the HashableUser as a subclass even if the inheritance just contains a protocol
-@Codable
-class HashableUser: Hashable { }
-
-// So you have to write the HashableUser like:
-@Codable
-class HashableUser { }
-extension HashableUser: Hashable { }
-```
-
-**Note:** For highly unusual or invalid Swift identifiers in key paths (e.g., reserved words), the generated coding key enum/case names will be sanitized to ensure valid Swift code.
-
-## Contributing
-
-Please feel free to contribute to `CodableKit`! Any input and suggestions are always appreciated.
-
-## Migration
-
-If you are upgrading from v1 to v2, see `MIGRATION.md` for hook-related breaking changes and how to update your code.
+[MIT](./LICENSE)

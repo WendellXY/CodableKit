@@ -1,0 +1,20 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="boltGradient" x1="86" y1="36" x2="173" y2="212" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FED7AA"/>
+      <stop offset="0.35" stop-color="#FB923C"/>
+      <stop offset="0.7" stop-color="#F97316"/>
+      <stop offset="1" stop-color="#C2410C"/>
+    </linearGradient>
+  </defs>
+
+  <path
+    d="M148 30L73 132H119L103 226L183 110H137L148 30Z"
+    fill="url(#boltGradient)"
+  />
+  <path
+    d="M141 59L96 121H132L123 180L160 121H131L141 59Z"
+    fill="#FFF7ED"
+    fill-opacity="0.18"
+  />
+</svg>
