@@ -131,6 +131,8 @@ let payload = try JSONDecoder().decode(
 
 let name = payload.value["name"]?.stringValue
 let firstFlag = payload.value["flags"]?[0]?.boolValue
+let sameValue = try JSONValue(jsonString: #"{"name":"Ada","flags":[true,null]}"#)
+let nestedName = sameValue[path: ["name"]]?.stringValue
 ```
 
 ### Explicit lifecycle hooks

@@ -98,6 +98,23 @@ struct JSONValueTests {
     #expect(value["missing"] == nil)
   }
 
+  @Test func path_lookup_traverses_keys_and_indexes() {
+    let value: JSONValue = [
+      "user": [
+        "profile": [
+          "name": "Ada"
+        ],
+        "flags": [true, nil, false],
+      ]
+    ]
+
+    #expect(value[path: ["user", "profile", "name"]] == .string("Ada"))
+    #expect(value[path: ["user", "flags", 0]] == .bool(true))
+    #expect(value[path: ["user", "flags", 1]] == .null)
+    #expect(value[path: ["user", "flags", 99]] == nil)
+    #expect(value[path: ["user", "missing"]] == nil)
+  }
+
   @Test func literal_conveniences_build_expected_tree() {
     let nullValue: JSONValue = nil
     let boolValue: JSONValue = true
@@ -124,6 +141,38 @@ struct JSONValueTests {
         "flags": .array([.bool(true), .null]),
       ])
     )
+  }
+
+  @Test func json_data_and_string_conveniences_round_trip() throws {
+    let original: JSONValue = [
+      "name": "Ada",
+      "flags": [true, nil],
+      "score": 1.5,
+      "count": 3,
+    ]
+
+    let data = try original.jsonData()
+    let decodedFromData = try JSONValue(jsonData: data)
+    #expect(decodedFromData == original)
+
+    let string = try original.jsonString()
+    let decodedFromString = try JSONValue(jsonString: string)
+    #expect(decodedFromString == original)
+  }
+
+  @Test func pretty_printed_json_conveniences_emit_readable_output() throws {
+    let value: JSONValue = [
+      "user": [
+        "name": "Ada",
+        "flags": [true, nil],
+      ]
+    ]
+
+    let string = try value.jsonString(prettyPrinted: true)
+    #expect(string.contains("\n"))
+
+    let reparsed = try JSONValue(jsonString: string)
+    #expect(reparsed == value)
   }
 
   @Test func payload_model_decodes_dynamic_values() throws {
