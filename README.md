@@ -116,6 +116,25 @@ struct Feed {
 }
 ```
 
+### Dynamic JSON values
+
+```swift
+@Codable
+struct Payload {
+  var value: JSONValue
+}
+
+let payload = try JSONDecoder().decode(
+  Payload.self,
+  from: #"{"value":{"name":"Ada","flags":[true,null]}}"#.data(using: .utf8)!
+)
+
+let name = payload.value["name"]?.stringValue
+let firstFlag = payload.value["flags"]?[0]?.boolValue
+let sameValue = try JSONValue(jsonString: #"{"name":"Ada","flags":[true,null]}"#)
+let nestedName = sameValue[path: ["name"]]?.stringValue
+```
+
 ### Explicit lifecycle hooks
 
 ```swift
