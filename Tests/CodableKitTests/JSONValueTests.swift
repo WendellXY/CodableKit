@@ -143,6 +143,21 @@ struct JSONValueTests {
     )
   }
 
+  @Test func dictionary_literal_initializer_prefers_last_duplicate_key() {
+    let value = JSONValue(
+      dictionaryLiteral: ("name", "Ada"),
+      ("name", "Grace"),
+      ("count", 3)
+    )
+
+    #expect(
+      value == .object([
+        "name": .string("Grace"),
+        "count": .int(3),
+      ])
+    )
+  }
+
   @Test func json_data_and_string_conveniences_round_trip() throws {
     let original: JSONValue = [
       "name": "Ada",

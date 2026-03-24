@@ -336,7 +336,7 @@ extension JSONValue: ExpressibleByArrayLiteral {
 /// Allows dictionary literals like `["name": "Ada", "count": 3]`.
 extension JSONValue: ExpressibleByDictionaryLiteral {
   public init(dictionaryLiteral elements: (String, JSONValue)...) {
-    self = .object(Dictionary(uniqueKeysWithValues: elements))
+    self = .object(Dictionary(elements, uniquingKeysWith: { _, new in new }))
   }
 }
 
