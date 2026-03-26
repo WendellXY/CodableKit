@@ -340,6 +340,12 @@ extension JSONValue: ExpressibleByDictionaryLiteral {
   }
 }
 
+extension JSONValue: CustomStringConvertible {
+  public var description: String {
+    rawString ?? "null"
+  }
+}
+
 private struct JSONValueCodingKey: CodingKey {
   let stringValue: String
   let intValue: Int?

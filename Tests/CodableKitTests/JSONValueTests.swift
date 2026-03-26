@@ -190,6 +190,52 @@ struct JSONValueTests {
     #expect(reparsed == value)
   }
 
+  @Test func description_emits_compact_json_for_scalars() {
+    #expect(JSONValue.null.description == "null")
+    #expect(JSONValue.bool(true).description == "true")
+    #expect(JSONValue.string("Ada").description == #""Ada""#)
+    #expect(JSONValue.int(3).description == "3")
+    #expect(JSONValue.double(1.5).description == "1.5")
+  }
+
+  @Test func description_emits_compact_json_for_nested_values() throws {
+    let value: JSONValue = [
+      "user": [
+        "name": "Ada",
+        "flags": [true, nil],
+      ],
+      "count": 3,
+    ]
+
+    let description = value.description
+
+    #expect(description.contains(#""user""#))
+    #expect(description.contains(#""name":"Ada""#))
+    #expect(description.contains(#""flags":[true,null]"#))
+    #expect(description.contains(#""count":3"#))
+    #expect(description.contains("\n") == false)
+    #expect(description.first == "{")
+    #expect(description.last == "}")
+    #expect(try JSONValue(jsonString: description) == value)
+  }
+
+  @Test func description_round_trips_like_json_string_and_supports_string_interpolation() throws {
+    let value: JSONValue = [
+      "name": "Ada",
+      "flags": [true, nil],
+      "score": 1.5,
+      "count": 3,
+    ]
+
+    let description = value.description
+    let jsonString = try value.jsonString()
+
+    #expect(try JSONValue(jsonString: description) == value)
+    #expect(try JSONValue(jsonString: jsonString) == value)
+    #expect(description.contains("\n") == false)
+    #expect("\(value)" == description)
+  }
+
   @Test func payload_model_decodes_dynamic_values() throws {
     let scalarPayload = try JSONDecoder().decode(
       JSONValuePayload.self,
