@@ -26,30 +26,42 @@ extension JSONValue {
 // MARK: - Numeric Accessors
 
 extension JSONValue {
-  /// Returns the numeric value as `Int64`, converting from `.int` or truncating from `.double`.
+  /// Returns the numeric value as `Int64`, converting from `.int`, `.double`, `.bool`, or numeric `.string`.
   public var int64Value: Int64? {
     switch self {
-    case .int(let value): Int64(value)
-    case .double(let value): Int64(exactly: value)
-    default: nil
+    case .int(let value): return Int64(value)
+    case .double(let value): return Int64(exactly: value)
+    case .bool(let value): return value ? 1 : 0
+    case .string(let value):
+      if let i = Int64(value) { return i }
+      if let d = Double(value) { return Int64(exactly: d) }
+      return nil
+    default: return nil
     }
   }
 
-  /// Returns the numeric value as `Int8`, converting from `.int` or truncating from `.double`.
+  /// Returns the numeric value as `Int8`, converting from `.int`, `.double`, `.bool`, or numeric `.string`.
   public var int8Value: Int8? {
     switch self {
-    case .int(let value): Int8(exactly: value)
-    case .double(let value): Int8(exactly: value)
-    default: nil
+    case .int(let value): return Int8(exactly: value)
+    case .double(let value): return Int8(exactly: value)
+    case .bool(let value): return value ? 1 : 0
+    case .string(let value):
+      if let i = Int(value), let i8 = Int8(exactly: i) { return i8 }
+      if let d = Double(value) { return Int8(exactly: d) }
+      return nil
+    default: return nil
     }
   }
 
-  /// Returns the numeric value as `Double`, converting from `.int` or returning `.double` directly.
+  /// Returns the numeric value as `Double`, converting from `.int`, `.double`, `.bool`, or numeric `.string`.
   public var numberValue: Double? {
     switch self {
-    case .int(let value): Double(value)
-    case .double(let value): value
-    default: nil
+    case .int(let value): return Double(value)
+    case .double(let value): return value
+    case .bool(let value): return value ? 1.0 : 0.0
+    case .string(let value): return Double(value)
+    default: return nil
     }
   }
 }
