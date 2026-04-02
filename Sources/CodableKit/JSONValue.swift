@@ -185,8 +185,10 @@ public enum JSONValue: Codable, Equatable, Hashable, Sendable {
   /// - Throws: Any error thrown by `JSONEncoder`.
   public func jsonData(prettyPrinted: Bool = false) throws -> Data {
     let encoder = JSONEncoder()
-    if prettyPrinted {
-      encoder.outputFormatting = [.prettyPrinted]
+    encoder.outputFormatting = if prettyPrinted {
+       [.prettyPrinted, .sortedKeys]
+    } else {
+      [.sortedKeys]
     }
     return try encoder.encode(self)
   }
