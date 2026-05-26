@@ -54,6 +54,38 @@ import Testing
     )
   }
 
+  @Test func privateClassPromotesWitnessesToFileprivate() throws {
+    assertMacro(
+      """
+      @Codable
+      private class Account {
+        let token: String
+      }
+      """,
+      expandedSource: """
+        private class Account {
+          let token: String
+
+          fileprivate required init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            token = try container.decode(String.self, forKey: .token)
+          }
+
+          fileprivate func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(token, forKey: .token)
+          }
+        }
+
+        extension Account: Codable {
+          enum CodingKeys: String, CodingKey {
+            case token
+          }
+        }
+        """
+    )
+  }
+
   @Test func macroWithDefaultValue() throws {
 
     assertMacro(
