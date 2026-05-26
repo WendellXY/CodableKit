@@ -96,6 +96,75 @@ import Testing
     )
   }
 
+  @Test func privateStructPromotesWitnessesToFileprivate() throws {
+    assertMacro(
+      """
+      @Codable
+      private struct UserInfo {
+        let name: String
+        let age: Int
+      }
+      """,
+      expandedSource: """
+        private struct UserInfo {
+          let name: String
+          let age: Int
+
+          fileprivate func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(name, forKey: .name)
+            try container.encode(age, forKey: .age)
+          }
+        }
+
+        extension UserInfo: Codable {
+          enum CodingKeys: String, CodingKey {
+            case name
+            case age
+          }
+
+          fileprivate init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            name = try container.decode(String.self, forKey: .name)
+            age = try container.decode(Int.self, forKey: .age)
+          }
+        }
+        """
+    )
+  }
+
+  @Test func fileprivateStructKeepsFileprivateWitnesses() throws {
+    assertMacro(
+      """
+      @Codable
+      fileprivate struct UserInfo {
+        let name: String
+      }
+      """,
+      expandedSource: """
+        fileprivate struct UserInfo {
+          let name: String
+
+          fileprivate func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(name, forKey: .name)
+          }
+        }
+
+        extension UserInfo: Codable {
+          enum CodingKeys: String, CodingKey {
+            case name
+          }
+
+          fileprivate init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            name = try container.decode(String.self, forKey: .name)
+          }
+        }
+        """
+    )
+  }
+
   @Test func optionSkipProtocolConformanceDoesNotAttachConformance() throws {
     assertMacro(
       """

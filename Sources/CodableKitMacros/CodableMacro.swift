@@ -128,7 +128,7 @@ public struct CodableMacro: ExtensionMacro {
               DeclSyntax(
                 genInitDecoderDecl(
                   from: properties,
-                  modifiers: [accessModifier],
+                  modifiers: [accessModifier.witnessSafe],
                   codableOptions: codableOptions,
                   hasSuper: false,
                   tree: usingTree,
@@ -196,8 +196,8 @@ extension CodableMacro: MemberMacro {
       encodeTree = sharedTree
     }
 
-    var decodeModifiers = [accessModifier]
-    var encodeModifiers = [accessModifier]
+    var decodeModifiers = [accessModifier.witnessSafe]
+    var encodeModifiers = [accessModifier.witnessSafe]
 
     // If the structure is a class and has a superclass, this should be set to true.
     // This flag is used to determine if the encode and decode methods
