@@ -136,10 +136,11 @@ struct UserConfigInfo {
 
 A derived property has no `CodingKeys` case and is never encoded. Its value is computed at the
 end of `init(from:)` by feeding the already-decoded `from:` property through the transformer
-pipeline, before any `@CodableHook(.didDecode)` hook runs. Optional or defaulted derived
-properties fall back to `nil`/the default when the pipeline fails; non-optional ones without a
-default rethrow from `init(from:)`. Add `.onFailure(_:)` to the pipeline to log failures that
-the fallback path would otherwise swallow.
+pipeline, before any `@CodableHook(.didDecode)` hook runs. The `from:` source must itself be a
+decoded stored property of the same type — `.ignored` properties are rejected at compile time.
+Optional or defaulted derived properties fall back to `nil`/the default when the pipeline fails;
+non-optional ones without a default rethrow from `init(from:)`. Add `.onFailure(_:)` to the
+pipeline to log failures that the fallback path would otherwise swallow.
 
 ### Dynamic JSON values
 

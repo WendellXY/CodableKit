@@ -587,4 +587,34 @@ import Testing
       ]
     )
   }
+
+  @Test func derivedKeyFromIgnoredPropertyIsAnError() throws {
+    assertMacro(
+      """
+      @Codable
+      public struct User {
+        let id: Int
+        @CodableKey(options: .ignored)
+        var cache: String = ""
+        @DerivedKey(from: "cache", transformer: CountTransformer())
+        var cacheLength: Int?
+      }
+      """,
+      expandedSource: """
+        public struct User {
+          let id: Int
+          var cache: String = ""
+          var cacheLength: Int?
+        }
+        """,
+      diagnostics: [
+        .init(
+          message:
+            "@DerivedKey source property 'cache' is excluded from decoding (.ignored); derived properties may only depend on decoded properties",
+          line: 6,
+          column: 3
+        )
+      ]
+    )
+  }
 }

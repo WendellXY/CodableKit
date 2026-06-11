@@ -622,9 +622,10 @@ public macro CodableKey(
 ///   propagates the error from `init(from:)`. Because the optional/default fallback path swallows
 ///   pipeline errors via `try?`, attach `.onFailure(_:)` to the transformer pipeline when you
 ///   need to observe or log those failures.
-/// - **Dependencies:** the `from:` property must be a coded stored property of the same type
-///   (inherited superclass properties are not supported as `from:` sources). Deriving from
-///   another derived property is not supported and is diagnosed.
+/// - **Dependencies:** the `from:` property must be a stored property of the same type that is
+///   actually decoded — properties marked `.ignored` and inherited superclass properties are not
+///   supported as `from:` sources. Deriving from another derived property is not supported and
+///   is diagnosed.
 /// - **Decode-only:** `@DerivedKey` works under `@Codable` and `@Decodable`; it cannot be used in
 ///   an `@Encodable`-only type, and it cannot be combined with `@CodableKey`, `@DecodableKey`, or
 ///   `@EncodableKey` on the same property.

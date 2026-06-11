@@ -443,7 +443,7 @@ extension CodeGenCore {
       }
 
       // Validate @DerivedKey usage. Derived properties are decode-only: they have no coding key,
-      // are never encoded, and are computed at the end of `init(from:)` from a coded sibling.
+      // are never encoded, and are computed at the end of `init(from:)` from a decoded sibling.
       // Failures are attached to the offending @DerivedKey attribute and only emitted on the
       // advisory (member macro) path, so each diagnostic surfaces exactly once; generation is
       // then aborted via `DiagnosticAlreadyEmitted`.
@@ -483,6 +483,12 @@ extension CodeGenCore {
         if sourceProperty.isDerived {
           throw derivedError(
             "@DerivedKey source property '\(derivedFromName)' is itself derived; derived properties may only depend on coded properties"
+          )
+        }
+
+        if sourceProperty.ignored {
+          throw derivedError(
+            "@DerivedKey source property '\(derivedFromName)' is excluded from decoding (.ignored); derived properties may only depend on decoded properties"
           )
         }
 
