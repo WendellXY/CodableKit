@@ -19,6 +19,7 @@
 - One-line `@Codable`, `@Encodable`, and `@Decodable` synthesis
 - Default-aware decoding, nested keys, and graceful fallbacks
 - Raw-string transcoding, lossy collections, and transformer pipelines
+- Derived properties computed from already-decoded fields via `@DerivedKey`
 - Explicit lifecycle hooks with deterministic generated code
 
 CodableKit is a Swift macro package built for the JSON you actually receive: nested payloads, string-encoded objects, partially invalid arrays, and schemas that drift over time. It keeps configuration close to each property, surfaces mistakes with compile-time diagnostics, and avoids runtime reflection or hidden magic.
@@ -58,7 +59,8 @@ That single model gets generated `CodingKeys`, `init(from:)`, and `encode(to:)` 
 | Raw-string transcoding | `@CodableKey(options: .safeTranscodeRawString)` | Decode string-encoded JSON into strongly typed models |
 | Lossy collections | `@CodableKey(options: .lossy)` | Drop invalid array, set, or dictionary entries during decode |
 | Explicit hooks | `@CodableHook(.didDecode)` | Run validation, normalization, or derived-value logic at clear lifecycle stages |
-| Transformer pipelines | `@CodableKey(transformer: MyTransformer())` | Compose reusable decode and encode transformations |
+| Transformer pipelines | `@CodableKey(transformer: MyTransformer())` | Compose reusable decode and encode transformations; `DictionaryLookupTransformer` pulls a value out of a decoded dictionary, `liftOptional()` lifts a pipeline to optional input/output, and `onFailure(_:)` observes pipeline errors for logging |
+| Derived properties | `@DerivedKey(from: "slots", transformer: MyTransformer())` | Compute typed properties from an already-decoded sibling at the end of `init(from:)` — no coding key, never encoded |
 
 ## Targets
 
@@ -116,6 +118,29 @@ struct Feed {
 }
 ```
 
+### Derived properties
+
+```swift
+@Codable
+struct UserConfigInfo {
+  var userConfigValue: [String: String]?
+
+  @DerivedKey(
+    from: "userConfigValue",
+    transformer: DictionaryLookupTransformer(key: "avatar_frame")
+      .chained(RawStringDecodingTransformer<AvatarFrame>().liftOptional())
+  )
+  private(set) var avatarFrame: AvatarFrame?
+}
+```
+
+A derived property has no `CodingKeys` case and is never encoded. Its value is computed at the
+end of `init(from:)` by feeding the already-decoded `from:` property through the transformer
+pipeline, before any `@CodableHook(.didDecode)` hook runs. Optional or defaulted derived
+properties fall back to `nil`/the default when the pipeline fails; non-optional ones without a
+default rethrow from `init(from:)`. Add `.onFailure(_:)` to the pipeline to log failures that
+the fallback path would otherwise swallow.
+
 ### Dynamic JSON values
 
 ```swift
@@ -158,7 +183,7 @@ swift build -v
 swift test -v
 ```
 
-Tests cover macro expansion, diagnostics, hooks, inheritance, lossy coding, nested keys, and transformer behavior.
+Tests cover macro expansion, diagnostics, hooks, inheritance, lossy coding, nested keys, derived properties, and transformer behavior.
 
 ## Docs
 

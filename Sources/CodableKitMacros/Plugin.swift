@@ -15,6 +15,7 @@ struct CodableKitPlugin: CompilerPlugin {
     CodableKeyMacro.self,
     DecodableKeyMacro.self,
     EncodableKeyMacro.self,
+    DerivedKeyMacro.self,
     CodingHookMacro.self,
   ]
 }

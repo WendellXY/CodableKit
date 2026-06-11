@@ -590,6 +590,61 @@ public macro CodableKey(
   transformer: any BidirectionalCodingTransformer = NothingToTransform()
 ) = #externalMacro(module: "CodableKitMacros", type: "CodableKeyMacro")
 
+/// A macro that marks a stored property as *derived*: its value is not decoded from its own
+/// coding key, but computed at the end of the generated `init(from:)` by a transformer pipeline
+/// whose input is an already-decoded sibling property.
+///
+/// ## Overview
+///
+/// Use `@DerivedKey` when a typed property should be materialized from another property that is
+/// decoded normally — for example, slot-bag dictionaries with embedded JSON strings:
+///
+/// ```swift
+/// @Codable
+/// public struct UserCommonConfigInfo: Sendable, Hashable {
+///   public var userConfigValue: [String: UserConfigValue]?
+///
+///   @DerivedKey(from: "userConfigValue", transformer: AvatarFrameSlotTransformer())
+///   public private(set) var avatarFrame: AvatarFrame?
+/// }
+/// ```
+///
+/// ## Semantics
+///
+/// - **No coding key:** derived properties get no `CodingKeys` case and are never read from the
+///   decoder.
+/// - **Never encoded:** `encode(to:)` skips derived properties entirely.
+/// - **Decode ordering:** assignments are emitted at the end of `init(from:)` — after all coded
+///   properties are assigned and before any `didDecode` hook runs, so hooks observe derived
+///   values. Multiple derived properties are assigned in declaration order.
+/// - **Failure policy:** if the property is optional or has a default initializer value, a
+///   pipeline failure falls back to `nil`/the default. A non-optional property without a default
+///   propagates the error from `init(from:)`. Because the optional/default fallback path swallows
+///   pipeline errors via `try?`, attach `.onFailure(_:)` to the transformer pipeline when you
+///   need to observe or log those failures.
+/// - **Dependencies:** the `from:` property must be a coded stored property of the same type
+///   (inherited superclass properties are not supported as `from:` sources). Deriving from
+///   another derived property is not supported and is diagnosed.
+/// - **Decode-only:** `@DerivedKey` works under `@Codable` and `@Decodable`; it cannot be used in
+///   an `@Encodable`-only type, and it cannot be combined with `@CodableKey`, `@DecodableKey`, or
+///   `@EncodableKey` on the same property.
+/// - **Hashable/Equatable:** no special handling — derived stored properties participate in
+///   whatever synthesis the type already gets.
+///
+/// The transformer's `Input` must match the source property's type and its `Output` must match
+/// the derived property's type; mismatches surface as compile errors in the generated code.
+///
+/// - Parameters:
+///   - property: The name of the sibling stored property whose decoded value feeds the pipeline.
+///     Must be a string literal.
+///   - transformer: The transformer pipeline applied to the source value. Only the forward
+///     direction is used; encoding never needs the reverse direction.
+@attached(peer)
+public macro DerivedKey(
+  from property: String,
+  transformer: any CodingTransformer
+) = #externalMacro(module: "CodableKitMacros", type: "DerivedKeyMacro")
+
 // MARK: - DecodeKey / EncodeKey
 
 @attached(peer, names: arbitrary)

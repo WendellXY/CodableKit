@@ -34,6 +34,12 @@ struct SimpleFixItMessage: FixItMessage {
   }
 }
 
+/// An error thrown after a diagnostic has already been emitted via `context.diagnose`.
+///
+/// Expansion entry points catch it to abort code generation without emitting a duplicate
+/// diagnostic at the container macro attribute.
+struct DiagnosticAlreadyEmitted: Error {}
+
 enum CustomError: Error, CustomStringConvertible {
   case message(String)
 

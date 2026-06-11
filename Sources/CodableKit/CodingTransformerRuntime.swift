@@ -75,6 +75,21 @@ public func __ckEncodeTransformedIfPresent<T, K>(
   }
 }
 
+// MARK: - Derived property support
+
+/// Runtime helper for `@DerivedKey`: feeds an already-decoded sibling value through a
+/// one-directional transformer pipeline and returns its output.
+///
+/// Unlike the key-based helpers above, the input is not read from a decoding container — it is
+/// the value of a sibling property that has already been assigned earlier in `init(from:)`.
+@inline(__always)
+public func __ckDecodeDerived<T>(
+  transformer: T,
+  from input: T.Input
+) throws -> T.Output where T: CodingTransformer {
+  try transformer.transform(.success(input)).get()
+}
+
 // MARK: - One-way transformer support
 
 @inline(__always)
