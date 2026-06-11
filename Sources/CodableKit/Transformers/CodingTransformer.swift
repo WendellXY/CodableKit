@@ -47,6 +47,23 @@ extension CodingTransformer {
   public func optional() -> some CodingTransformer<Input, Output?> {
     self.chained(Optional())
   }
+
+  /// Lifts this transformer to operate on optional values.
+  ///
+  /// A nil input produces a nil output without invoking the base transformer.
+  /// An upstream failure is forwarded into the base transformer, so
+  /// failure-recovering transformers (such as `DefaultOnFailureTransformer`)
+  /// recover when lifted, producing `.some(recovered)`; non-recovering
+  /// transformers propagate the failure unchanged.
+  public func liftOptional() -> some CodingTransformer<Input?, Output?> {
+    OptionalLifted(transformer: self)
+  }
+
+  public func onFailure(
+    _ handler: @escaping (any Error) -> Void
+  ) -> some CodingTransformer<Input, Output> {
+    OnFailure(transformer: self, handler: handler)
+  }
 }
 
 public protocol BidirectionalCodingTransformer<Input, Output>: CodingTransformer {
@@ -62,6 +79,18 @@ extension BidirectionalCodingTransformer {
 
   public var reversed: some BidirectionalCodingTransformer<Output, Input> {
     Reversed(transformer: self)
+  }
+
+  /// Lifts this transformer to operate on optional values in both directions.
+  ///
+  /// Forward and reverse share the same semantics: a nil input produces a nil
+  /// output without invoking the base transformer, and an upstream failure is
+  /// forwarded into the base transformer, so failure-recovering transformers
+  /// (such as `DefaultOnFailureTransformer`) recover when lifted, producing
+  /// `.some(recovered)`; non-recovering transformers propagate the failure
+  /// unchanged.
+  public func liftOptional() -> some BidirectionalCodingTransformer<Input?, Output?> {
+    OptionalLifted(transformer: self)
   }
 }
 
