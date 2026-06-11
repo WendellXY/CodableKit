@@ -59,6 +59,10 @@ extension CodingTransformer {
     OptionalLifted(transformer: self)
   }
 
+  /// Taps failures for observability without altering the result.
+  ///
+  /// The handler is invoked whenever the transformed result is a failure; the
+  /// result is passed through unchanged in all cases.
   public func onFailure(
     _ handler: @escaping (any Error) -> Void
   ) -> some CodingTransformer<Input, Output> {
@@ -91,6 +95,17 @@ extension BidirectionalCodingTransformer {
   /// unchanged.
   public func liftOptional() -> some BidirectionalCodingTransformer<Input?, Output?> {
     OptionalLifted(transformer: self)
+  }
+
+  /// Taps failures for observability without altering the result.
+  ///
+  /// The handler is invoked whenever the transformed result is a failure in
+  /// either direction — both `transform(_:)` and `reverseTransform(_:)` report
+  /// their failures — and the result is passed through unchanged in all cases.
+  public func onFailure(
+    _ handler: @escaping (any Error) -> Void
+  ) -> some BidirectionalCodingTransformer<Input, Output> {
+    OnFailure(transformer: self, handler: handler)
   }
 }
 

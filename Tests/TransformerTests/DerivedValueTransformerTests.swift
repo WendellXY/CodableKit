@@ -130,6 +130,62 @@ struct DerivedValueTransformerTests {
     #expect(observed.count == 1)
   }
 
+  /// Identity forward; reverse always fails, to exercise the reverse tap.
+  struct FailingReverse: BidirectionalCodingTransformer {
+    func transform(_ input: Result<Int, any Error>) -> Result<Int, any Error> {
+      input
+    }
+
+    func reverseTransform(_ input: Result<Int, any Error>) -> Result<Int, any Error> {
+      input.flatMap { _ in .failure(TestError.boom) }
+    }
+  }
+
+  @Test func onFailure_reverse_invoked_on_failure_and_result_unchanged() async throws {
+    var observed: [any Error] = []
+    let t = FailingReverse().onFailure { observed.append($0) }
+    let result = t.reverseTransform(.success(1))
+
+    #expect(observed.count == 1)
+    #expect(observed.first is TestError)
+
+    var caught: (any Error)?
+    do { _ = try result.get() } catch { caught = error }
+    #expect(caught is TestError)
+  }
+
+  @Test func onFailure_reverse_not_invoked_on_success_and_result_unchanged() async throws {
+    var observed: [any Error] = []
+    let t = IntegerToBooleanTransformer<Int>().onFailure { observed.append($0) }
+    #expect(try t.reverseTransform(.success(true)).get() == 1)
+    #expect(try t.transform(.success(0)).get() == false)
+    #expect(observed.isEmpty)
+  }
+
+  /// Adds one on decode; subtracts one on encode. Forward/reverse companion
+  /// for building a bidirectional chain.
+  struct Increment: BidirectionalCodingTransformer {
+    func transform(_ input: Result<Int, any Error>) -> Result<Int, any Error> {
+      input.map { $0 + 1 }
+    }
+
+    func reverseTransform(_ input: Result<Int, any Error>) -> Result<Int, any Error> {
+      input.map { $0 - 1 }
+    }
+  }
+
+  @Test func onFailure_bidirectional_chain_remains_bidirectional() async throws {
+    // The tapped chain still erases to `any BidirectionalCodingTransformer`,
+    // as `@CodableKey(transformer:)` pipelines require.
+    let pipeline: any BidirectionalCodingTransformer<Int, Bool> =
+      Increment()
+      .chained(IntegerToBooleanTransformer<Int>())
+      .onFailure { _ in }
+
+    #expect(try pipeline.transform(.success(0)).get() == true)
+    #expect(try pipeline.reverseTransform(.success(true)).get() == 0)
+  }
+
   // MARK: - End-to-end: derived value from a slot bag
 
   /// Mirrors the motivating payload shape: an optional dictionary of slot bags

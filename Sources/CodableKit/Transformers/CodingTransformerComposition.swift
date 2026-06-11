@@ -238,3 +238,16 @@ where
     return output
   }
 }
+
+extension OnFailure: BidirectionalCodingTransformer
+where
+  T: BidirectionalCodingTransformer
+{
+  func reverseTransform(_ input: Result<T.Output, any Error>) -> Result<T.Input, any Error> {
+    let output = transformer.reverseTransform(input)
+    if case .failure(let error) = output {
+      handler(error)
+    }
+    return output
+  }
+}
