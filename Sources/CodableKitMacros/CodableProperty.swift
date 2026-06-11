@@ -21,6 +21,8 @@ struct CodableProperty {
   private(set) var attributes: [AttributeSyntax]
   /// The declaration modifiers of the property
   let declModifiers: [DeclModifierSyntax]
+  /// Whether the property is declared with the `let` binding specifier
+  let isConstant: Bool
   /// The name of the property
   let name: PatternSyntax
   /// The type of the property
@@ -33,12 +35,14 @@ struct CodableProperty {
   /// - Parameters:
   ///   - attributes: The attributes associated with the macro.
   ///   - declModifiers: The declaration modifiers associated of the property.
+  ///   - isConstant: Whether the property is declared with the `let` binding specifier.
   ///   - binding: The pattern binding syntax.
   ///   - type: The default type syntax. Variable Decl might not have a type annotation like in
   ///  `let a, b: String`, so we need to pass the default type.
   private init(
     attributes: [AttributeSyntax],
     declModifiers: [DeclModifierSyntax],
+    isConstant: Bool,
     binding: PatternBindingSyntax,
     defaultType type: TypeSyntax
   ) {
@@ -46,6 +50,7 @@ struct CodableProperty {
       $0.macroName < $1.macroName
     }
     self.declModifiers = declModifiers
+    self.isConstant = isConstant
     self.name = binding.pattern.trimmed
     self.type = binding.typeAnnotation?.type.trimmed ?? type.trimmed
     self.defaultValue = binding.initializer?.value
@@ -66,6 +71,7 @@ struct CodableProperty {
       $0.macroName < $1.macroName
     }
     self.declModifiers = declModifiers
+    self.isConstant = false
     self.name = PatternSyntax(IdentifierPatternSyntax(identifier: caseElement.name.trimmed))
     self.type = "Never"
     self.defaultValue = nil
@@ -388,6 +394,7 @@ extension CodableProperty {
     // Ignore static properties
     guard !modifiers.contains(where: \.name.isTypePropertyKeyword) else { return [] }
 
+    let isConstant = variable.bindingSpecifier.tokenKind == .keyword(.let)
     let globalDefaultType = variable.bindings.last?.typeAnnotation?.type
 
     var properties: [Self] = []
@@ -401,7 +408,8 @@ extension CodableProperty {
 
       if let fallbackType {
         let property = Self(
-          attributes: attributes, declModifiers: modifiers, binding: binding, defaultType: fallbackType
+          attributes: attributes, declModifiers: modifiers, isConstant: isConstant, binding: binding,
+          defaultType: fallbackType
         )
         try property.validated()
         properties.append(property)
@@ -409,7 +417,8 @@ extension CodableProperty {
       }
 
       // If we cannot determine a type and the property is ignored, skip it silently.
-      let tmpProperty = Self(attributes: attributes, declModifiers: [], binding: binding, defaultType: "Any")
+      let tmpProperty = Self(
+        attributes: attributes, declModifiers: [], isConstant: isConstant, binding: binding, defaultType: "Any")
       if tmpProperty.ignored {
         continue
       }

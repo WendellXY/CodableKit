@@ -162,3 +162,92 @@ struct Optional<T>: CodingTransformer {
     }
   }
 }
+
+/// Lifts a transformer over optional values.
+///
+/// A nil input passes through as a nil output; a non-nil input runs through
+/// the base transformer and its output is wrapped. Failures are forwarded to
+/// the base transformer so failure-recovering transformers keep working when
+/// lifted.
+struct OptionalLifted<T>: CodingTransformer
+where
+  T: CodingTransformer
+{
+  typealias Input = T.Input?
+  typealias Output = T.Output?
+
+  let transformer: T
+
+  init(transformer: T) {
+    self.transformer = transformer
+  }
+
+  func transform(_ input: Result<T.Input?, any Error>) -> Result<T.Output?, any Error> {
+    switch input {
+    case .success(.some(let value)):
+      transformer.transform(.success(value)).map { $0 as T.Output? }
+    case .success(.none):
+      .success(nil)
+    case .failure(let error):
+      transformer.transform(.failure(error)).map { $0 as T.Output? }
+    }
+  }
+}
+
+extension OptionalLifted: BidirectionalCodingTransformer
+where
+  T: BidirectionalCodingTransformer
+{
+  func reverseTransform(_ input: Result<T.Output?, any Error>) -> Result<T.Input?, any Error> {
+    switch input {
+    case .success(.some(let value)):
+      transformer.reverseTransform(.success(value)).map { $0 as T.Input? }
+    case .success(.none):
+      .success(nil)
+    case .failure(let error):
+      transformer.reverseTransform(.failure(error)).map { $0 as T.Input? }
+    }
+  }
+}
+
+/// Passes results through unchanged while reporting failures to a handler.
+///
+/// The handler is invoked with the error whenever the transformed result is a
+/// failure; it cannot alter the result. Useful for logging malformed payloads
+/// that would otherwise be silently swallowed downstream.
+struct OnFailure<T>: CodingTransformer
+where
+  T: CodingTransformer
+{
+  typealias Input = T.Input
+  typealias Output = T.Output
+
+  let transformer: T
+  let handler: (any Error) -> Void
+
+  init(transformer: T, handler: @escaping (any Error) -> Void) {
+    self.transformer = transformer
+    self.handler = handler
+  }
+
+  func transform(_ input: Result<Input, any Error>) -> Result<Output, any Error> {
+    let output = transformer.transform(input)
+    if case .failure(let error) = output {
+      handler(error)
+    }
+    return output
+  }
+}
+
+extension OnFailure: BidirectionalCodingTransformer
+where
+  T: BidirectionalCodingTransformer
+{
+  func reverseTransform(_ input: Result<T.Output, any Error>) -> Result<T.Input, any Error> {
+    let output = transformer.reverseTransform(input)
+    if case .failure(let error) = output {
+      handler(error)
+    }
+    return output
+  }
+}

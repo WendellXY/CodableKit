@@ -405,8 +405,9 @@ extension CodeGenCore {
         throw error("No properties found")
       }
 
-      // Check if there are key conflicts
-      let notIgnoredProperties = extractedProperties.filter({ !$0.ignored })
+      // Check if there are key conflicts. Derived properties have no coding key of their own,
+      // so they cannot conflict with coded keys.
+      let notIgnoredProperties = extractedProperties.filter({ !$0.ignored && !$0.isDerived })
       var propertiesKeySet = Set(notIgnoredProperties.map(\.normalizedName))
       if propertiesKeySet.count != notIgnoredProperties.count {
         for property in notIgnoredProperties {
@@ -438,6 +439,61 @@ extension CodeGenCore {
         // Mathematically, the attachedMacroType should share elements with the codableType.
         if attachedMacroType.intersection(codableType).isEmpty && attachedMacroType != .none && codableType != .none {
           throw error("The attached Key macro \(attachedMacroType) does not match the Container macro \(codableType)")
+        }
+      }
+
+      // Validate @DerivedKey usage. Derived properties are decode-only: they have no coding key,
+      // are never encoded, and are computed at the end of `init(from:)` from a decoded sibling.
+      // Failures are attached to the offending @DerivedKey attribute and only emitted on the
+      // advisory (member macro) path, so each diagnostic surfaces exactly once; generation is
+      // then aborted via `DiagnosticAlreadyEmitted`.
+      for property in extractedProperties where property.isDerived {
+        guard let derivedAttribute = property.derivedKeyAttribute else { continue }
+
+        func derivedError(_ message: String) -> any Error {
+          if emitAdvisories {
+            context.diagnose(makeDiagnostic(node: derivedAttribute, message: message, severity: .error))
+          }
+          return DiagnosticAlreadyEmitted()
+        }
+
+        if !property.attachedKeyMacros.isEmpty {
+          throw derivedError(
+            "@DerivedKey cannot be combined with @CodableKey, @DecodableKey, or @EncodableKey on the same property")
+        }
+
+        if !macroCodableType.contains(.decodable) {
+          throw derivedError(
+            "@DerivedKey is decode-only and cannot be used in an @Encodable-only type; use @Codable or @Decodable")
+        }
+
+        guard let derivedFromName = property.derivedFromPropertyName else {
+          throw derivedError(
+            "@DerivedKey requires a 'from:' argument that is a non-empty string literal naming a sibling stored property"
+          )
+        }
+
+        guard let sourceProperty = extractedProperties.first(where: { $0.name.trimmedDescription == derivedFromName })
+        else {
+          throw derivedError(
+            "@DerivedKey source property '\(derivedFromName)' does not exist as a stored property of this type; inherited properties are not supported as 'from:' sources"
+          )
+        }
+
+        if sourceProperty.isDerived {
+          throw derivedError(
+            "@DerivedKey source property '\(derivedFromName)' is itself derived; derived properties may only depend on coded properties"
+          )
+        }
+
+        if sourceProperty.ignored {
+          throw derivedError(
+            "@DerivedKey source property '\(derivedFromName)' is excluded from decoding (.ignored); derived properties may only depend on decoded properties"
+          )
+        }
+
+        if property.derivedTransformerExpr == nil {
+          throw derivedError("@DerivedKey requires a 'transformer:' argument")
         }
       }
 

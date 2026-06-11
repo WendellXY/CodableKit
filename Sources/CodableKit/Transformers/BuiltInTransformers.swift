@@ -201,3 +201,22 @@ public struct KeyPathTransformer<T, U: Decodable>: CodingTransformer {
     input.map { $0[keyPath: keyPath] }
   }
 }
+
+/// Looks up a value by key in an optional dictionary.
+///
+/// A nil dictionary or an absent key produces `nil` rather than an error, so
+/// chains can treat missing slots as missing values and continue.
+public struct DictionaryLookupTransformer<Key: Hashable, Value>: CodingTransformer {
+  public typealias Input = [Key: Value]?
+  public typealias Output = Value?
+
+  public let key: Key
+
+  public init(key: Key) {
+    self.key = key
+  }
+
+  public func transform(_ input: Result<[Key: Value]?, any Error>) -> Result<Value?, any Error> {
+    input.map { $0?[key] }
+  }
+}

@@ -69,18 +69,21 @@ public struct CodableMacro: ExtensionMacro {
       // If there are no properties, return an empty array.
       guard !properties.isEmpty else { return [] }
 
-      let needsSeparateKeys = properties.contains { $0.containsDifferentKeyPaths(for: codableType) }
+      // Derived properties have no coding key and never participate in container decode/encode.
+      let codedProperties = properties.filter { !$0.isDerived }
+
+      let needsSeparateKeys = codedProperties.contains { $0.containsDifferentKeyPaths(for: codableType) }
 
       let codingKeyDecls: [EnumDeclSyntax]
       let usingTree: NamespaceNode
 
       if needsSeparateKeys {
-        let decodeTree = NamespaceNode.buildTree(.decodable, from: properties)
-        let encodeTree = NamespaceNode.buildTree(.encodable, from: properties)
+        let decodeTree = NamespaceNode.buildTree(.decodable, from: codedProperties)
+        let encodeTree = NamespaceNode.buildTree(.encodable, from: codedProperties)
         usingTree = decodeTree
         codingKeyDecls = decodeTree.allCodingKeysEnums + encodeTree.allCodingKeysEnums
       } else {
-        let sharedTree = NamespaceNode.buildTree(.codable, from: properties)
+        let sharedTree = NamespaceNode.buildTree(.codable, from: codedProperties)
         usingTree = sharedTree
         codingKeyDecls = sharedTree.allCodingKeysEnums
       }
@@ -147,6 +150,9 @@ public struct CodableMacro: ExtensionMacro {
           }
         ]
       }
+    } catch is DiagnosticAlreadyEmitted {
+      // The member macro path has already attached the diagnostic to the offending node.
+      return []
     } catch is SimpleDiagnosticMessage {
       // Swallow known diagnostics here to avoid emitting duplicates across macro roles.
       // The member macro will surface the diagnostic once.
@@ -168,9 +174,14 @@ extension CodableMacro: MemberMacro {
   ) throws -> [DeclSyntax] {
     let core = CodeGenCore()
     // Member macro path: allow advisory diagnostics to be emitted once here
-    try core.prepareCodeGeneration(
-      of: node, for: declaration, in: context, conformingTo: protocols, emitAdvisories: true
-    )
+    do {
+      try core.prepareCodeGeneration(
+        of: node, for: declaration, in: context, conformingTo: protocols, emitAdvisories: true
+      )
+    } catch is DiagnosticAlreadyEmitted {
+      // The diagnostic is already attached to the offending node; abort generation silently.
+      return []
+    }
 
     let properties = try core.properties(for: declaration, in: context)
     let accessModifier = try core.accessModifier(for: declaration, in: context)
@@ -182,16 +193,19 @@ extension CodableMacro: MemberMacro {
     // If there are no properties, return an empty array.
     guard !properties.isEmpty else { return [] }
 
-    let needsSeparateKeys = properties.contains { $0.containsDifferentKeyPaths(for: codableType) }
+    // Derived properties have no coding key and never participate in container decode/encode.
+    let codedProperties = properties.filter { !$0.isDerived }
+
+    let needsSeparateKeys = codedProperties.contains { $0.containsDifferentKeyPaths(for: codableType) }
 
     let decodeTree: NamespaceNode
     let encodeTree: NamespaceNode
 
     if needsSeparateKeys {
-      decodeTree = NamespaceNode.buildTree(.decodable, from: properties)
-      encodeTree = NamespaceNode.buildTree(.encodable, from: properties)
+      decodeTree = NamespaceNode.buildTree(.decodable, from: codedProperties)
+      encodeTree = NamespaceNode.buildTree(.encodable, from: codedProperties)
     } else {
-      let sharedTree = NamespaceNode.buildTree(.codable, from: properties)
+      let sharedTree = NamespaceNode.buildTree(.codable, from: codedProperties)
       decodeTree = sharedTree
       encodeTree = sharedTree
     }
@@ -297,6 +311,12 @@ extension CodableMacro {
         containerDecl
       }
 
+      // Derived properties: computed from already-decoded sibling values, in declaration order.
+      // Emitted after all coded assignments and before the didDecode hooks so hooks observe them.
+      for item in derivedPropertyAssignments(from: properties) {
+        item
+      }
+
       if hasSuper {
         if codableOptions.contains(.skipSuperCoding) {
           "super.init()"
@@ -314,6 +334,38 @@ extension CodableMacro {
         }
       }
     }
+  }
+
+  /// Generate the tail assignments for `@DerivedKey` properties in `init(from:)`.
+  ///
+  /// Each derived property is assigned by feeding the already-decoded source property through the
+  /// transformer pipeline via the `__ckDecodeDerived` runtime helper, in declaration order.
+  /// Failure policy mirrors `.useDefaultOnFailure` conventions: optional properties and
+  /// properties with a default initializer value fall back to `nil`/the default on pipeline
+  /// failure; non-optional properties without a default propagate the error.
+  fileprivate static func derivedPropertyAssignments(from properties: [Property]) -> [CodeBlockItemSyntax] {
+    properties
+      .filter(\.isDerived)
+      .compactMap { property in
+        guard
+          let transformerExpr = property.derivedTransformerExpr,
+          let sourceName = property.derivedFromPropertyName
+        else { return nil }
+
+        // A `let` with an initializer can never be re-assigned in `init(from:)`. The peer macro
+        // already diagnoses this; skip the tail assignment so the diagnostic is not followed by
+        // confusing secondary compile errors in generated code.
+        guard !(property.isConstant && property.defaultValue != nil) else { return nil }
+
+        let callExpr: ExprSyntax =
+          "__ckDecodeDerived(transformer: \(transformerExpr), from: \(raw: sourceName))"
+
+        if property.isOptional || property.defaultValue != nil {
+          return "\(property.name) = (try? \(callExpr)) ?? \(property.defaultValue ?? "nil")"
+        } else {
+          return "\(property.name) = try \(callExpr)"
+        }
+      }
   }
 
   /// Generate the `func encode(to encoder: Encoder)` method of the `Codable` protocol.

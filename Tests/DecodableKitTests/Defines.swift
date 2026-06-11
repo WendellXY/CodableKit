@@ -20,6 +20,7 @@ let macros: [String: any Macro.Type] = [
   "CodableKey": CodableKeyMacro.self,
   "DecodableKey": DecodableKeyMacro.self,
   "EncodableKey": EncodableKeyMacro.self,
+  "DerivedKey": DerivedKeyMacro.self,
 ]
 
 let macroSpecs: [String: MacroSpec] = [
@@ -28,6 +29,7 @@ let macroSpecs: [String: MacroSpec] = [
   "CodableKey": MacroSpec(type: CodableKeyMacro.self),
   "DecodableKey": MacroSpec(type: DecodableKeyMacro.self),
   "EncodableKey": MacroSpec(type: EncodableKeyMacro.self),
+  "DerivedKey": MacroSpec(type: DerivedKeyMacro.self),
 ]
 
 func assertMacro(

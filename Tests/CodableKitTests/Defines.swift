@@ -19,13 +19,16 @@ let macros: [String: any Macro.Type] = [
   "CodableKey": CodableKeyMacro.self,
   "DecodableKey": DecodableKeyMacro.self,
   "EncodableKey": EncodableKeyMacro.self,
+  "DerivedKey": DerivedKeyMacro.self,
 ]
 
 let macroSpecs: [String: MacroSpec] = [
   "Codable": MacroSpec(type: CodableMacro.self, conformances: ["Codable"]),
+  "Encodable": MacroSpec(type: CodableMacro.self, conformances: ["Encodable"]),
   "CodableKey": MacroSpec(type: CodableKeyMacro.self),
   "DecodableKey": MacroSpec(type: DecodableKeyMacro.self),
   "EncodableKey": MacroSpec(type: EncodableKeyMacro.self),
+  "DerivedKey": MacroSpec(type: DerivedKeyMacro.self),
 ]
 
 func assertMacro(
