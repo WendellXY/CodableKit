@@ -27,6 +27,10 @@ import Testing
           public var userConfigValue: [String: String]?
           public private(set) var avatarFrame: AvatarFrame?
 
+          public mutating func rederiveValues() {
+            avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
+          }
+
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encodeIfPresent(userConfigValue, forKey: .userConfigValue)
@@ -48,6 +52,56 @@ import Testing
     )
   }
 
+  @Test func defaultDerivedFrom_omittedPropertySource_andExplicitOverride() throws {
+    assertMacro(
+      """
+      @Codable(derivedFrom: "userConfigValue")
+      public struct UserCommonConfigInfo {
+        public var userConfigValue: [String: String]?
+        public var fallbackConfigValue: [String: String]?
+        @DerivedKey(transformer: FrameTransformer())
+        public private(set) var avatarFrame: AvatarFrame?
+        @DerivedKey(from: "fallbackConfigValue", transformer: BadgeTransformer())
+        public private(set) var badge: Badge?
+      }
+      """,
+      expandedSource: """
+        public struct UserCommonConfigInfo {
+          public var userConfigValue: [String: String]?
+          public var fallbackConfigValue: [String: String]?
+          public private(set) var avatarFrame: AvatarFrame?
+          public private(set) var badge: Badge?
+
+          public mutating func rederiveValues() {
+            avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
+            badge = (try? __ckDecodeDerived(transformer: BadgeTransformer(), from: fallbackConfigValue)) ?? nil
+          }
+
+          public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(userConfigValue, forKey: .userConfigValue)
+            try container.encodeIfPresent(fallbackConfigValue, forKey: .fallbackConfigValue)
+          }
+        }
+
+        extension UserCommonConfigInfo: Codable {
+          enum CodingKeys: String, CodingKey {
+            case userConfigValue
+            case fallbackConfigValue
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            userConfigValue = try container.decodeIfPresent([String: String]?.self, forKey: .userConfigValue) ?? nil
+            fallbackConfigValue = try container.decodeIfPresent([String: String]?.self, forKey: .fallbackConfigValue) ?? nil
+            avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
+            badge = (try? __ckDecodeDerived(transformer: BadgeTransformer(), from: fallbackConfigValue)) ?? nil
+          }
+        }
+        """
+    )
+  }
+
   @Test func derivedProperty_nonOptionalWithDefault_fallsBackToDefault() throws {
     assertMacro(
       """
@@ -62,6 +116,10 @@ import Testing
         public struct TagBox {
           var tags: [String] = []
           var tagCount: Int = 0
+
+          public mutating func rederiveValues() {
+            tagCount = (try? __ckDecodeDerived(transformer: CountTransformer(), from: tags)) ?? 0
+          }
 
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
@@ -98,6 +156,10 @@ import Testing
         public struct TagBox {
           var tags: [String] = []
           var tagCount: Int
+
+          public mutating func rederiveValues() throws {
+            tagCount = try __ckDecodeDerived(transformer: CountTransformer(), from: tags)
+          }
 
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
@@ -144,6 +206,11 @@ import Testing
           @CodableHook(.didDecode)
           mutating func didDecode() throws {}
 
+          public mutating func rederiveValues() {
+            avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
+            badge = (try? __ckDecodeDerived(transformer: BadgeTransformer(), from: userConfigValue)) ?? nil
+          }
+
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encodeIfPresent(userConfigValue, forKey: .userConfigValue)
@@ -188,6 +255,10 @@ import Testing
             avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
           }
 
+          public func rederiveValues() {
+            avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
+          }
+
           public func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encodeIfPresent(userConfigValue, forKey: .userConfigValue)
@@ -223,6 +294,10 @@ import Testing
             userConfigValue = try container.decodeIfPresent([String: String]?.self, forKey: .userConfigValue) ?? nil
             avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
             try super.init(from: decoder)
+          }
+
+          public func rederiveValues() {
+            avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
           }
 
           public override func encode(to encoder: any Encoder) throws {
@@ -408,42 +483,133 @@ import Testing
     )
   }
 
-  @Test func derivedKeyOnLetWithInitializerIsAnError() throws {
+  @Test func derivedKeyWithoutSourceOrDefaultIsAnError() throws {
+    assertMacro(
+      """
+      @Codable
+      public struct User {
+        let id: Int
+        @DerivedKey(transformer: StringifyTransformer())
+        var display: String?
+      }
+      """,
+      expandedSource: """
+        public struct User {
+          let id: Int
+          var display: String?
+        }
+        """,
+      diagnostics: [
+        .init(
+          message:
+            "@DerivedKey requires a 'from:' argument or a non-empty top-level 'derivedFrom:' default naming a sibling stored property",
+          line: 4,
+          column: 3
+        )
+      ]
+    )
+  }
+
+  @Test func invalidTopLevelDerivedFromIsAnError() throws {
+    assertMacro(
+      """
+      @Codable(derivedFrom: sourceName)
+      public struct User {
+        let id: Int
+      }
+      """,
+      expandedSource: """
+        public struct User {
+          let id: Int
+        }
+        """,
+      diagnostics: [
+        .init(
+          message: "Codable requires 'derivedFrom:' to be a non-empty string literal",
+          line: 1,
+          column: 1
+        )
+      ]
+    )
+  }
+
+  @Test func derivedKeyDefaultSourcePropertyMustExist() throws {
+    assertMacro(
+      """
+      @Codable(derivedFrom: "missing")
+      public struct User {
+        let id: Int
+        @DerivedKey(transformer: StringifyTransformer())
+        var display: String?
+      }
+      """,
+      expandedSource: """
+        public struct User {
+          let id: Int
+          var display: String?
+        }
+        """,
+      diagnostics: [
+        .init(
+          message:
+            "@DerivedKey source property 'missing' does not exist as a stored property of this type; inherited properties are not supported as 'from:' sources",
+          line: 4,
+          column: 3
+        )
+      ]
+    )
+  }
+
+  @Test func declaringRederiveValuesWhenDerivedPropertiesExistIsAnError() throws {
     assertMacro(
       """
       @Codable
       public struct User {
         let id: Int
         @DerivedKey(from: "id", transformer: StringifyTransformer())
-        let display: String = "none"
+        var display: String?
+
+        func rederiveValues() {}
       }
       """,
       expandedSource: """
         public struct User {
           let id: Int
-          let display: String = "none"
+          var display: String?
 
-          public func encode(to encoder: any Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(id, forKey: .id)
-          }
+          func rederiveValues() {}
         }
+        """,
+      diagnostics: [
+        .init(
+          message: "Types with @DerivedKey properties cannot declare rederiveValues(); it is generated by the macro",
+          line: 1,
+          column: 1
+        )
+      ]
+    )
+  }
 
-        extension User: Codable {
-          enum CodingKeys: String, CodingKey {
-            case id
-          }
-
-          public init(from decoder: any Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(Int.self, forKey: .id)
-          }
+  @Test func derivedKeyOnLetPropertyIsAnError() throws {
+    assertMacro(
+      """
+      @Codable
+      public struct User {
+        let id: Int
+        @DerivedKey(from: "id", transformer: StringifyTransformer())
+        let display: String?
+      }
+      """,
+      expandedSource: """
+        public struct User {
+          let id: Int
+          let display: String?
         }
         """,
       diagnostics: [
         .init(
           message:
-            "@DerivedKey cannot be applied to a 'let' property with an initializer; use 'var' or remove the initializer",
+            "@DerivedKey cannot be applied to a 'let' property; use 'var' so generated rederiveValues() can update it",
           line: 4,
           column: 3
         )

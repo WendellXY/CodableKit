@@ -148,10 +148,12 @@ import CodableKitCore
 ///
 /// - Parameters:
 ///   - options: Configuration options for the macro behavior. Defaults to `.default`.
+///   - derivedFrom: Default source property for `@DerivedKey` properties that omit `from:`.
 @attached(extension, conformances: Codable, names: named(CodingKeys), named(init(from:)), arbitrary)
-@attached(member, conformances: Codable, names: named(init(from:)), named(encode(to:)), arbitrary)
+@attached(member, conformances: Codable, names: named(init(from:)), named(encode(to:)), named(rederiveValues), arbitrary)
 public macro Codable(
-  options: CodableOptions = .default
+  options: CodableOptions = .default,
+  derivedFrom: String? = nil
 ) = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
 /// A macro that generates `Decodable` conformance for structs and classes.
@@ -280,10 +282,12 @@ public macro Codable(
 ///
 /// - Parameters:
 ///   - options: Configuration options for the macro behavior. Defaults to `.default`.
+///   - derivedFrom: Default source property for `@DerivedKey` properties that omit `from:`.
 @attached(extension, conformances: Decodable, names: named(CodingKeys), named(init(from:)), arbitrary)
-@attached(member, conformances: Decodable, names: named(init(from:)), arbitrary)
+@attached(member, conformances: Decodable, names: named(init(from:)), named(rederiveValues), arbitrary)
 public macro Decodable(
-  options: CodableOptions = .default
+  options: CodableOptions = .default,
+  derivedFrom: String? = nil
 ) = #externalMacro(module: "CodableKitMacros", type: "CodableMacro")
 
 /// A macro that generates `Encodable` conformance for structs and classes.
@@ -600,11 +604,11 @@ public macro CodableKey(
 /// decoded normally — for example, slot-bag dictionaries with embedded JSON strings:
 ///
 /// ```swift
-/// @Codable
+/// @Codable(derivedFrom: "userConfigValue")
 /// public struct UserCommonConfigInfo: Sendable, Hashable {
 ///   public var userConfigValue: [String: UserConfigValue]?
 ///
-///   @DerivedKey(from: "userConfigValue", transformer: AvatarFrameSlotTransformer())
+///   @DerivedKey(transformer: AvatarFrameSlotTransformer())
 ///   public private(set) var avatarFrame: AvatarFrame?
 /// }
 /// ```
@@ -622,6 +626,13 @@ public macro CodableKey(
 ///   propagates the error from `init(from:)`. Because the optional/default fallback path swallows
 ///   pipeline errors via `try?`, attach `.onFailure(_:)` to the transformer pipeline when you
 ///   need to observe or log those failures.
+/// - **Default source:** `@Codable(derivedFrom:)` and `@Decodable(derivedFrom:)` provide a
+///   containing-type default for derived properties that omit `from:`. A property-level `from:`
+///   always overrides that default.
+/// - **Re-derivation:** types with derived properties get `rederiveValues()` so callers can
+///   recompute derived values after mutating source properties. The method is `mutating` on
+///   structs and nonmutating on classes. It is generated as `throws` when any non-optional,
+///   non-defaulted derived property can propagate transformer failures.
 /// - **Dependencies:** the `from:` property must be a stored property of the same type that is
 ///   actually decoded — properties marked `.ignored` and inherited superclass properties are not
 ///   supported as `from:` sources. Deriving from another derived property is not supported and
@@ -637,12 +648,13 @@ public macro CodableKey(
 ///
 /// - Parameters:
 ///   - property: The name of the sibling stored property whose decoded value feeds the pipeline.
-///     Must be a string literal.
+///     Must be a string literal. Defaults to the containing `@Codable(derivedFrom:)` or
+///     `@Decodable(derivedFrom:)` value when omitted.
 ///   - transformer: The transformer pipeline applied to the source value. Only the forward
 ///     direction is used; encoding never needs the reverse direction.
 @attached(peer)
 public macro DerivedKey(
-  from property: String,
+  from property: String? = nil,
   transformer: any CodingTransformer
 ) = #externalMacro(module: "CodableKitMacros", type: "DerivedKeyMacro")
 

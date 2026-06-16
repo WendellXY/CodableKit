@@ -60,7 +60,7 @@ That single model gets generated `CodingKeys`, `init(from:)`, and `encode(to:)` 
 | Lossy collections | `@CodableKey(options: .lossy)` | Drop invalid array, set, or dictionary entries during decode |
 | Explicit hooks | `@CodableHook(.didDecode)` | Run validation, normalization, or derived-value logic at clear lifecycle stages |
 | Transformer pipelines | `@CodableKey(transformer: MyTransformer())` | Compose reusable decode and encode transformations; `DictionaryLookupTransformer` pulls a value out of a decoded dictionary, `liftOptional()` lifts a pipeline to optional input/output, and `onFailure(_:)` observes pipeline errors for logging |
-| Derived properties | `@DerivedKey(from: "slots", transformer: MyTransformer())` | Compute typed properties from an already-decoded sibling at the end of `init(from:)` — no coding key, never encoded |
+| Derived properties | `@Codable(derivedFrom: "slots")` + `@DerivedKey(transformer: MyTransformer())` | Compute typed properties from an already-decoded sibling at the end of `init(from:)` — no coding key, never encoded |
 
 ## Targets
 
@@ -121,12 +121,11 @@ struct Feed {
 ### Derived properties
 
 ```swift
-@Codable
+@Codable(derivedFrom: "userConfigValue")
 struct UserConfigInfo {
   var userConfigValue: [String: String]?
 
   @DerivedKey(
-    from: "userConfigValue",
     transformer: DictionaryLookupTransformer(key: "avatar_frame")
       .chained(RawStringDecodingTransformer<AvatarFrame>().liftOptional())
   )
@@ -135,12 +134,33 @@ struct UserConfigInfo {
 ```
 
 A derived property has no `CodingKeys` case and is never encoded. Its value is computed at the
-end of `init(from:)` by feeding the already-decoded `from:` property through the transformer
+end of `init(from:)` by feeding the already-decoded source property through the transformer
 pipeline, before any `@CodableHook(.didDecode)` hook runs. The `from:` source must itself be a
 decoded stored property of the same type — `.ignored` properties are rejected at compile time.
 Optional or defaulted derived properties fall back to `nil`/the default when the pipeline fails;
 non-optional ones without a default rethrow from `init(from:)`. Add `.onFailure(_:)` to the
 pipeline to log failures that the fallback path would otherwise swallow.
+
+Use `@Codable(derivedFrom:)` or `@Decodable(derivedFrom:)` when several derived properties read
+from the same decoded source. A property-level `from:` overrides the type-level default:
+
+```swift
+@Codable(derivedFrom: "userConfigValue")
+struct UserConfigInfo {
+  var userConfigValue: [String: String]?
+  var fallbackConfigValue: [String: String]?
+
+  @DerivedKey(transformer: AvatarFrameTransformer())
+  private(set) var avatarFrame: AvatarFrame?
+
+  @DerivedKey(from: "fallbackConfigValue", transformer: BadgeTransformer())
+  private(set) var badge: Badge?
+}
+```
+
+If you mutate a source property after decoding, call `rederiveValues()` to refresh the derived
+properties. The generated method is `mutating` for structs and nonmutating for classes; it is
+`throws` when a non-optional derived property without a default can propagate transformer failures.
 
 ### Dynamic JSON values
 

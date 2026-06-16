@@ -19,7 +19,7 @@ extension CodableProperty {
   var isDerived: Bool { derivedKeyAttribute != nil }
 
   /// The name of the source property in `@DerivedKey(from:)`, when written as a plain string
-  /// literal. `nil` when the argument is missing, empty, or not a simple string literal.
+  /// literal. `nil` when the argument is omitted, empty, or not a simple string literal.
   var derivedFromPropertyName: String? {
     guard
       let expr = derivedKeyAttribute?.arguments?
@@ -33,6 +33,13 @@ extension CodableProperty {
 
     let text = segment.content.text
     return text.isEmpty ? nil : text
+  }
+
+  /// Whether `@DerivedKey` explicitly provides a `from:` argument, even if invalid.
+  var hasExplicitDerivedFromArgument: Bool {
+    derivedKeyAttribute?.arguments?
+      .as(LabeledExprListSyntax.self)?
+      .getExpr(label: "from") != nil
   }
 
   /// The transformer expression provided via `@DerivedKey(transformer:)`.

@@ -53,18 +53,28 @@ private struct DerivedStrictCountTransformer: CodingTransformer {
   }
 }
 
-@Codable
+@Codable(derivedFrom: "userConfigValue")
 struct DerivedConfigModel: Equatable {
   var userConfigValue: [String: String]?
-  @DerivedKey(from: "userConfigValue", transformer: DerivedFrameSlotTransformer())
+  @DerivedKey(transformer: DerivedFrameSlotTransformer())
   private(set) var avatarFrame: DerivedFrame?
 }
 
-@Codable
+@Codable(derivedFrom: "tags")
 struct DerivedCountModel: Equatable {
   var tags: [String] = []
-  @DerivedKey(from: "tags", transformer: DerivedTagCountTransformer())
+  @DerivedKey(transformer: DerivedTagCountTransformer())
   private(set) var tagCount: Int = -1
+}
+
+@Codable(derivedFrom: "tags")
+struct DerivedOverrideCountModel: Equatable {
+  var tags: [String] = []
+  var fallbackTags: [String] = []
+  @DerivedKey(transformer: DerivedTagCountTransformer())
+  private(set) var tagCount: Int = -1
+  @DerivedKey(from: "fallbackTags", transformer: DerivedTagCountTransformer())
+  private(set) var fallbackTagCount: Int = -1
 }
 
 @Codable
@@ -89,9 +99,18 @@ struct DerivedHookModel {
 }
 
 @Codable
+struct DerivedEncodableIgnoredSourceModel: Equatable {
+  var name: String = ""
+  @EncodableKey(options: .ignored)
+  var tags: [String] = []
+  @DerivedKey(from: "tags", transformer: DerivedTagCountTransformer())
+  private(set) var tagCount: Int = -1
+}
+
+@Codable(derivedFrom: "userConfigValue")
 class DerivedConfigClass {
   var userConfigValue: [String: String]?
-  @DerivedKey(from: "userConfigValue", transformer: DerivedFrameSlotTransformer())
+  @DerivedKey(transformer: DerivedFrameSlotTransformer())
   private(set) var avatarFrame: DerivedFrame?
 }
 
@@ -168,6 +187,20 @@ class DerivedChildClass: DerivedBaseClass {
     #expect(decoded.tagCount == 3)
   }
 
+  @Test func derivedValue_structRederiveValues_updatesAfterSourceMutation() throws {
+    let json = #"{"tags":["a","b"],"fallbackTags":["x"]}"#
+    let data = json.data(using: .utf8)!
+    var decoded = try JSONDecoder().decode(DerivedOverrideCountModel.self, from: data)
+    #expect(decoded.tagCount == 2)
+    #expect(decoded.fallbackTagCount == 1)
+
+    decoded.tags = ["a", "b", "c", "d"]
+    decoded.fallbackTags = []
+    decoded.rederiveValues()
+    #expect(decoded.tagCount == 4)
+    #expect(decoded.fallbackTagCount == 0)
+  }
+
   @Test func derivedValue_nonOptionalNoDefault_pipelineFailure_throwsFromDecode() throws {
     let json = #"{"tags":[]}"#
     let data = json.data(using: .utf8)!
@@ -190,6 +223,21 @@ class DerivedChildClass: DerivedBaseClass {
     #expect(decoded.tagCount == 3)
     #expect(decoded.observedCount == 3)
   }
+
+  @Test func derivedValue_encodableIgnoredSource_stillDerivesFromDecodedProperty() throws {
+    let json = #"{"name":"box","tags":["a","b","c"]}"#
+    let data = json.data(using: .utf8)!
+    let decoded = try JSONDecoder().decode(DerivedEncodableIgnoredSourceModel.self, from: data)
+    #expect(decoded.name == "box")
+    #expect(decoded.tags == ["a", "b", "c"])
+    #expect(decoded.tagCount == 3)
+
+    let encodedData = try JSONEncoder().encode(decoded)
+    let encodedString = String(data: encodedData, encoding: .utf8)!
+    #expect(encodedString.contains("name"))
+    #expect(!encodedString.contains("tags"))
+    #expect(!encodedString.contains("tagCount"))
+  }
 }
 
 @Suite struct DerivedKeyClassRuntimeTests {
@@ -198,6 +246,16 @@ class DerivedChildClass: DerivedBaseClass {
     let data = json.data(using: .utf8)!
     let decoded = try JSONDecoder().decode(DerivedConfigClass.self, from: data)
     #expect(decoded.avatarFrame == DerivedFrame(id: 11))
+  }
+
+  @Test func derivedValue_classRederiveValues_updatesAfterSourceMutation() throws {
+    let json = #"{"userConfigValue":{"frame":"{\"id\":11}"}}"#
+    let data = json.data(using: .utf8)!
+    let decoded = try JSONDecoder().decode(DerivedConfigClass.self, from: data)
+
+    decoded.userConfigValue = ["frame": #"{"id":12}"#]
+    decoded.rederiveValues()
+    #expect(decoded.avatarFrame == DerivedFrame(id: 12))
   }
 
   @Test func derivedValue_classDidDecodeHook_observesDerivedValue() throws {

@@ -25,20 +25,6 @@ public struct DerivedKeyMacro: PeerMacro {
     // no accessor block, non-static).
     _ = try CodeGenCore().prepareCodeGeneration(for: declaration, in: context, with: node)
 
-    guard let variable = VariableDeclSyntax(declaration) else { return [] }
-
-    // The generated tail assignment writes the property at the end of `init(from:)`. A `let`
-    // that already has an initializer can never be assigned again, so reject it up front.
-    if variable.bindingSpecifier.tokenKind == .keyword(.let),
-      variable.bindings.contains(where: { $0.initializer != nil })
-    {
-      throw SimpleDiagnosticMessage(
-        message:
-          "@DerivedKey cannot be applied to a 'let' property with an initializer; use 'var' or remove the initializer",
-        severity: .error
-      )
-    }
-
     return []
   }
 }
