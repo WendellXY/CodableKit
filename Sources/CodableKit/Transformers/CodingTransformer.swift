@@ -21,6 +21,43 @@ extension CodingTransformer {
     Chained(transformer1: self, transformer2: next)
   }
 
+  /// Maps the successful output of this transformer with a closure.
+  ///
+  /// Upstream failures are propagated unchanged. If the mapping closure throws,
+  /// the thrown error becomes the transformed failure.
+  public func map<T>(
+    _ next: @escaping (Output) throws -> T
+  ) -> some CodingTransformer<Input, T> {
+    self.chained(MapTransformer(transformClosure: next))
+  }
+
+  /// Unwraps an optional output with a default value, then maps it.
+  ///
+  /// This is equivalent to `wrapped(defaultValue:).map(_:)`, but keeps common
+  /// default-then-map pipelines concise.
+  public func map<WrappedOutput, T>(
+    defaultValue: WrappedOutput,
+    _ next: @escaping (WrappedOutput) throws -> T
+  ) -> some CodingTransformer<Input, T> where Output == WrappedOutput? {
+    self.wrapped(defaultValue: defaultValue).map(next)
+  }
+
+  /// Unwraps an optional output, applies a failable mapping, then unwraps the
+  /// mapped result with a fallback value.
+  ///
+  /// This is equivalent to
+  /// `wrapped(defaultValue:).map(_:)
+  ///   .wrapped(defaultValue: fallbackValue)`.
+  public func map<WrappedOutput, T>(
+    defaultValue: WrappedOutput,
+    fallbackValue: T,
+    _ next: @escaping (WrappedOutput) throws -> T?
+  ) -> some CodingTransformer<Input, T> where Output == WrappedOutput? {
+    self.wrapped(defaultValue: defaultValue)
+      .map(next)
+      .wrapped(defaultValue: fallbackValue)
+  }
+
   public func paired<T>(
     _ reversed: some CodingTransformer<Output, Input>
   ) -> some BidirectionalCodingTransformer<Input, Output> {

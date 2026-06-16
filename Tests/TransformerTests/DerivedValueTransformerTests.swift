@@ -13,6 +13,63 @@ import Testing
 struct DerivedValueTransformerTests {
   enum TestError: Error { case boom }
 
+  // MARK: - map
+
+  @Test func map_transforms_successful_output() async throws {
+    let t = IdentityTransformer<Int>().map { "\($0)" }
+    #expect(try t.transform(.success(7)).get() == "7")
+  }
+
+  @Test func map_propagates_upstream_failure() async throws {
+    let t = IdentityTransformer<Int>().map { "\($0)" }
+    var threw = false
+    do { _ = try t.transform(.failure(TestError.boom)).get() } catch { threw = true }
+    #expect(threw)
+  }
+
+  @Test func map_propagates_mapping_failure() async throws {
+    let t = IdentityTransformer<Int>().map { _ throws -> String in
+      throw TestError.boom
+    }
+
+    var threw = false
+    do { _ = try t.transform(.success(7)).get() } catch { threw = true }
+    #expect(threw)
+  }
+
+  @Test func map_defaultValue_unwraps_optional_before_mapping() async throws {
+    let t = IdentityTransformer<Int?>().map(defaultValue: 0) { $0 + 1 }
+
+    #expect(try t.transform(.success(nil)).get() == 1)
+    #expect(try t.transform(.success(4)).get() == 5)
+  }
+
+  @Test func map_defaultValue_preserves_failable_mapping_output() async throws {
+    enum AccountType: Int {
+      case normal = 1
+    }
+
+    let t = IdentityTransformer<Int?>().map(defaultValue: 0, AccountType.init(rawValue:))
+
+    #expect(try t.transform(.success(1)).get() == .normal)
+    #expect(try t.transform(.success(nil)).get() == nil)
+    #expect(try t.transform(.success(999)).get() == nil)
+  }
+
+  @Test func map_defaultValue_fallbackValue_recovers_nil_mapped_output() async throws {
+    enum AccountType: Int {
+      case unknown = 0
+      case normal = 1
+    }
+
+    let t = IdentityTransformer<Int?>()
+      .map(defaultValue: 0, fallbackValue: AccountType.unknown, AccountType.init(rawValue:))
+
+    #expect(try t.transform(.success(1)).get() == .normal)
+    #expect(try t.transform(.success(nil)).get() == .unknown)
+    #expect(try t.transform(.success(999)).get() == .unknown)
+  }
+
   // MARK: - DictionaryLookupTransformer
 
   @Test func dictionaryLookup_hit_returns_value() async throws {

@@ -141,6 +141,18 @@ Optional or defaulted derived properties fall back to `nil`/the default when the
 non-optional ones without a default rethrow from `init(from:)`. Add `.onFailure(_:)` to the
 pipeline to log failures that the fallback path would otherwise swallow.
 
+Transformer pipelines can use `.map(_:)` for lightweight projections or scalar conversions.
+For optional source values that should default before mapping, use `.map(defaultValue:_:)`. For
+failable mappings that also need a default output, use `.map(defaultValue:fallbackValue:_:)`:
+
+```swift
+@DerivedKey(
+  transformer: DictionaryLookupTransformer(key: "account_type")
+    .map(defaultValue: 0, fallbackValue: AccountType.unknown, AccountType.init(rawValue:))
+)
+private(set) var accountType: AccountType = .unknown
+```
+
 Use `@Codable(derivedFrom:)` or `@Decodable(derivedFrom:)` when several derived properties read
 from the same decoded source. A property-level `from:` overrides the type-level default:
 
