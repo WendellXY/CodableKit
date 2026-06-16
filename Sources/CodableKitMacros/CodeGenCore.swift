@@ -32,6 +32,7 @@ internal final class CodeGenCore: @unchecked Sendable {
   private var structureTypes: [MacroContextKey: StructureType] = [:]
   private var codableTypes: [MacroContextKey: CodableType] = [:]
   private var codableOptions: [MacroContextKey: CodableOptions] = [:]
+  private var derivedFromDefaults: [MacroContextKey: String?] = [:]
   private var hooksPresence: [MacroContextKey: HooksPresence] = [:]
 
   func key(for declaration: some SyntaxProtocol, in context: some MacroExpansionContext) -> MacroContextKey {
@@ -246,6 +247,13 @@ extension CodeGenCore {
     )
   }
 
+  func accessDerivedFromDefault(
+    for declaration: some SyntaxProtocol,
+    in context: some MacroExpansionContext
+  ) -> String? {
+    derivedFromDefaults[key(for: declaration, in: context)] ?? nil
+  }
+
   func accessHooksPresence(
     for declaration: some SyntaxProtocol,
     in context: some MacroExpansionContext
@@ -266,6 +274,46 @@ extension CodeGenCore {
   fileprivate static func shouldWarnAboutSuperCoding(for declaration: some DeclGroupSyntax) -> Bool {
     let inherited = directInheritedTypeNames(in: declaration)
     return inherited.contains("NSObject")
+  }
+
+  fileprivate static func stringLiteralArgument(
+    named label: String,
+    in node: AttributeSyntax
+  ) -> String? {
+    guard
+      let expr = node.arguments?
+        .as(LabeledExprListSyntax.self)?
+        .getExpr(label: label)?
+        .expression,
+      let stringLiteral = expr.as(StringLiteralExprSyntax.self),
+      stringLiteral.segments.count == 1,
+      let segment = stringLiteral.segments.first?.as(StringSegmentSyntax.self)
+    else { return nil }
+
+    let text = segment.content.text
+    return text.isEmpty ? nil : text
+  }
+
+  fileprivate static func hasArgument(
+    named label: String,
+    in node: AttributeSyntax
+  ) -> Bool {
+    node.arguments?
+      .as(LabeledExprListSyntax.self)?
+      .getExpr(label: label) != nil
+  }
+
+  fileprivate static func hasInstanceMethod(
+    named name: String,
+    parameterCount: Int,
+    in declaration: some DeclGroupSyntax
+  ) -> Bool {
+    declaration.memberBlock.members.contains { member in
+      guard let functionDecl = member.decl.as(FunctionDeclSyntax.self) else { return false }
+      guard functionDecl.name.text == name else { return false }
+      guard functionDecl.signature.parameterClause.parameters.count == parameterCount else { return false }
+      return !functionDecl.modifiers.contains { $0.name.text == "static" || $0.name.text == "class" }
+    }
   }
 
   /// Validate that the macro is being applied to a struct declaration
@@ -331,9 +379,26 @@ extension CodeGenCore {
       .as(LabeledExprListSyntax.self)?
       .first(where: { $0.label?.text == "options" })?
       .parseCodableOptions() ?? .default
+    let derivedFromDefault = Self.stringLiteralArgument(named: "derivedFrom", in: node)
 
     codableTypes[id] = options.contains(.skipProtocolConformance) ? codableType.union(macroCodableType) : codableType
     codableOptions[id] = options
+    derivedFromDefaults[id] = derivedFromDefault
+
+    if Self.hasArgument(named: "derivedFrom", in: node),
+      derivedFromDefault == nil
+    {
+      if emitAdvisories {
+        context.diagnose(
+          makeDiagnostic(
+            node: node,
+            message: "\(node.attributeName.trimmedDescription) requires 'derivedFrom:' to be a non-empty string literal",
+            severity: .error
+          )
+        )
+      }
+      throw DiagnosticAlreadyEmitted()
+    }
 
     try validateDeclaration(for: declaration, in: context)
 
@@ -467,9 +532,20 @@ extension CodeGenCore {
             "@DerivedKey is decode-only and cannot be used in an @Encodable-only type; use @Codable or @Decodable")
         }
 
-        guard let derivedFromName = property.derivedFromPropertyName else {
+        if property.isConstant {
+          throw derivedError("@DerivedKey cannot be applied to a 'let' property; use 'var' so generated rederiveValues() can update it")
+        }
+
+        if property.hasExplicitDerivedFromArgument, property.derivedFromPropertyName == nil {
           throw derivedError(
             "@DerivedKey requires a 'from:' argument that is a non-empty string literal naming a sibling stored property"
+          )
+        }
+
+        let derivedFromName = property.derivedFromPropertyName ?? derivedFromDefault
+        guard let derivedFromName else {
+          throw derivedError(
+            "@DerivedKey requires a 'from:' argument or a non-empty top-level 'derivedFrom:' default naming a sibling stored property"
           )
         }
 
@@ -486,7 +562,7 @@ extension CodeGenCore {
           )
         }
 
-        if sourceProperty.ignored {
+        if sourceProperty.generateProperty(for: .decodable).ignored {
           throw derivedError(
             "@DerivedKey source property '\(derivedFromName)' is excluded from decoding (.ignored); derived properties may only depend on decoded properties"
           )
@@ -495,6 +571,22 @@ extension CodeGenCore {
         if property.derivedTransformerExpr == nil {
           throw derivedError("@DerivedKey requires a 'transformer:' argument")
         }
+      }
+
+      if macroCodableType.contains(.decodable),
+        extractedProperties.contains(where: \.isDerived),
+        Self.hasInstanceMethod(named: "rederiveValues", parameterCount: 0, in: declaration)
+      {
+        if emitAdvisories {
+          context.diagnose(
+            makeDiagnostic(
+              node: declaration,
+              message: "Types with @DerivedKey properties cannot declare rederiveValues(); it is generated by the macro",
+              severity: .error
+            )
+          )
+        }
+        throw DiagnosticAlreadyEmitted()
       }
 
       properties[id] = extractedProperties

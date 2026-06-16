@@ -26,6 +26,10 @@ import Testing
         public struct UserCommonConfigInfo {
           public var userConfigValue: [String: String]?
           public private(set) var avatarFrame: AvatarFrame?
+
+          public mutating func rederiveValues() {
+            avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
+          }
         }
 
         extension UserCommonConfigInfo: Decodable {
@@ -37,6 +41,50 @@ import Testing
             let container = try decoder.container(keyedBy: CodingKeys.self)
             userConfigValue = try container.decodeIfPresent([String: String]?.self, forKey: .userConfigValue) ?? nil
             avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
+          }
+        }
+        """
+    )
+  }
+
+  @Test func defaultDerivedFrom_omittedPropertySource_andExplicitOverride() throws {
+    assertMacro(
+      """
+      @Decodable(derivedFrom: "userConfigValue")
+      public struct UserCommonConfigInfo {
+        public var userConfigValue: [String: String]?
+        public var fallbackConfigValue: [String: String]?
+        @DerivedKey(transformer: FrameTransformer())
+        public private(set) var avatarFrame: AvatarFrame?
+        @DerivedKey(from: "fallbackConfigValue", transformer: BadgeTransformer())
+        public private(set) var badge: Badge?
+      }
+      """,
+      expandedSource: """
+        public struct UserCommonConfigInfo {
+          public var userConfigValue: [String: String]?
+          public var fallbackConfigValue: [String: String]?
+          public private(set) var avatarFrame: AvatarFrame?
+          public private(set) var badge: Badge?
+
+          public mutating func rederiveValues() {
+            avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
+            badge = (try? __ckDecodeDerived(transformer: BadgeTransformer(), from: fallbackConfigValue)) ?? nil
+          }
+        }
+
+        extension UserCommonConfigInfo: Decodable {
+          enum CodingKeys: String, CodingKey {
+            case userConfigValue
+            case fallbackConfigValue
+          }
+
+          public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            userConfigValue = try container.decodeIfPresent([String: String]?.self, forKey: .userConfigValue) ?? nil
+            fallbackConfigValue = try container.decodeIfPresent([String: String]?.self, forKey: .fallbackConfigValue) ?? nil
+            avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
+            badge = (try? __ckDecodeDerived(transformer: BadgeTransformer(), from: fallbackConfigValue)) ?? nil
           }
         }
         """
@@ -57,6 +105,10 @@ import Testing
         public struct TagBox {
           var tags: [String] = []
           var tagCount: Int
+
+          public mutating func rederiveValues() throws {
+            tagCount = try __ckDecodeDerived(transformer: CountTransformer(), from: tags)
+          }
         }
 
         extension TagBox: Decodable {
@@ -91,6 +143,11 @@ import Testing
           public var userConfigValue: [String: String]?
           public private(set) var avatarFrame: AvatarFrame?
           public private(set) var badge: Badge?
+
+          public mutating func rederiveValues() {
+            avatarFrame = (try? __ckDecodeDerived(transformer: FrameTransformer(), from: userConfigValue)) ?? nil
+            badge = (try? __ckDecodeDerived(transformer: BadgeTransformer(), from: userConfigValue)) ?? nil
+          }
         }
 
         extension UserCommonConfigInfo: Decodable {

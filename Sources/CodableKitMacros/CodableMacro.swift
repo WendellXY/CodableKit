@@ -64,6 +64,7 @@ public struct CodableMacro: ExtensionMacro {
       let structureType = try core.accessStructureType(for: declaration, in: context)
       let codableType = try core.accessCodableType(for: declaration, in: context)
       let codableOptions = try core.accessCodableOptions(for: declaration, in: context)
+      let derivedFromDefault = core.accessDerivedFromDefault(for: declaration, in: context)
       let hooks = try core.accessHooksPresence(for: declaration, in: context)
 
       // If there are no properties, return an empty array.
@@ -135,6 +136,7 @@ public struct CodableMacro: ExtensionMacro {
                   codableOptions: codableOptions,
                   hasSuper: false,
                   tree: usingTree,
+                  derivedFromDefault: derivedFromDefault,
                   hooks: hooks
                 )
               )
@@ -188,6 +190,7 @@ extension CodableMacro: MemberMacro {
     let structureType = try core.accessStructureType(for: declaration, in: context)
     let codableType = try core.accessCodableType(for: declaration, in: context)
     let codableOptions = try core.accessCodableOptions(for: declaration, in: context)
+    let derivedFromDefault = core.accessDerivedFromDefault(for: declaration, in: context)
     let hooks = try core.accessHooksPresence(for: declaration, in: context)
 
     // If there are no properties, return an empty array.
@@ -232,24 +235,47 @@ extension CodableMacro: MemberMacro {
 
     var result: [DeclSyntax] = []
 
-    switch structureType {
-    case .classType:
-      if codableType.contains(.decodable) {
-        result.append(
-          DeclSyntax(
-            genInitDecoderDecl(
-              from: properties,
-              modifiers: decodeModifiers,
-              codableOptions: codableOptions,
-              hasSuper: hasSuper,
-              tree: decodeTree,
-              hooks: hooks
-            )
+    if case .classType = structureType,
+      codableType.contains(.decodable)
+    {
+      result.append(
+        DeclSyntax(
+          genInitDecoderDecl(
+            from: properties,
+            modifiers: decodeModifiers,
+            codableOptions: codableOptions,
+            hasSuper: hasSuper,
+            tree: decodeTree,
+            derivedFromDefault: derivedFromDefault,
+            hooks: hooks
           )
         )
+      )
+    }
+
+    let canGenerateRederiveValues =
+      switch structureType {
+      case .structType, .classType: true
+      case .enumType: false
       }
-      fallthrough
-    case .structType:
+    if codableType.contains(.decodable),
+      canGenerateRederiveValues,
+      properties.contains(where: \.isDerived)
+    {
+      result.append(
+        DeclSyntax(
+          genRederiveValuesDecl(
+            from: properties,
+            modifiers: [accessModifier.witnessSafe],
+            structureType: structureType,
+            derivedFromDefault: derivedFromDefault
+          )
+        )
+      )
+    }
+
+    switch structureType {
+    case .classType, .structType:
       if codableType.contains(.encodable) {
         result.append(
           DeclSyntax(
@@ -283,6 +309,7 @@ extension CodableMacro {
     codableOptions: CodableOptions,
     hasSuper: Bool,
     tree: NamespaceNode,
+    derivedFromDefault: String?,
     hooks: HooksPresence
   ) -> InitializerDeclSyntax {
     InitializerDeclSyntax(
@@ -313,7 +340,7 @@ extension CodableMacro {
 
       // Derived properties: computed from already-decoded sibling values, in declaration order.
       // Emitted after all coded assignments and before the didDecode hooks so hooks observe them.
-      for item in derivedPropertyAssignments(from: properties) {
+      for item in derivedPropertyAssignments(from: properties, derivedFromDefault: derivedFromDefault) {
         item
       }
 
@@ -343,18 +370,20 @@ extension CodableMacro {
   /// Failure policy mirrors `.useDefaultOnFailure` conventions: optional properties and
   /// properties with a default initializer value fall back to `nil`/the default on pipeline
   /// failure; non-optional properties without a default propagate the error.
-  fileprivate static func derivedPropertyAssignments(from properties: [Property]) -> [CodeBlockItemSyntax] {
+  fileprivate static func derivedPropertyAssignments(
+    from properties: [Property],
+    derivedFromDefault: String?
+  ) -> [CodeBlockItemSyntax] {
     properties
       .filter(\.isDerived)
       .compactMap { property in
         guard
           let transformerExpr = property.derivedTransformerExpr,
-          let sourceName = property.derivedFromPropertyName
+          let sourceName = property.derivedFromPropertyName ?? derivedFromDefault
         else { return nil }
 
-        // A `let` with an initializer can never be re-assigned in `init(from:)`. The peer macro
-        // already diagnoses this; skip the tail assignment so the diagnostic is not followed by
-        // confusing secondary compile errors in generated code.
+        // Invalid `let` derived properties are diagnosed before generation. Keep this defensive
+        // skip so invalid partial expansions do not cascade into secondary compiler errors.
         guard !(property.isConstant && property.defaultValue != nil) else { return nil }
 
         let callExpr: ExprSyntax =
@@ -366,6 +395,44 @@ extension CodableMacro {
           return "\(property.name) = try \(callExpr)"
         }
       }
+  }
+
+  fileprivate static func derivedPropertyRederiveValuesThrows(from properties: [Property]) -> Bool {
+    properties
+      .filter(\.isDerived)
+      .contains { !$0.isOptional && $0.defaultValue == nil }
+  }
+
+  fileprivate static func genRederiveValuesDecl(
+    from properties: [Property],
+    modifiers: [DeclModifierSyntax],
+    structureType: StructureType,
+    derivedFromDefault: String?
+  ) -> FunctionDeclSyntax {
+    let isMutating =
+      switch structureType {
+      case .structType: true
+      case .classType, .enumType: false
+      }
+    var modifiers = modifiers
+    if isMutating {
+      modifiers.append(.init(name: .keyword(.mutating)))
+    }
+    let isThrowing = derivedPropertyRederiveValuesThrows(from: properties)
+
+    return FunctionDeclSyntax(
+      leadingTrivia: .newline,
+      modifiers: DeclModifierListSyntax(modifiers),
+      name: .identifier("rederiveValues"),
+      signature: .init(
+        parameterClause: FunctionParameterClauseSyntax {},
+        effectSpecifiers: isThrowing ? .init(throwsClause: .init(throwsSpecifier: .keyword(.throws))) : nil
+      )
+    ) {
+      for item in derivedPropertyAssignments(from: properties, derivedFromDefault: derivedFromDefault) {
+        item
+      }
+    }
   }
 
   /// Generate the `func encode(to encoder: Encoder)` method of the `Codable` protocol.
