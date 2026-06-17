@@ -21,13 +21,21 @@ where
   let transformer1: T
   let transformer2: U
 
-  init(transformer1: T, transformer2: U) {
-    self.transformer1 = transformer1
-    self.transformer2 = transformer2
-  }
-
   func transform(_ input: Result<T.Input, any Error>) -> Result<U.Output, any Error> {
     transformer2.transform(transformer1.transform(input))
+  }
+}
+
+/// Adapts a throwing closure into a one-way transformer.
+struct MapTransformer<Input, Output>: CodingTransformer {
+  let transformClosure: (Input) throws -> Output
+
+  func transform(_ input: Result<Input, any Error>) -> Result<Output, any Error> {
+    input.flatMap { value in
+      Result {
+        try transformClosure(value)
+      }
+    }
   }
 }
 
@@ -50,10 +58,6 @@ where
   T: BidirectionalCodingTransformer
 {
   let transformer: T
-
-  init(transformer: T) {
-    self.transformer = transformer
-  }
 
   func transform(_ input: Result<T.Output, any Error>) -> Result<T.Input, any Error> {
     transformer.reverseTransform(input)
@@ -80,11 +84,6 @@ where
 
   let transformer: T
   let reversedTransformer: U
-
-  init(transformer: T, reversedTransformer: U) {
-    self.transformer = transformer
-    self.reversedTransformer = reversedTransformer
-  }
 
   func transform(_ input: Result<Input, any Error>) -> Result<Output, any Error> {
     transformer.transform(input)
@@ -135,10 +134,6 @@ enum WrappedError: Error {
 struct Wrapped<T>: CodingTransformer {
   let defaultValue: T?
 
-  init(defaultValue: T?) {
-    self.defaultValue = defaultValue
-  }
-
   func transform(_ input: Result<T?, any Error>) -> Result<T, any Error> {
     input.flatMap { value in
       if let value {
@@ -154,8 +149,6 @@ struct Wrapped<T>: CodingTransformer {
 
 /// Wraps a non-optional value into an optional result for further chaining.
 struct Optional<T>: CodingTransformer {
-  init() {}
-
   func transform(_ input: Result<T, any Error>) -> Result<T?, any Error> {
     input.flatMap { value in
       .success(value)
@@ -177,10 +170,6 @@ where
   typealias Output = T.Output?
 
   let transformer: T
-
-  init(transformer: T) {
-    self.transformer = transformer
-  }
 
   func transform(_ input: Result<T.Input?, any Error>) -> Result<T.Output?, any Error> {
     switch input {
@@ -224,11 +213,6 @@ where
 
   let transformer: T
   let handler: (any Error) -> Void
-
-  init(transformer: T, handler: @escaping (any Error) -> Void) {
-    self.transformer = transformer
-    self.handler = handler
-  }
 
   func transform(_ input: Result<Input, any Error>) -> Result<Output, any Error> {
     let output = transformer.transform(input)
