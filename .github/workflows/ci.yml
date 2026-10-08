@@ -13,16 +13,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-22.04]
+        os: [macos-15, ubuntu-22.04]
         swift: ["6.0.0", "6.1.0", "6.2.0"]
+        # Keep each macOS SDK compatible with its Swift compiler.
+        include:
+          - os: macos-15
+            swift: "6.0.0"
+            xcode: "16.0"
+          - os: macos-15
+            swift: "6.1.0"
+            xcode: "16.3"
+          - os: macos-15
+            swift: "6.2.0"
+            xcode: "26.0.1"
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
+      - name: Select compatible Xcode SDK
+        if: runner.os == 'macOS'
+        env:
+          XCODE_VERSION: ${{ matrix.xcode }}
+        run: |
+          sudo xcode-select --switch "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
       - name: Setup Swift ${{ matrix.swift }} on ${{ matrix.os }}
         uses: SwiftyLab/setup-swift@latest
         with:
           swift-version: ${{ matrix.swift }}
+      - name: Show Swift version
+        run: swift --version
       - name: Build
         run: swift build -v
       - name: Run tests
