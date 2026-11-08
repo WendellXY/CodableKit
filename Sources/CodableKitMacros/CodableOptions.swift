@@ -5,7 +5,6 @@
 //  Created by Wendell Wang on 2025/10/2.
 //
 
-import CodableKitCore
 import SwiftSyntax
 
 extension CodableOptions {

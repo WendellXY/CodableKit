@@ -28,10 +28,13 @@ let package = Package(
     .target(
       name: "CodableKitCore"
     ),
+    // The macro compiles CodableKitCore's option definitions through the
+    // `Sources/CodableKitMacros/SharedCore` symlink instead of depending on that
+    // runtime target. A host-only macro that depends on a module also linked into
+    // client code makes SwiftPM refuse prebuilt swift-syntax for the whole graph.
     .macro(
       name: "CodableKitMacros",
       dependencies: [
-        "CodableKitCore",
         .product(name: "SwiftSyntax", package: "swift-syntax"),
         .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
         .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
